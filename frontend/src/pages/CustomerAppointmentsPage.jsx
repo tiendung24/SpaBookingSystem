@@ -74,6 +74,16 @@ export default function CustomerAppointmentsPage() {
     return () => clearTimeout(t)
   }, [searchedPhone, upcoming.length, completed.length, cancelled.length])
 
+  const handleDirections = () => {
+    const destination = String(shop.address || shop.name || '').trim()
+    if (!destination) {
+      window.alert('C?a h�ng chua c?p nh?t d?a ch? d? ch? du?ng.')
+      return
+    }
+
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer')
+  }
   const handleCancel = (booking) => {
     if (!isUpcoming(booking, nowTs)) return
 
@@ -280,7 +290,7 @@ export default function CustomerAppointmentsPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-3 pt-4 border-t border-primary/10">
-                      <button className="flex-1 min-w-[140px] py-2 px-4 rounded-xl bg-slate-100 text-primary font-bold flex items-center justify-center gap-2 hover:bg-primary/10 transition-all">
+                      <button className="flex-1 min-w-[140px] py-2 px-4 rounded-xl bg-slate-100 text-primary font-bold flex items-center justify-center gap-2 hover:bg-primary/10 transition-all" onClick={handleDirections}>
                         <span className="material-symbols-outlined text-[18px]">directions</span>
                         <span>Chỉ đường</span>
                       </button>

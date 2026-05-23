@@ -16,6 +16,17 @@ const emptyDraft = {
   note: ''
 }
 
+function normalizeOnboardingCompleted(value) {
+  if (value === true) return true
+  if (value === false) return false
+  if (typeof value === 'number') return value === 1
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    return normalized === 'true' || normalized === '1' || normalized === 'yes'
+  }
+  return false
+}
+
 function mapService(item) {
   return {
     id: item._id,
@@ -69,6 +80,7 @@ export function ShopProvider({ children }) {
     slug: '',
     address: '',
     phone: '',
+    onboardingCompleted: false,
     deposit: {
       enabled: false,
       type: 'fixed',
@@ -96,6 +108,7 @@ export function ShopProvider({ children }) {
       setShop((prev) => ({
         ...prev,
         ...(meShop.shop || {}),
+        onboardingCompleted: normalizeOnboardingCompleted(meShop.shop?.onboardingCompleted ?? prev.onboardingCompleted),
         deposit: {
           enabled: Boolean(meShop.shop?.depositConfig?.enabled ?? prev.deposit.enabled),
           type: meShop.shop?.depositConfig?.type || prev.deposit.type,
@@ -211,7 +224,12 @@ export function ShopProvider({ children }) {
       apiRequest(`/api/public/shops/${slug}/services`),
       apiRequest(`/api/public/shops/${slug}/staffs`)
     ])
-    setShop((prev) => ({ ...prev, ...(shopRes.shop || {}), slug }))
+    setShop((prev) => ({
+      ...prev,
+      ...(shopRes.shop || {}),
+      slug,
+      onboardingCompleted: normalizeOnboardingCompleted(shopRes.shop?.onboardingCompleted ?? prev.onboardingCompleted)
+    }))
     setServices((servicesRes.items || []).map(mapService))
     setStaff((staffsRes.items || []).map(mapStaff))
   }

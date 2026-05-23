@@ -14,23 +14,23 @@ export default function TopNavBar() {
           </Link>
           <div className="hidden md:flex gap-6">
             <a href="#features" className="text-primary font-bold border-b-2 border-primary pb-1 font-label-bold text-label-bold">
-              Tính năng
+              TÃ­nh nÄƒng
             </a>
             <a href="#pricing" className="text-main hover:text-primary transition-colors font-label-bold text-label-bold">
-              Bảng giá
+              Báº£ng giÃ¡
             </a>
             <a href="#faq" className="text-main hover:text-primary transition-colors font-label-bold text-label-bold">
-              Hỗ trợ
+              Há»— trá»£
             </a>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <Link to="/login" className="hidden md:block text-main hover:bg-gray-100 transition-all duration-300 font-label-bold text-label-bold px-4 py-2 rounded-xl">
-            Đăng nhập
+            ÄÄƒng nháº­p
           </Link>
-          <button className="bg-[#5ea4b8] text-white font-label-bold text-label-bold px-6 py-2.5 rounded-xl cta-3d hover:brightness-110">
-            Đăng ký ngay
-          </button>
+          <Link to="/register" className="bg-[#5ea4b8] text-white font-label-bold text-label-bold px-6 py-2.5 rounded-xl cta-3d hover:brightness-110">
+            ÄÄƒng kÃ½ ngay
+          </Link>
         </div>
       </nav>
     </header>

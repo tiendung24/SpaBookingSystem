@@ -117,7 +117,7 @@ export default function CustomerBookingTimePage() {
     return (
       <div className="min-h-screen bg-slate-50 p-10">
         <p className="text-main">Bạn chưa chọn dịch vụ.</p>
-        <Link className="text-primary underline" to={`/${shop.slug}/book`}>
+        <Link className="text-primary underline" to={`/${slug || shop.slug}/book`}>
           Quay lại bước 1
         </Link>
       </div>

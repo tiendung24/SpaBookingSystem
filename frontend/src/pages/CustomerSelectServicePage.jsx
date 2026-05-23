@@ -60,7 +60,7 @@ export default function CustomerSelectServicePage() {
       serviceId: selectedServiceId,
       staffId: selectedStaffId
     }))
-    navigate(`/${shop.slug}/book/time`)
+    navigate(`/${slug || shop.slug}/book/time`)
   }
 
   const isCorrectSlug = !slug || slug === shop.slug
@@ -77,13 +77,13 @@ export default function CustomerSelectServicePage() {
         <div className="max-w-[1440px] mx-auto px-6 md:px-10 flex justify-between items-center h-20">
           <div className="font-h3 text-h3 tracking-tight text-primary">{shop.name}</div>
           <div className="hidden md:flex items-center gap-6">
-            <Link className="text-primary font-bold border-b-2 border-primary pb-1" to={`/${shop.slug}#services`}>
+            <Link className="text-primary font-bold border-b-2 border-primary pb-1" to={`/${slug || shop.slug}#services`}>
               Dịch vụ
             </Link>
-            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${shop.slug}#staff`}>
+            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#staff`}>
               Nhân sự
             </Link>
-            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${shop.slug}#reviews`}>
+            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#reviews`}>
               Đánh giá
             </Link>
           </div>
@@ -98,7 +98,7 @@ export default function CustomerSelectServicePage() {
                 onChange={(e) => setQuery(e.target.value)}
               />
             </div>
-            <Link className="bg-primary text-white px-6 py-2.5 rounded-full font-bold shadow-lg active:scale-95 transition-transform" to={`/${shop.slug}/book`}>
+            <Link className="bg-primary text-white px-6 py-2.5 rounded-full font-bold shadow-lg active:scale-95 transition-transform" to={`/${slug || shop.slug}/book`}>
               Đặt lịch
             </Link>
           </div>

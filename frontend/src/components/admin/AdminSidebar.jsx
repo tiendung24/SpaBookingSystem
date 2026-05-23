@@ -1,4 +1,5 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useShop } from '../../context/ShopContext'
 
 const menus = [
   { to: '/admin/dashboard', icon: 'space_dashboard', label: 'Tổng quan hệ thống' },
@@ -12,6 +13,8 @@ const menus = [
 
 export default function AdminSidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { logout } = useShop()
 
   return (
     <aside className="fixed left-0 top-0 h-full w-72 bg-white/90 backdrop-blur-xl border-r border-slate-200 p-4 flex flex-col z-40">
@@ -39,7 +42,7 @@ export default function AdminSidebar() {
       </nav>
 
       <div className="mt-auto border-t border-slate-200 pt-3 space-y-2">
-        <button type="button" className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-600 hover:bg-red-50">
+        <button type="button" className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-600 hover:bg-red-50" onClick={() => { logout(); navigate("/login") }}>
           <span className="material-symbols-outlined">logout</span>
           <span className="font-label-bold text-label-bold">Đăng xuất</span>
         </button>
