@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import AdminHeaderNav from '../components/admin/AdminHeaderNav'
 import { adminPartners } from '../data/adminMockData'
 
 function formatVnd(value) {
-  return `${Number(value || 0).toLocaleString('vi-VN')}d`
+  return `${Number(value || 0).toLocaleString('vi-VN')}đ`
 }
 
 function statusLabel(status) {
-  if (status === 'active') return '�ang ho?t d?ng'
-  if (status === 'pending') return 'Ch? duy?t'
-  return 'T?m ngung'
+  if (status === 'active') return 'Đang hoạt động'
+  if (status === 'pending') return 'Chờ duyệt'
+  return 'Tạm ngưng'
 }
 
 function statusClass(status) {
@@ -25,7 +25,7 @@ const emptyForm = {
   owner: '',
   phone: '',
   district: '',
-  plan: 'Co b?n',
+  plan: 'Cơ bản',
   status: 'pending'
 }
 
@@ -34,14 +34,10 @@ export default function AdminPartnersPage() {
   const [partners, setPartners] = useState(adminPartners)
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('all')
-  const [showCreateForm, setShowCreateForm] = useState(searchParams.get('create') === '1')
+  const shouldOpenCreateForm = searchParams.get('create') === '1'
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
 
-  useEffect(() => {
-    const shouldOpen = searchParams.get('create') === '1'
-    setShowCreateForm(shouldOpen)
-  }, [searchParams])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -65,12 +61,10 @@ export default function AdminPartnersPage() {
   }, [partners])
 
   const openCreateForm = () => {
-    setShowCreateForm(true)
     setSearchParams({ create: '1' })
   }
 
   const closeCreateForm = () => {
-    setShowCreateForm(false)
     setForm(emptyForm)
     setFormError('')
     setSearchParams({})
@@ -80,7 +74,7 @@ export default function AdminPartnersPage() {
     event.preventDefault()
 
     if (!form.shopName.trim() || !form.owner.trim() || !form.phone.trim() || !form.district.trim()) {
-      setFormError('Vui l�ng nh?p d?y d? th�ng tin d?i t�c.')
+      setFormError('Vui lòng nhập đầy đủ thông tin đối tác.')
       return
     }
 
@@ -108,45 +102,45 @@ export default function AdminPartnersPage() {
     <AdminLayout>
       <header className="flex flex-col md:flex-row justify-between gap-4">
         <div>
-          <h2 className="font-h2 text-h2 text-primary">Qu?n l� d?i t�c</h2>
-          <p className="text-main/70">Duy?t shop m?i, theo d�i ch?t lu?ng v� ki?m so�t tr?ng th�i h?p t�c.</p>
+          <h2 className="font-h2 text-h2 text-primary">Quản lý đối tác</h2>
+          <p className="text-main/70">Duyệt shop mới, theo dõi chất lượng và kiểm soát trạng thái hợp tác.</p>
           <AdminHeaderNav />
         </div>
         <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform" onClick={openCreateForm}>
-          + Th�m d?i t�c
+          + Thêm đối tác
         </button>
       </header>
 
-      {showCreateForm && (
+      {shouldOpenCreateForm && (
         <section className="glass-card bg-white rounded-3xl p-6 space-y-4 border border-primary/20">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h3 className="font-h3 text-h3 text-primary">T?o d?i t�c m?i</h3>
-              <p className="text-main/70 text-sm">Th�m nhanh m?t shop m?i v�o danh s�ch qu?n tr? d?i t�c.</p>
+              <h3 className="font-h3 text-h3 text-primary">Tạo đối tác mới</h3>
+              <p className="text-main/70 text-sm">Thêm nhanh một shop mới vào danh sách quản trị đối tác.</p>
             </div>
             <button type="button" className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50" onClick={closeCreateForm}>
-              ��ng
+              Đóng
             </button>
           </div>
 
           <form className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" onSubmit={handleCreatePartner}>
-            <input className="p-3 rounded-xl border border-slate-300" placeholder="T�n shop" value={form.shopName} onChange={(e) => setForm((prev) => ({ ...prev, shopName: e.target.value }))} />
-            <input className="p-3 rounded-xl border border-slate-300" placeholder="Ch? shop" value={form.owner} onChange={(e) => setForm((prev) => ({ ...prev, owner: e.target.value }))} />
-            <input className="p-3 rounded-xl border border-slate-300" placeholder="S? di?n tho?i" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
-            <input className="p-3 rounded-xl border border-slate-300" placeholder="Khu v?c / qu?n" value={form.district} onChange={(e) => setForm((prev) => ({ ...prev, district: e.target.value }))} />
+            <input className="p-3 rounded-xl border border-slate-300" placeholder="Tên shop" value={form.shopName} onChange={(e) => setForm((prev) => ({ ...prev, shopName: e.target.value }))} />
+            <input className="p-3 rounded-xl border border-slate-300" placeholder="Chủ shop" value={form.owner} onChange={(e) => setForm((prev) => ({ ...prev, owner: e.target.value }))} />
+            <input className="p-3 rounded-xl border border-slate-300" placeholder="Số điện thoại" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
+            <input className="p-3 rounded-xl border border-slate-300" placeholder="Khu vực / quận" value={form.district} onChange={(e) => setForm((prev) => ({ ...prev, district: e.target.value }))} />
             <select className="p-3 rounded-xl border border-slate-300" value={form.plan} onChange={(e) => setForm((prev) => ({ ...prev, plan: e.target.value }))}>
-              <option value="Co b?n">Co b?n</option>
-              <option value="N�ng cao">N�ng cao</option>
+              <option value="Cơ bản">Cơ bản</option>
+              <option value="Nâng cao">Nâng cao</option>
             </select>
             <select className="p-3 rounded-xl border border-slate-300" value={form.status} onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}>
-              <option value="pending">Ch? duy?t</option>
-              <option value="active">�ang ho?t d?ng</option>
-              <option value="inactive">T?m ngung</option>
+              <option value="pending">Chờ duyệt</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="inactive">Tạm ngưng</option>
             </select>
             <div className="md:col-span-2 xl:col-span-3 flex items-center justify-between gap-4">
               <p className="text-sm text-rose-600">{formError}</p>
               <button type="submit" className="px-5 py-3 rounded-xl bg-primary text-white font-bold hover:brightness-110">
-                Luu d?i t�c
+                Lưu đối tác
               </button>
             </div>
           </form>
@@ -155,19 +149,19 @@ export default function AdminPartnersPage() {
 
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-main/60 text-sm">T?ng d?i t�c</p>
+          <p className="text-main/60 text-sm">Tổng đối tác</p>
           <p className="text-3xl font-bold text-primary mt-1">{stats.total}</p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-main/60 text-sm">�ang ho?t d?ng</p>
+          <p className="text-main/60 text-sm">Đang hoạt động</p>
           <p className="text-3xl font-bold text-emerald-600 mt-1">{stats.active}</p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-main/60 text-sm">Ch? duy?t</p>
+          <p className="text-main/60 text-sm">Chờ duyệt</p>
           <p className="text-3xl font-bold text-amber-600 mt-1">{stats.pending}</p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-main/60 text-sm">Booking th�ng n�y</p>
+          <p className="text-main/60 text-sm">Booking tháng này</p>
           <p className="text-3xl font-bold text-primary mt-1">{stats.totalBookings}</p>
         </article>
       </section>
@@ -180,17 +174,17 @@ export default function AdminPartnersPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="T�m theo t�n shop, ch? shop, s? di?n tho?i..."
+              placeholder="Tìm theo tên shop, chủ shop, số điện thoại..."
               className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
             {[
-              { id: 'all', label: 'T?t c?' },
-              { id: 'active', label: '�ang ho?t d?ng' },
-              { id: 'pending', label: 'Ch? duy?t' },
-              { id: 'inactive', label: 'T?m ngung' }
+              { id: 'all', label: 'Tất cả' },
+              { id: 'active', label: 'Đang hoạt động' },
+              { id: 'pending', label: 'Chờ duyệt' },
+              { id: 'inactive', label: 'Tạm ngưng' }
             ].map((item) => (
               <button
                 key={item.id}
@@ -210,13 +204,13 @@ export default function AdminPartnersPage() {
             <thead>
               <tr className="bg-slate-50">
                 <th className="px-4 py-3 text-main/60 text-sm uppercase">Shop</th>
-                <th className="px-4 py-3 text-main/60 text-sm uppercase">Ch? shop</th>
-                <th className="px-4 py-3 text-main/60 text-sm uppercase">Khu v?c</th>
-                <th className="px-4 py-3 text-main/60 text-sm uppercase">G�i</th>
-                <th className="px-4 py-3 text-main/60 text-sm uppercase">Tr?ng th�i</th>
-                <th className="px-4 py-3 text-main/60 text-sm uppercase">Booking / th�ng</th>
-                <th className="px-4 py-3 text-main/60 text-sm uppercase">V�</th>
-                <th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi ti?t</th>
+                <th className="px-4 py-3 text-main/60 text-sm uppercase">Chủ shop</th>
+                <th className="px-4 py-3 text-main/60 text-sm uppercase">Khu vực</th>
+                <th className="px-4 py-3 text-main/60 text-sm uppercase">Gói</th>
+                <th className="px-4 py-3 text-main/60 text-sm uppercase">Trạng thái</th>
+                <th className="px-4 py-3 text-main/60 text-sm uppercase">Booking / tháng</th>
+                <th className="px-4 py-3 text-main/60 text-sm uppercase">Ví</th>
+                <th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi tiết</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -224,7 +218,7 @@ export default function AdminPartnersPage() {
                 <tr key={partner.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-4">
                     <p className="font-bold text-primary">{partner.shopName}</p>
-                    <p className="text-xs text-main/60">M�: {partner.id}</p>
+                    <p className="text-xs text-main/60">Mã: {partner.id}</p>
                   </td>
                   <td className="px-4 py-4">
                     <p className="font-semibold">{partner.owner}</p>
@@ -241,7 +235,7 @@ export default function AdminPartnersPage() {
                   <td className="px-4 py-4 text-sm font-semibold text-primary">{formatVnd(partner.wallet)}</td>
                   <td className="px-4 py-4 text-right">
                     <Link className="px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-bold" to={`/admin/partners/${partner.id}`}>
-                      Xem chi ti?t
+                      Xem chi tiết
                     </Link>
                   </td>
                 </tr>

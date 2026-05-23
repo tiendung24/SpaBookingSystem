@@ -1,11 +1,11 @@
-import { useMemo } from 'react'
+﻿import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import AdminHeaderNav from '../components/admin/AdminHeaderNav'
 import { adminIncidents, adminOnboardingRequests, adminPartners, adminTickets, adminTransactions } from '../data/adminMockData'
 
 function formatVnd(value) {
-  return `${Number(value || 0).toLocaleString('vi-VN')}d`
+  return `${Number(value || 0).toLocaleString('vi-VN')}đ`
 }
 
 function downloadCsv(filename, rows) {
@@ -92,49 +92,49 @@ export default function AdminDashboardPage() {
     <AdminLayout>
       <header className="flex flex-col md:flex-row justify-between gap-4">
         <div>
-          <h2 className="font-h2 text-h2 text-primary">T?ng quan h? th?ng</h2>
-          <p className="text-main/70">Theo d�i s?c kh?e h? th?ng, tang tru?ng d?i t�c v� v?n h�nh.</p>
+          <h2 className="font-h2 text-h2 text-primary">Tổng quan hệ thống</h2>
+          <p className="text-main/70">Theo dõi sức khỏe hệ thống, tăng trưởng đối tác và vận hành.</p>
           <AdminHeaderNav />
         </div>
         <div className="flex gap-2">
-          <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold shadow-lg hover:brightness-110" onClick={handleCreatePartner}>T?o d?i t�c</button>
-          <button className="px-5 py-3 rounded-xl bg-white border border-slate-200 text-main font-bold hover:bg-slate-50" onClick={handleExportReport}>Xu?t b�o c�o</button>
+          <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold shadow-lg hover:brightness-110" onClick={handleCreatePartner}>Tạo đối tác</button>
+          <button className="px-5 py-3 rounded-xl bg-white border border-slate-200 text-main font-bold hover:bg-slate-50" onClick={handleExportReport}>Xuất báo cáo</button>
         </div>
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-sm text-main/60">T?ng d?i t�c</p>
+          <p className="text-sm text-main/60">Tổng đối tác</p>
           <p className="text-3xl font-bold text-primary mt-1">{stats.totalPartners}</p>
-          <p className="text-sm text-main/60 mt-2">�ang ho?t d?ng: <b className="text-emerald-600">{stats.activePartners}</b></p>
+          <p className="text-sm text-main/60 mt-2">Đang hoạt động: <b className="text-emerald-600">{stats.activePartners}</b></p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-sm text-main/60">Ch? duy?t / onboarding</p>
+          <p className="text-sm text-main/60">Chờ duyệt / onboarding</p>
           <p className="text-3xl font-bold text-amber-600 mt-1">{stats.pendingPartners}</p>
-          <p className="text-sm text-main/60 mt-2">Request m?i: <b className="text-primary">{adminOnboardingRequests.length}</b></p>
+          <p className="text-sm text-main/60 mt-2">Request mới: <b className="text-primary">{adminOnboardingRequests.length}</b></p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-sm text-main/60">V� LumiX (t?ng)</p>
+          <p className="text-sm text-main/60">Ví LumiX (tổng)</p>
           <p className="text-3xl font-bold text-primary mt-1">{formatVnd(stats.totalWallet)}</p>
-          <p className="text-sm text-main/60 mt-2">Topup h�m nay (mock): <b className="text-primary">{formatVnd(stats.totalTopup)}</b></p>
+          <p className="text-sm text-main/60 mt-2">Topup hôm nay (mock): <b className="text-primary">{formatVnd(stats.totalTopup)}</b></p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-sm text-main/60">Ticket h? tr? m?</p>
+          <p className="text-sm text-main/60">Ticket hỗ trợ mở</p>
           <p className="text-3xl font-bold text-rose-600 mt-1">{stats.openTickets}</p>
-          <p className="text-sm text-main/60 mt-2">S? c? r?i ro: <b className="text-primary">{adminIncidents.length}</b></p>
+          <p className="text-sm text-main/60 mt-2">Sự cố rủi ro: <b className="text-primary">{adminIncidents.length}</b></p>
         </article>
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <article className="glass-card bg-white rounded-3xl p-6 space-y-3">
-          <h4 className="font-h3 text-h3 text-primary">C?nh b�o v?n h�nh</h4>
-          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm">C� <b>{stats.pendingPartners}</b> d?i t�c dang ch? duy?t / ho�n t?t onboarding.</div>
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-main/70 text-sm">G?i �: theo d�i t? l? h?y/no-show b?t thu?ng v� ngu?ng v� t?i thi?u.</div>
+          <h4 className="font-h3 text-h3 text-primary">Cảnh báo vận hành</h4>
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-sm">Có <b>{stats.pendingPartners}</b> đối tác đang chờ duyệt / hoàn tất onboarding.</div>
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-main/70 text-sm">Gợi ý: theo dõi tỉ lệ hủy/no-show bất thường và ngưỡng ví tối thiểu.</div>
         </article>
 
         <article className="glass-card bg-white rounded-3xl p-6 xl:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="font-h3 text-h3 text-primary">T�nh tr?ng h? th?ng</h4>
+            <h4 className="font-h3 text-h3 text-primary">Tình trạng hệ thống</h4>
             <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">All systems nominal</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -154,3 +154,4 @@ export default function AdminDashboardPage() {
     </AdminLayout>
   )
 }
+
