@@ -1,4 +1,5 @@
 
+import { Link } from 'react-router-dom'
 import LoginForm from '../components/shop/LoginForm';
 import LumiXLogo from '../assets/lumix-logo.png';
 
@@ -16,9 +17,9 @@ export default function LoginPage() {
 
       {/* Header */}
       <header className="relative z-10 w-full px-10 h-20 flex items-center justify-between border-b border-gray-200">
-        <div className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <img src={LumiXLogo} alt="LumiX Logo" className="h-16 w-auto" />
-        </div>
+        </Link>
         <div className="hidden md:block">
           <a className="text-main font-medium hover:text-primary transition-colors font-body-md text-body-md" href="#">
             Hỗ trợ
@@ -36,9 +37,9 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="relative z-10 w-full border-t border-gray-200 bg-gray-50 py-8">
         <div className="flex flex-col md:flex-row justify-between items-center px-10 max-w-7xl mx-auto gap-4">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <img src={LumiXLogo} alt="LumiX Logo" className="h-12 w-auto" />
-          </div>
+          </Link>
           <div className="flex flex-wrap justify-center gap-6">
             <a className="font-body-md text-body-md text-main hover:text-primary transition-colors" href="#">
               Điều khoản dịch vụ

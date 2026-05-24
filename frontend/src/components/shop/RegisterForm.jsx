@@ -17,7 +17,7 @@ function slugifyVietnamese(input) {
 
 export default function RegisterForm() {
   const navigate = useNavigate()
-  const { registerShop, loginShop } = useShop()
+  const { registerShop } = useShop()
   const [formData, setFormData] = useState({
     ownerName: '',
     phone: '',
@@ -56,17 +56,22 @@ export default function RegisterForm() {
     setSubmitting(true)
     setError('')
     try {
+      // Normalize email giống backend
+      const normalizedEmail = formData.email ? String(formData.email).toLowerCase().trim() : ''
+      
       await registerShop({
         fullName: formData.ownerName,
-        phone: formData.phone,
-        email: formData.email,
+        phone: formData.phone.trim(),
+        email: normalizedEmail || undefined,
         password: formData.password,
         shopName: formData.shopName,
-        slug: formData.slug
+        slug: formData.slug.trim()
       })
-      await loginShop({ identity: formData.phone || formData.email, password: formData.password })
-      navigate('/shop/dashboard')
+      
+      // Đăng ký thành công, chuyển đến trang đăng nhập
+      navigate('/login')
     } catch (err) {
+      console.error('Register error:', err)
       setError(err?.message || 'Đăng ký thất bại')
     } finally {
       setSubmitting(false)
