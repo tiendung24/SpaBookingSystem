@@ -87,7 +87,7 @@ export default function ShopBookingsPage() {
                     <td className="p-4">{booking.serviceName}</td>
                     <td className="p-4">{booking.staffName}</td>
                     <td className="p-4 text-sm">{booking.timeLabel}</td>
-                    <td className="p-4">{booking.deposit.toLocaleString('vi-VN')}đ</td>
+                    <td className="p-4">{Number(booking.deposit || 0).toLocaleString('vi-VN')}đ</td>
                     <td className={`p-4 font-bold ${statusClass(booking.statusLabel)}`}>{booking.statusLabel}</td>
                     <td className="p-4">
                       <Link className="px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/10 text-sm" to={`/shop/bookings/${booking.id}`}>

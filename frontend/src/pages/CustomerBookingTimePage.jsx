@@ -34,6 +34,13 @@ export default function CustomerBookingTimePage() {
   const navigate = useNavigate()
   const { slug } = useParams()
   const { shop, services, staff, bookings, bookingDraft, setBookingDraft, loadPublicShop } = useShop()
+  const hours = shop.hours || {}
+  const openTime = hours.open || '09:00'
+  const closeTime = hours.close || '20:00'
+  const slotDuration = Number(hours.slotDuration || 60)
+  const lunchBreakStart = hours.lunchBreakStart || '12:00'
+  const lunchBreakEnd = hours.lunchBreakEnd || '13:00'
+  const shopCapacity = Number(hours.capacity || 1)
 
   const service = services.find((s) => s.id === bookingDraft.serviceId)
   const selectedStaff = staff.find((s) => s.id === bookingDraft.staffId)
@@ -70,11 +77,11 @@ export default function CustomerBookingTimePage() {
   const slots = useMemo(() => {
     if (!service) return []
 
-    const start = toMinutes(shop.hours.open)
-    const end = toMinutes(shop.hours.close)
-    const duration = shop.hours.slotDuration
-    const lunchStart = toMinutes(shop.hours.lunchBreakStart || '12:00')
-    const lunchEnd = toMinutes(shop.hours.lunchBreakEnd || '13:00')
+    const start = toMinutes(openTime)
+    const end = toMinutes(closeTime)
+    const duration = slotDuration
+    const lunchStart = toMinutes(lunchBreakStart)
+    const lunchEnd = toMinutes(lunchBreakEnd)
 
     const list = []
     for (let t = start; t + duration <= end; t += duration) {
@@ -90,12 +97,12 @@ export default function CustomerBookingTimePage() {
         return b.staffId === bookingDraft.staffId
       }).length
 
-      const limit = bookingDraft.staffId === 'random' ? shop.hours.capacity : 1
+      const limit = bookingDraft.staffId === 'random' ? shopCapacity : 1
       const available = !inLunch && occupied < limit
       list.push({ start: slotStart, occupied, limit, available })
     }
     return list
-  }, [service, shop.hours, bookings, selectedDate, bookingDraft.staffId])
+  }, [service, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId])
 
   const canConfirm = Boolean(service && selectedTime && name.trim() && phone.trim() && emailOk)
 

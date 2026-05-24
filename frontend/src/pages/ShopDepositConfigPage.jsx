@@ -161,7 +161,7 @@ export default function ShopDepositConfigPage() {
                               : 'border-slate-300 hover:border-primary hover:text-primary'
                           }`}
                         >
-                          {value.toLocaleString('vi-VN')}đ
+                          {Number(value || 0).toLocaleString('vi-VN')}đ
                         </button>
                       ))}
                     </div>
@@ -311,17 +311,17 @@ export default function ShopDepositConfigPage() {
                     <p className="text-xs text-main/60">Dịch vụ</p>
                     <p className="font-bold text-primary">Gội đầu dưỡng sinh</p>
                   </div>
-                  <p className="font-bold">{servicePrice.toLocaleString('vi-VN')}đ</p>
+                  <p className="font-bold">{Number(servicePrice || 0).toLocaleString('vi-VN')}đ</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span>Tổng cộng:</span>
-                    <span>{servicePrice.toLocaleString('vi-VN')}đ</span>
+                    <span>{Number(servicePrice || 0).toLocaleString('vi-VN')}đ</span>
                   </div>
                   <div className="flex justify-between items-center py-2 px-3 bg-primary/5 rounded border border-primary/10">
                     <span className="font-bold text-primary">Tiền cọc cần trả:</span>
                     <span className="font-bold text-primary">
-                      {depositEnabled ? `${previewDeposit.toLocaleString('vi-VN')}đ` : '0đ'}
+                      {depositEnabled ? `${Number(previewDeposit || 0).toLocaleString('vi-VN')}đ` : '0đ'}
                     </span>
                   </div>
                 </div>

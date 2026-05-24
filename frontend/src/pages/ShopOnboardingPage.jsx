@@ -100,7 +100,7 @@ export default function ShopOnboardingPage() {
                 {services.map((s) => (
                   <div key={s.id} className="p-4 rounded-2xl border border-slate-200 bg-white">
                     <p className="font-bold text-primary">{s.name}</p>
-                    <p className="text-xs text-main/60">{s.durationMinutes} phút • {s.priceVnd.toLocaleString('vi-VN')}đ</p>
+                    <p className="text-xs text-main/60">{s.durationMinutes} phút • {Number(s.priceVnd || 0).toLocaleString('vi-VN')}đ</p>
                   </div>
                 ))}
               </div>

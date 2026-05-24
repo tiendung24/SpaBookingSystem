@@ -22,7 +22,7 @@ export default function ShopWalletPage() {
           : t.type === 'fee'
             ? { label: 'Phí dịch vụ', icon: 'receipt_long', cls: 'bg-blue-100 text-blue-800', amtCls: 'text-main', sign: '' }
             : { label: 'Khác', icon: 'receipt_long', cls: 'bg-slate-100 text-slate-700', amtCls: 'text-main', sign: '' };
-      const amountText = `${t.amount > 0 ? '+' : ''}${Math.abs(t.amount).toLocaleString('vi-VN')}`;
+      const amountText = `${t.amount > 0 ? '+' : ''}${Math.abs(Number(t.amount || 0)).toLocaleString('vi-VN')}`;
       return {
         time: t.time,
         type: typeMeta.label,
@@ -92,7 +92,7 @@ export default function ShopWalletPage() {
             <div className="flex justify-between items-start z-10">
               <div>
                 <p className="font-label-bold text-label-bold opacity-80 mb-1 uppercase tracking-widest">Số dư khả dụng</p>
-                <h3 className="font-h1 text-h1 font-bold">{shop.wallet.balance.toLocaleString('vi-VN')} VNĐ</h3>
+                <h3 className="font-h1 text-h1 font-bold">{Number(shop.wallet?.balance || 0).toLocaleString('vi-VN')} VNĐ</h3>
               </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full backdrop-blur-md">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
@@ -119,7 +119,7 @@ export default function ShopWalletPage() {
               <div>
                 <p className="font-h3 text-h3 text-red-700 mb-1">Cảnh báo duy trì số dư</p>
                 <p className="font-body-md text-body-md text-red-900/80">
-                  Bạn cần duy trì tối thiểu <strong>{shop.wallet.minBalance.toLocaleString('vi-VN')}đ</strong> để nhận lịch online. Nếu số dư thấp hơn, link sẽ tạm ngưng hoạt động.
+                  Bạn cần duy trì tối thiểu <strong>{Number(shop.wallet?.minBalance || 0).toLocaleString('vi-VN')}đ</strong> để nhận lịch online. Nếu số dư thấp hơn, link sẽ tạm ngưng hoạt động.
                 </p>
               </div>
             </div>
@@ -185,7 +185,7 @@ export default function ShopWalletPage() {
                 <span className="material-symbols-outlined text-amber-500 text-[32px]">pending_actions</span>
                 <div>
                   <p className="font-label-bold text-label-bold text-main/70 uppercase">Tiền cọc Escrow</p>
-                  <p className="font-h2 text-h2 text-amber-700">{shop.wallet.escrow.toLocaleString('vi-VN')} VNĐ</p>
+                  <p className="font-h2 text-h2 text-amber-700">{Number(shop.wallet?.escrow || 0).toLocaleString('vi-VN')} VNĐ</p>
                 </div>
               </div>
 

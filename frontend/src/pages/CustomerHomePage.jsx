@@ -131,7 +131,7 @@ export default function CustomerHomePage() {
             </div>
             <div>
               <h4 className="font-h3 text-h3 text-primary">Giờ mở cửa</h4>
-              <p className="text-main/70">{`${shop.hours.open} - ${shop.hours.close}`}</p>
+              <p className="text-main/70">{`${shop.hours?.open || '09:00'} - ${shop.hours?.close || '20:00'}`}</p>
             </div>
           </div>
         </section>

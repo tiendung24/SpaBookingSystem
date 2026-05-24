@@ -30,11 +30,12 @@ function clamp(value, min, max) {
 
 export default function ShopSlotsConfigPage() {
   const { shop, setShop, staff } = useShop();
-  const [openTime, setOpenTime] = useState(shop.hours.open);
-  const [closeTime, setCloseTime] = useState(shop.hours.close);
-  const [daysOff, setDaysOff] = useState(new Set(shop.hours.daysOff ?? [0]));
-  const [slotDuration, setSlotDuration] = useState(shop.hours.slotDuration);
-  const [capacity, setCapacity] = useState(shop.hours.capacity);
+  const hours = shop.hours || {};
+  const [openTime, setOpenTime] = useState(hours.open || '09:00');
+  const [closeTime, setCloseTime] = useState(hours.close || '20:00');
+  const [daysOff, setDaysOff] = useState(new Set(hours.daysOff ?? [0]));
+  const [slotDuration, setSlotDuration] = useState(Number(hours.slotDuration || 60));
+  const [capacity, setCapacity] = useState(Number(hours.capacity || 1));
   const [toastVisible, setToastVisible] = useState(false);
 
   const timelineSlots = useMemo(() => {
