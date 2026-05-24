@@ -81,6 +81,15 @@ export function ShopProvider({ children }) {
     address: '',
     phone: '',
     onboardingCompleted: false,
+    hours: {
+      open: '09:00',
+      close: '20:00',
+      slotDuration: 60,
+      capacity: 1,
+      lunchBreakStart: '12:00',
+      lunchBreakEnd: '13:00',
+      daysOff: [0]
+    },
     deposit: {
       enabled: false,
       type: 'fixed',
@@ -109,6 +118,10 @@ export function ShopProvider({ children }) {
         ...prev,
         ...(meShop.shop || {}),
         onboardingCompleted: normalizeOnboardingCompleted(meShop.shop?.onboardingCompleted ?? prev.onboardingCompleted),
+        hours: {
+          ...(prev.hours || {}),
+          ...(meShop.shop?.hours || {})
+        },
         deposit: {
           enabled: Boolean(meShop.shop?.depositConfig?.enabled ?? prev.deposit.enabled),
           type: meShop.shop?.depositConfig?.type || prev.deposit.type,
@@ -180,7 +193,11 @@ export function ShopProvider({ children }) {
     setStoredAuth(res.token, 'shop')
     setToken(res.token)
     setRole('shop')
-    await loadMeAndShop(res.token)
+    try {
+      await loadMeAndShop(res.token)
+    } catch (err) {
+      throw err
+    }
     return res
   }
 
@@ -198,6 +215,9 @@ export function ShopProvider({ children }) {
       const res = await loginShop({ identity, password })
       return { ...res, role: 'shop' }
     } catch (shopErr) {
+      if (shopErr?.status !== 401 && shopErr?.status !== 403) {
+        throw shopErr
+      }
       try {
         const res = await loginAdmin({ identity, password })
         return { ...res, role: 'admin' }
@@ -228,7 +248,11 @@ export function ShopProvider({ children }) {
       ...prev,
       ...(shopRes.shop || {}),
       slug,
-      onboardingCompleted: normalizeOnboardingCompleted(shopRes.shop?.onboardingCompleted ?? prev.onboardingCompleted)
+      onboardingCompleted: normalizeOnboardingCompleted(shopRes.shop?.onboardingCompleted ?? prev.onboardingCompleted),
+      hours: {
+        ...(prev.hours || {}),
+        ...(shopRes.shop?.hours || {})
+      }
     }))
     setServices((servicesRes.items || []).map(mapService))
     setStaff((staffsRes.items || []).map(mapStaff))
