@@ -1,13 +1,13 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+﻿import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 
 const menus = [
-  { to: '/shop/dashboard', icon: 'dashboard', label: 'Tá»•ng quan' },
-  { to: '/shop/bookings', icon: 'calendar_month', label: 'Lá»‹ch háº¹n' },
-  { to: '/shop/services', icon: 'spa', label: 'Dá»‹ch vá»¥' },
-  { to: '/shop/staff', icon: 'group', label: 'NhÃ¢n sá»±' },
-  { to: '/shop/wallet', icon: 'account_balance_wallet', label: 'VÃ­' },
-  { to: '/shop/statistics', icon: 'leaderboard', label: 'Thá»‘ng kÃª' }
+  { to: '/shop/dashboard', icon: 'dashboard', label: 'Tổng quan' },
+  { to: '/shop/bookings', icon: 'calendar_month', label: 'Lịch hẹn' },
+  { to: '/shop/services', icon: 'spa', label: 'Dịch vụ' },
+  { to: '/shop/staff', icon: 'group', label: 'Nhân sự' },
+  { to: '/shop/wallet', icon: 'account_balance_wallet', label: 'Ví' },
+  { to: '/shop/statistics', icon: 'leaderboard', label: 'Thống kê' }
 ]
 
 export default function ShopSidebar({ onNewBooking }) {
@@ -20,7 +20,7 @@ export default function ShopSidebar({ onNewBooking }) {
     <aside className="fixed left-0 top-0 h-full w-64 bg-white/90 backdrop-blur-xl border-r border-slate-200 p-4 flex flex-col z-40">
       <div className="mb-8 px-2">
         <h1 className="font-h3 text-h3 text-primary font-bold">LumiX Partner</h1>
-        <p className="text-sm text-main/70">Quáº£n lÃ½ cá»­a hÃ ng</p>
+        <p className="text-sm text-main/70">Quản lý cửa hàng</p>
       </div>
 
       <button
@@ -32,7 +32,7 @@ export default function ShopSidebar({ onNewBooking }) {
         className="w-full bg-primary text-white py-3 px-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:scale-105 transition-transform active:scale-95"
       >
         <span className="material-symbols-outlined">add_circle</span>
-        Táº¡o lá»‹ch háº¹n má»›i
+        Tạo lịch hẹn mới
       </button>
 
       <nav className="flex-grow space-y-2 overflow-y-auto pr-1 pt-4">
@@ -61,11 +61,11 @@ export default function ShopSidebar({ onNewBooking }) {
           }`}
         >
           <span className="material-symbols-outlined">settings</span>
-          <span className="font-label-bold text-label-bold">Cáº¥u hÃ¬nh há»‡ thá»‘ng</span>
+          <span className="font-label-bold text-label-bold">Cấu hình hệ thống</span>
         </Link>
-        <button type="button" className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-600 hover:bg-red-50" onClick={() => { logout(); navigate("/login") }}>
+        <button type="button" className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-red-600 hover:bg-red-50" onClick={() => { logout(); navigate('/login') }}>
           <span className="material-symbols-outlined">logout</span>
-          <span className="font-label-bold text-label-bold">ÄÄƒng xuáº¥t</span>
+          <span className="font-label-bold text-label-bold">Đăng xuất</span>
         </button>
       </div>
     </aside>

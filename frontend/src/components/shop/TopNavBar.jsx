@@ -1,6 +1,4 @@
-
-
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import LumiXLogo from '../../assets/lumix-logo.png';
 
 export default function TopNavBar() {
@@ -14,27 +12,25 @@ export default function TopNavBar() {
           </Link>
           <div className="hidden md:flex gap-6">
             <a href="#features" className="text-primary font-bold border-b-2 border-primary pb-1 font-label-bold text-label-bold">
-              TÃ­nh nÄƒng
+              Tính năng
             </a>
             <a href="#pricing" className="text-main hover:text-primary transition-colors font-label-bold text-label-bold">
-              Báº£ng giÃ¡
+              Bảng giá
             </a>
             <a href="#faq" className="text-main hover:text-primary transition-colors font-label-bold text-label-bold">
-              Há»— trá»£
+              Hỗ trợ
             </a>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <Link to="/login" className="hidden md:block text-main hover:bg-gray-100 transition-all duration-300 font-label-bold text-label-bold px-4 py-2 rounded-xl">
-            ÄÄƒng nháº­p
+            Đăng nhập
           </Link>
           <Link to="/register" className="bg-[#5ea4b8] text-white font-label-bold text-label-bold px-6 py-2.5 rounded-xl cta-3d hover:brightness-110">
-            ÄÄƒng kÃ½ ngay
+            Đăng ký ngay
           </Link>
         </div>
       </nav>
     </header>
   );
 }
-
-

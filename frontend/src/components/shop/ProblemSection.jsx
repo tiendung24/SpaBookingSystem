@@ -3,23 +3,23 @@
 const problems = [
   {
     icon: 'event_busy',
-    title: 'KhÃ³ kiá»ƒm soÃ¡t lá»‹ch',
-    description: 'Lá»‹ch háº¹n chá»“ng chÃ©o, khÃ¡ch pháº£i chá» lÃ¢u gÃ¢y áº£nh hÆ°á»Ÿng Ä‘áº¿n uy tÃ­n cá»§a shop.'
+    title: 'Khó kiểm soát lịch',
+    description: 'Lịch hẹn chồng chéo, khách phải chờ lâu gây ảnh hưởng đến uy tín của shop.'
   },
   {
     icon: 'notifications_off',
-    title: 'QuÃªn lá»‹ch khÃ¡ch',
-    description: 'KhÃ´ng cÃ³ há»‡ thá»‘ng nháº¯c lá»‹ch tá»± Ä‘á»™ng, dáº«n Ä‘áº¿n viá»‡c bá» lá»¡ nhá»¯ng khÃ¡ch hÃ ng quan trá»ng.'
+    title: 'Quên lịch khách',
+    description: 'Không có hệ thống nhắc lịch tự động, dẫn đến việc bỏ lỡ những khách hàng quan trọng.'
   },
   {
     icon: 'group_remove',
-    title: 'CRM rá»i ráº¡c',
-    description: 'ThÃ´ng tin khÃ¡ch hÃ ng lÆ°u trÃªn sá»• sÃ¡ch dá»… tháº¥t láº¡c, khÃ³ tra cá»©u lá»‹ch sá»­ dá»‹ch vá»¥.'
+    title: 'CRM rời rạc',
+    description: 'Thông tin khách hàng lưu trên sổ sách dễ thất lạc, khó tra cứu lịch sử dịch vụ.'
   },
   {
     icon: 'money_off',
-    title: 'Tháº¥t thoÃ¡t doanh thu',
-    description: 'Sai sÃ³t trong quÃ¡ trÃ¬nh tÃ­nh tiá»n vÃ  khÃ´ng theo dÃµi Ä‘Æ°á»£c bÃ¡o cÃ¡o lÃ£i lá»— chÃ­nh xÃ¡c.'
+    title: 'Thất thoát doanh thu',
+    description: 'Sai sót trong quá trình tính tiền và không theo dõi được báo cáo lãi lỗ chính xác.'
   }
 ];
 
@@ -27,7 +27,7 @@ export default function ProblemSection() {
   return (
     <section className="py-24 px-4 md:px-10">
       <div className="max-w-7xl mx-auto text-center mb-20">
-        <h2 className="font-h2 text-[32px] text-main mb-4">Shop cá»§a báº¡n cÃ³ Ä‘ang gáº·p nhá»¯ng váº¥n Ä‘á» nÃ y?</h2>
+        <h2 className="font-h2 text-[32px] text-main mb-4">Shop của bạn có đang gặp những vấn đề này?</h2>
         <div className="w-24 h-1.5 bg-gradient-to-r from-primary to-transparent mx-auto rounded-full"></div>
       </div>
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -44,5 +44,3 @@ export default function ProblemSection() {
     </section>
   );
 }
-
-
