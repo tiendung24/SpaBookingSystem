@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
@@ -75,7 +75,7 @@ function ConfettiLayer({ active }) {
 
 export default function CustomerPaymentPage() {
   const { slug } = useParams()
-  const { shop, services, staff, bookingDraft, createBookingFromDraft, resetBookingDraft, loadPublicShop } = useShop()
+  const { shop, services, staff, bookingDraft, createBookingFromDraft, resetBookingDraft, loadPublicShop, checkBookingStatus } = useShop()
 
   const service = services.find((item) => item.id === bookingDraft.serviceId)
   const selectedStaff = bookingDraft.staffId === 'random' ? null : staff.find((item) => item.id === bookingDraft.staffId)
@@ -84,8 +84,9 @@ export default function CustomerPaymentPage() {
   const [success, setSuccess] = useState(false)
   const [createdBookingId, setCreatedBookingId] = useState(null)
   const [confetti, setConfetti] = useState(false)
-
-  const bookingCode = useMemo(() => createdBookingId || '9982', [createdBookingId])
+  
+  const [payosData, setPayosData] = useState(null)
+  const [creating, setCreating] = useState(true)
 
   useEffect(() => {
     if (!slug) return
@@ -103,6 +104,43 @@ export default function CustomerPaymentPage() {
   }, [service, shop.deposit])
 
   useEffect(() => {
+    if (!service || !bookingDraft.customerPhone) {
+      setCreating(false)
+      return
+    }
+
+    let isMounted = true
+    const initBooking = async () => {
+      try {
+        const res = await createBookingFromDraft(slug)
+        if (!isMounted) return
+        
+        if (res?.booking) {
+          setCreatedBookingId(res.booking.bookingCode || res.booking._id)
+        }
+        if (res?.payment) {
+          setPayosData(res.payment)
+        }
+        setCreating(false)
+      } catch (err) {
+        console.error(err)
+        if (isMounted) {
+          alert('Không thể giữ chỗ: ' + err.message)
+          setCreating(false)
+        }
+      }
+    }
+    
+    // Only call if we haven't created it yet
+    if (!createdBookingId && creating) {
+      initBooking()
+    }
+
+    return () => { isMounted = false }
+  }, [service, bookingDraft.customerPhone, slug, createdBookingId, creating, createBookingFromDraft])
+
+  // Timer countdown
+  useEffect(() => {
     if (success) return
     const timer = setInterval(() => {
       setTimeLeft((prev) => (prev <= 0 ? 0 : prev - 1))
@@ -110,15 +148,30 @@ export default function CustomerPaymentPage() {
     return () => clearInterval(timer)
   }, [success])
 
-  const handleTransferred = async () => {
-    const created = await createBookingFromDraft(slug)
-    const booking = created?.booking
-    if (!booking) {
-      alert('Thiếu thông tin đặt lịch. Vui lòng quay lại và nhập đủ thông tin.')
-      return
-    }
+  // Polling to check if payment succeeded via webhook
+  useEffect(() => {
+    if (!createdBookingId || success) return
 
-    setCreatedBookingId(booking.bookingCode || booking._id)
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await checkBookingStatus(createdBookingId)
+        if (res && res.status === 'confirmed') {
+          clearInterval(pollInterval)
+          setSuccess(true)
+          setConfetti(true)
+          setTimeout(() => setConfetti(false), 5200)
+          resetBookingDraft()
+        }
+      } catch (error) {
+        console.error('Lỗi khi kiểm tra thanh toán:', error)
+      }
+    }, 3000) // 3 seconds poll
+
+    return () => clearInterval(pollInterval)
+  }, [createdBookingId, success, checkBookingStatus, resetBookingDraft])
+
+  const handleTransferred = () => {
+    // If they click the button before polling catches it, just simulate success locally
     setSuccess(true)
     setConfetti(true)
     setTimeout(() => setConfetti(false), 5200)
@@ -181,41 +234,59 @@ export default function CustomerPaymentPage() {
               <h1 className="font-h2 text-h2 text-primary mb-3">Thanh toán cọc</h1>
               <p className="text-main/70 mb-6">Vui lòng chuyển khoản trước khi hết thời gian giữ slot.</p>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                  <img src={qrPlaceholder} alt="QR thanh toán" className="w-full rounded-xl" />
+              {creating ? (
+                <div className="flex flex-col items-center justify-center py-12 text-primary">
+                  <span className="material-symbols-outlined text-4xl animate-spin mb-4">autorenew</span>
+                  <p className="font-bold">Đang khởi tạo phiên thanh toán...</p>
                 </div>
-                <div className="space-y-4">
-                  <div className="text-sm rounded-xl bg-slate-100 px-4 py-3">
-                    Còn lại: <b className="text-primary">{formatCountdown(timeLeft)}</b>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center">
+                    {payosData?.qrCodeUrl ? (
+                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payosData.qrCodeUrl)}`} alt="QR thanh toán PayOS" className="w-full rounded-xl" />
+                    ) : (
+                      <div className="w-full h-48 bg-slate-100 flex items-center justify-center rounded-xl text-slate-400">
+                        {depositAmount > 0 ? 'Lỗi tạo mã QR' : 'Không cần đặt cọc'}
+                      </div>
+                    )}
+                    {payosData?.checkoutUrl && (
+                      <a href={payosData.checkoutUrl} target="_blank" rel="noreferrer" className="inline-block mt-4 text-sm font-bold text-blue-600 hover:underline">
+                        Mở trang PayOS
+                      </a>
+                    )}
                   </div>
+                  <div className="space-y-4">
+                    <div className="text-sm rounded-xl bg-slate-100 px-4 py-3">
+                      Còn lại: <b className="text-primary">{formatCountdown(timeLeft)}</b>
+                    </div>
 
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-main/60">Số tiền:</span>
-                      <span className="font-bold text-primary">{formatVnd(depositAmount)}</span>
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-main/60">Số tiền:</span>
+                        <span className="font-bold text-primary">{formatVnd(depositAmount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-main/60">Nội dung:</span>
+                        <span className="font-bold text-main">{buildPayContent(createdBookingId || '????')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-main/60">Ngân hàng:</span>
+                        <span className="font-bold text-main">VietinBank (PayOS)</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-main/60">Nội dung:</span>
-                      <span className="font-bold text-main">{buildPayContent(bookingCode)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-main/60">Ngân hàng:</span>
-                      <span className="font-bold text-main">VietinBank (PayOS)</span>
-                    </div>
+
+                    <button
+                      onClick={handleTransferred}
+                      disabled={timeLeft <= 0}
+                      className={`w-full py-4 rounded-xl font-bold transition-all ${
+                        timeLeft > 0 ? 'bg-primary text-white hover:brightness-110 active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Tôi đã chuyển khoản
+                    </button>
                   </div>
-
-                  <button
-                    onClick={handleTransferred}
-                    disabled={timeLeft <= 0}
-                    className={`w-full py-4 rounded-xl font-bold transition-all ${
-                      timeLeft > 0 ? 'bg-primary text-white hover:brightness-110 active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    }`}
-                  >
-                    Tôi đã chuyển khoản
-                  </button>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 

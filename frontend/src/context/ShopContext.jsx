@@ -433,6 +433,11 @@ export function ShopProvider({ children }) {
     return res.url
   }
 
+  const checkBookingStatus = async (bookingCode) => {
+    const res = await apiRequest(`/api/public/bookings/${bookingCode}`, { method: 'GET' })
+    return res
+  }
+
   const value = useMemo(
     () => ({
       token,
@@ -453,6 +458,7 @@ export function ShopProvider({ children }) {
       bookingDraft,
       setBookingDraft,
       resetBookingDraft,
+      createBookingFromDraft,
       addService,
       updateService,
       deleteService,
@@ -463,6 +469,7 @@ export function ShopProvider({ children }) {
       topupWallet,
       updateDepositConfig,
       uploadImage,
+      checkBookingStatus,
       loginShop,
       loginAdmin,
       loginUnified,

@@ -281,12 +281,7 @@ export default function CustomerSelectServicePage() {
               <p className="text-xs text-main/60 text-center">Bước tiếp theo: Chọn thời gian phù hợp.</p>
             </div>
 
-            <div className="glass-card bg-amber-50 p-4 rounded-2xl border border-amber-200 flex items-center gap-3">
-              <span className="material-symbols-outlined text-amber-700">auto_awesome</span>
-              <p className="text-xs text-amber-900">
-                Nhập mã <b>LUMIX10</b> để được giảm ngay 10% dịch vụ đầu tiên!
-              </p>
-            </div>
+
           </aside>
         </div>
       </main>
