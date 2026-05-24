@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
@@ -17,7 +17,7 @@ function formatCountdown(seconds) {
 }
 
 function buildPayContent(bookingCode) {
-  return LUMIX_
+  return `LUMIX_${bookingCode || ''}`
 }
 
 function normalizePhone(input) {
@@ -29,9 +29,6 @@ function normalizePhone(input) {
 function isValidPhone(input) {
   return /^(?:\+84|0)\d{9,10}$/.test(input)
 }
-
-const qrPlaceholder =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCZ6SPtBXru0iQm3v5zKYWLzOETMiIItS8mvd8U3kXOLMbXUbN23J_pUv2U0WyV9S_dXm6zljE2ZXJPo1yrEcOEWUmpXESCH_c2pD3Yw3SE5anhxI9ixa5gC5Pk9giG1MG6onA8yzOxIuz7cj4oS_NmgAWBCHF5p_3yLwLrTyhj8Yj3VcGBwPZBRPA5J_On4l8iW9e14z-k19Cl3JWGH7cB5FX2XS7igC-BNIbbAYL1kkYPA6NkSya2-KCqo5UCz287A579koBKDoLq'
 
 function ConfettiLayer({ active }) {
   const pseudo = (seed) => {
@@ -85,7 +82,16 @@ function ConfettiLayer({ active }) {
 
 export default function CustomerPaymentPage() {
   const { slug } = useParams()
-  const { shop, services, staff, bookingDraft, createBookingFromDraft, resetBookingDraft, loadPublicShop, checkBookingStatus } = useShop()
+  const {
+    shop,
+    services,
+    staff,
+    bookingDraft,
+    createBookingFromDraft,
+    resetBookingDraft,
+    loadPublicShop,
+    checkBookingStatus
+  } = useShop()
 
   const service = services.find((item) => item.id === bookingDraft.serviceId)
   const selectedStaff = bookingDraft.staffId === 'random' ? null : staff.find((item) => item.id === bookingDraft.staffId)
@@ -94,7 +100,7 @@ export default function CustomerPaymentPage() {
   const [success, setSuccess] = useState(false)
   const [createdBookingId, setCreatedBookingId] = useState(null)
   const [confetti, setConfetti] = useState(false)
-  
+
   const [payosData, setPayosData] = useState(null)
   const [creating, setCreating] = useState(true)
 
@@ -117,42 +123,38 @@ export default function CustomerPaymentPage() {
     const phoneNormalized = normalizePhone(bookingDraft.customerPhone)
     const phoneOk = isValidPhone(phoneNormalized)
 
-    if (!service || !phoneOk) {
-      setCreating(false)
-      return
-    }
+    if (!service || !phoneOk || createdBookingId) return
 
-    let isMounted = true
-    const initBooking = async () => {
+    let mounted = true
+
+    const run = async () => {
+      if (mounted) setCreating(true)
       try {
         const res = await createBookingFromDraft(slug)
-        if (!isMounted) return
-        
+        if (!mounted) return
+
         if (res?.booking) {
           setCreatedBookingId(res.booking.bookingCode || res.booking._id)
         }
         if (res?.payment) {
           setPayosData(res.payment)
         }
-        setCreating(false)
       } catch (err) {
         console.error(err)
-        if (isMounted) {
-          alert('Không thể giữ chỗ: ' + err.message)
-          setCreating(false)
+        if (mounted) {
+          window.alert(`Không thể giữ chỗ: ${err?.message || 'Lỗi không xác định'}`)
         }
+      } finally {
+        if (mounted) setCreating(false)
       }
     }
-    
-    // Only call if we haven't created it yet
-    if (!createdBookingId && creating) {
-      initBooking()
+
+    run()
+    return () => {
+      mounted = false
     }
+  }, [service, bookingDraft.customerPhone, slug, createdBookingId, createBookingFromDraft])
 
-    return () => { isMounted = false }
-  }, [service, bookingDraft.customerPhone, slug, createdBookingId, creating, createBookingFromDraft])
-
-  // Timer countdown
   useEffect(() => {
     if (success) return
     const timer = setInterval(() => {
@@ -161,58 +163,83 @@ export default function CustomerPaymentPage() {
     return () => clearInterval(timer)
   }, [success])
 
-  // Polling to check if payment succeeded via webhook
   useEffect(() => {
     if (!createdBookingId || success) return
 
-    const pollInterval = setInterval(async () => {
+    let mounted = true
+    const timer = setInterval(async () => {
       try {
         const res = await checkBookingStatus(createdBookingId)
-        if (res && res.status === 'confirmed') {
-          clearInterval(pollInterval)
+        const booking = res?.booking || res?.data?.booking || null
+        const paid = Boolean(booking?.isPaid || booking?.paid || booking?.paymentStatus === 'paid')
+
+        if (paid && mounted) {
           setSuccess(true)
           setConfetti(true)
-          setTimeout(() => setConfetti(false), 5200)
+          setTimeout(() => setConfetti(false), 2500)
           resetBookingDraft()
         }
-      } catch (error) {
-        console.error('Lỗi khi kiểm tra thanh toán:', error)
+      } catch {
+        // ignore polling errors
       }
-    }, 3000) // 3 seconds poll
+    }, 3000)
 
-    return () => clearInterval(pollInterval)
+    return () => {
+      mounted = false
+      clearInterval(timer)
+    }
   }, [createdBookingId, success, checkBookingStatus, resetBookingDraft])
 
-  const handleTransferred = () => {
-    // If they click the button before polling catches it, just simulate success locally
-    setSuccess(true)
-    setConfetti(true)
-    setTimeout(() => setConfetti(false), 5200)
-    resetBookingDraft()
+  const handleTransferred = async () => {
+    if (!createdBookingId) return
+
+    try {
+      const res = await checkBookingStatus(createdBookingId)
+      const booking = res?.booking || res?.data?.booking || null
+      const paid = Boolean(booking?.isPaid || booking?.paid || booking?.paymentStatus === 'paid')
+      if (paid) {
+        setSuccess(true)
+        setConfetti(true)
+        setTimeout(() => setConfetti(false), 2500)
+        resetBookingDraft()
+        return
+      }
+      window.alert('Hệ thống chưa ghi nhận thanh toán. Vui lòng đợi 1-2 phút và thử lại.')
+    } catch (err) {
+      window.alert(err?.message || 'Không kiểm tra được trạng thái thanh toán.')
+    }
   }
 
   if (!service) {
     return (
-      <div className="min-h-screen bg-slate-50 p-10 text-main">
-        <p>Bạn chưa chọn dịch vụ.</p>
-        <Link className="text-primary underline" to={`/${shop.slug || slug}/book`}>
-          Quay lại bước 1
-        </Link>
+      <div className="min-h-screen flex items-center justify-center text-main">
+        <div className="glass-card bg-white/70 rounded-3xl p-8 border border-primary/10 text-center">
+          <p className="font-bold mb-2">Thiếu thông tin dịch vụ</p>
+          <Link to={`/${slug || ''}/book`} className="text-primary underline">
+            Quay lại đặt lịch
+          </Link>
+        </div>
       </div>
     )
   }
 
-  const email = (bookingDraft.customerEmail || '').trim()
-
   return (
-    <div className="bg-slate-50 min-h-screen text-main">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 text-main">
       <ConfettiLayer active={confetti} />
 
-      <nav className="bg-white/80 backdrop-blur-xl border-b border-primary/20 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-10 flex justify-between items-center h-20">
-          <span className="font-h3 text-h3 tracking-tight text-primary">{shop.name}</span>
-        </div>
-      </nav>
+      <header className="px-4 md:px-10 py-6 flex items-center justify-between">
+        <Link to={`/${shop.slug || slug || ''}`} className="font-bold text-primary text-lg">
+          {shop.name || 'LumiX'}
+        </Link>
+        <nav className="flex items-center gap-3">
+          <Link className="px-4 py-2 rounded-xl bg-white/80 hover:bg-white border border-primary/10" to={`/${shop.slug || slug || ''}`}>
+            Trang chủ
+          </Link>
+          <Link className="px-4 py-2 rounded-xl bg-primary text-white hover:brightness-110" to={`/${shop.slug || slug || ''}/book`}>
+            Đặt lịch
+          </Link>
+        </nav>
+      </header>
 
       <main className="max-w-[1440px] mx-auto px-6 md:px-10 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
@@ -234,11 +261,11 @@ export default function CustomerPaymentPage() {
                   <span>Xem lịch hẹn của tôi</span>
                 </Link>
               </div>
-              {createdBookingId && (
+              {createdBookingId ? (
                 <div className="mt-6 text-sm text-main/70">
                   Mã đặt lịch: <b className="text-primary">#{createdBookingId}</b>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -256,18 +283,28 @@ export default function CustomerPaymentPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center">
                     {payosData?.qrCodeUrl ? (
-                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payosData.qrCodeUrl)}`} alt="QR thanh toán PayOS" className="w-full rounded-xl" />
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payosData.qrCodeUrl)}`}
+                        alt="QR thanh toán PayOS"
+                        className="w-full rounded-xl"
+                      />
                     ) : (
-                      <div className="w-full h-48 bg-slate-100 flex items-center justify-center rounded-xl text-slate-400">
-                        {depositAmount > 0 ? 'Lỗi tạo mã QR' : 'Không cần đặt cọc'}
+                      <div className="w-full h-48 bg-slate-100 flex items-center justify-center rounded-xl text-slate-500">
+                        {depositAmount > 0 ? 'Không lấy được QR. Vui lòng mở link PayOS.' : 'Không cần đặt cọc'}
                       </div>
                     )}
-                    {payosData?.checkoutUrl && (
-                      <a href={payosData.checkoutUrl} target="_blank" rel="noreferrer" className="inline-block mt-4 text-sm font-bold text-blue-600 hover:underline">
+                    {payosData?.checkoutUrl ? (
+                      <a
+                        href={payosData.checkoutUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-block mt-4 text-sm font-bold text-blue-600 hover:underline"
+                      >
                         Mở trang PayOS
                       </a>
-                    )}
+                    ) : null}
                   </div>
+
                   <div className="space-y-4">
                     <div className="text-sm rounded-xl bg-slate-100 px-4 py-3">
                       Còn lại: <b className="text-primary">{formatCountdown(timeLeft)}</b>
@@ -280,7 +317,7 @@ export default function CustomerPaymentPage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-main/60">Nội dung:</span>
-                        <span className="font-bold text-main">{buildPayContent(createdBookingId || '????')}</span>
+                        <span className="font-bold text-main">{buildPayContent(createdBookingId || '')}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-main/60">Ngân hàng:</span>
@@ -289,10 +326,13 @@ export default function CustomerPaymentPage() {
                     </div>
 
                     <button
+                      type="button"
                       onClick={handleTransferred}
                       disabled={timeLeft <= 0}
                       className={`w-full py-4 rounded-xl font-bold transition-all ${
-                        timeLeft > 0 ? 'bg-primary text-white hover:brightness-110 active:scale-[0.98]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        timeLeft > 0
+                          ? 'bg-primary text-white hover:brightness-110 active:scale-[0.98]'
+                          : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                       }`}
                     >
                       Tôi đã chuyển khoản
@@ -322,6 +362,7 @@ export default function CustomerPaymentPage() {
                   <span className="text-main/60">Mã đặt lịch:</span>
                   <span className="font-bold text-primary">{createdBookingId ? `#${createdBookingId}` : '#LMX-????'}</span>
                 </div>
+
                 <div className="space-y-2">
                   <span className="text-xs text-main/60 uppercase tracking-wider">Dịch vụ</span>
                   <div className="flex justify-between items-center">
@@ -329,6 +370,7 @@ export default function CustomerPaymentPage() {
                     <span className="font-bold">{formatVnd(service.priceVnd)}</span>
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <span className="text-xs text-main/60 uppercase tracking-wider">Thời gian</span>
                   <div className="flex items-center gap-2">
@@ -340,20 +382,12 @@ export default function CustomerPaymentPage() {
                     </span>
                   </div>
                 </div>
+
                 <div className="space-y-2">
                   <span className="text-xs text-main/60 uppercase tracking-wider">Nhân viên</span>
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-[20px]">person</span>
                     <span className="font-bold">{bookingDraft.staffId === 'random' ? 'Ngẫu nhiên' : selectedStaff?.name ?? '—'}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-xs text-main/60 uppercase tracking-wider">Email nhận thông báo</span>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[20px]">mail</span>
-                    <span className="font-bold text-sm">
-                      {email || 'Chưa nhập email (vẫn đặt lịch bình thường)'}
-                    </span>
                   </div>
                 </div>
               </div>
@@ -375,3 +409,4 @@ export default function CustomerPaymentPage() {
     </div>
   )
 }
+

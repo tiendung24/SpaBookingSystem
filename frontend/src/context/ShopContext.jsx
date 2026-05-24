@@ -1,5 +1,5 @@
-/* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+﻿/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { apiRequest } from '../lib/api'
 import { AUTH_EXPIRED_EVENT, clearStoredAuth, getStoredRole, getStoredToken, setStoredAuth } from '../lib/auth'
 
@@ -152,7 +152,7 @@ export function ShopProvider({ children }) {
       }))
       setError('')
     } catch (err) {
-      setError(err.message || 'Không tải được dữ liệu')
+      setError(err.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c dá»¯ liá»‡u')
     } finally {
       setLoading(false)
     }
@@ -180,7 +180,7 @@ export function ShopProvider({ children }) {
         currentPath.startsWith('/forgot-password') ||
         /^\/[^/]+(\/book(\/time|\/pay)?|\/appointments)?$/.test(currentPath)
       if (!isPublicPath) {
-        sessionStorage.setItem('lumix_flash_message', 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.')
+        sessionStorage.setItem('lumix_flash_message', 'PhiÃªn Ä‘Äƒng nháº­p Ä‘Ã£ háº¿t háº¡n, vui lÃ²ng Ä‘Äƒng nháº­p láº¡i.')
         window.location.href = '/login'
       }
     }
@@ -194,11 +194,7 @@ export function ShopProvider({ children }) {
     setStoredAuth(res.token, 'shop')
     setToken(res.token)
     setRole('shop')
-    try {
-      await loadMeAndShop(res.token)
-    } catch (err) {
-      throw err
-    }
+    await loadMeAndShop(res.token)
     return res
   }
 
@@ -437,50 +433,45 @@ export function ShopProvider({ children }) {
     const res = await apiRequest(`/api/public/bookings/${bookingCode}`, { method: 'GET' })
     return res
   }
-
-  const value = useMemo(
-    () => ({
-      token,
-      role,
-      isAuthenticated: Boolean(token),
-      user,
-      loading,
-      error,
-      shop,
-      setShop,
-      services,
-      setServices,
-      staff,
-      setStaff,
-      bookings,
-      setBookings,
-      walletTransactions,
-      bookingDraft,
-      setBookingDraft,
-      resetBookingDraft,
-      createBookingFromDraft,
-      addService,
-      updateService,
-      deleteService,
-      addStaff,
-      updateStaff,
-      deleteStaff,
-      updateBooking,
-      topupWallet,
-      updateDepositConfig,
-      uploadImage,
-      checkBookingStatus,
-      loginShop,
-      loginAdmin,
-      loginUnified,
-      registerShop,
-      logout,
-      loadPublicShop,
-      loadMeAndShop,
-      createBookingFromDraft
-    }),
-    [token, role, user, loading, error, shop, services, staff, bookings, walletTransactions, bookingDraft]
-  )
+  const value = {
+    token,
+    role,
+    isAuthenticated: Boolean(token),
+    user,
+    loading,
+    error,
+    shop,
+    setShop,
+    services,
+    setServices,
+    staff,
+    setStaff,
+    bookings,
+    setBookings,
+    walletTransactions,
+    bookingDraft,
+    setBookingDraft,
+    resetBookingDraft,
+    createBookingFromDraft,
+    addService,
+    updateService,
+    deleteService,
+    addStaff,
+    updateStaff,
+    deleteStaff,
+    updateBooking,
+    topupWallet,
+    updateDepositConfig,
+    uploadImage,
+    checkBookingStatus,
+    loginShop,
+    loginAdmin,
+    loginUnified,
+    registerShop,
+    logout,
+    loadPublicShop,
+    loadMeAndShop
+  }
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>
 }
@@ -490,3 +481,5 @@ export function useShop() {
   if (!ctx) throw new Error('useShop must be used within ShopProvider')
   return ctx
 }
+
+

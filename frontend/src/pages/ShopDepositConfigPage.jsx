@@ -1,43 +1,64 @@
-import { useMemo, useState } from 'react';
-import ShopSidebar from '../components/shop/ShopSidebar';
-import SystemConfigTabs from '../components/shop/SystemConfigTabs';
-import { useShop } from '../context/ShopContext';
+﻿import { useMemo, useState } from 'react'
+import ShopSidebar from '../components/shop/ShopSidebar'
+import SystemConfigTabs from '../components/shop/SystemConfigTabs'
+import { useShop } from '../context/ShopContext'
 
-const quickDepositValues = [50000, 100000, 200000];
+const quickDepositValues = [50000, 100000, 200000]
 
 export default function ShopDepositConfigPage() {
-  const { shop, updateDepositConfig } = useShop();
-  const [depositEnabled, setDepositEnabled] = useState(shop.deposit.enabled);
-  const [depositType, setDepositType] = useState(shop.deposit.type);
-  const [depositValue, setDepositValue] = useState(shop.deposit.value);
-  const [cancelHours, setCancelHours] = useState(shop.deposit.cancelHours);
-  const [formError, setFormError] = useState('');
-  const servicePrice = 250000;
+  const { shop, updateDepositConfig } = useShop()
+  const [depositEnabled, setDepositEnabled] = useState(shop.deposit.enabled)
+  const [depositType, setDepositType] = useState(shop.deposit.type)
+  const [depositValue, setDepositValue] = useState(shop.deposit.value)
+  const [cancelHours, setCancelHours] = useState(shop.deposit.cancelHours)
+  const [formError, setFormError] = useState('')
+  const servicePrice = 250000
 
   const previewDeposit = useMemo(() => {
-    if (!depositEnabled) return 0;
+    if (!depositEnabled) return 0
     if (depositType === 'percent') {
-      return Math.round((servicePrice * Number(depositValue || 0)) / 100);
+      return Math.round((servicePrice * Number(depositValue || 0)) / 100)
     }
-    return Number(depositValue || 0);
-  }, [depositEnabled, depositType, depositValue]);
+    return Number(depositValue || 0)
+  }, [depositEnabled, depositType, depositValue])
 
-  const depositSuffix = depositType === 'percent' ? '%' : 'VNĐ';
+  const depositSuffix = depositType === 'percent' ? '%' : 'VNĐ'
 
   const save = async () => {
+    const nextValue = Number(depositValue)
+    const nextCancelHours = Number(cancelHours)
+
+    if (depositEnabled) {
+      if (depositType === 'percent' && (nextValue < 1 || nextValue > 100)) {
+        setFormError('Phần trăm đặt cọc phải trong khoảng 1% - 100%.')
+        return
+      }
+      if (depositType === 'fixed' && nextValue <= 0) {
+        setFormError('Tiền cọc cố định phải lớn hơn 0.')
+        return
+      }
+    }
+
+    if (nextCancelHours < 0 || nextCancelHours > 72) {
+      setFormError('Số giờ hủy hợp lệ phải trong khoảng 0 - 72 giờ.')
+      return
+    }
+
+    setFormError('')
+
     try {
       await updateDepositConfig({
         enabled: depositEnabled,
         type: depositType,
-        value: Number(depositValue),
-        cancelHours: Number(cancelHours)
-      });
-      alert('Đã lưu cấu hình đặt cọc thành công!');
+        value: nextValue,
+        cancelHours: nextCancelHours
+      })
+      alert('Đã lưu cấu hình đặt cọc thành công!')
     } catch (error) {
-      console.error('Lỗi khi lưu cấu hình đặt cọc:', error);
-      alert('Có lỗi xảy ra: ' + error.message);
+      console.error('Lỗi khi lưu cấu hình đặt cọc:', error)
+      setFormError(error?.message || 'Có lỗi xảy ra khi lưu cấu hình.')
     }
-  };
+  }
 
   return (
     <div
@@ -61,11 +82,16 @@ export default function ShopDepositConfigPage() {
               Quản lý cách khách hàng đặt trước dịch vụ và các chính sách bảo vệ doanh thu cho cửa hàng.
             </p>
           </div>
-          <button onClick={save} className="bg-primary text-white px-8 py-3 rounded-xl font-label-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+          <button
+            type="button"
+            onClick={save}
+            className="bg-primary text-white px-8 py-3 rounded-xl font-label-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+          >
             <span className="material-symbols-outlined">save</span>
             Lưu thay đổi
           </button>
         </header>
+
         <SystemConfigTabs />
 
         {formError ? <p className="mb-4 text-sm text-red-600 font-bold">{formError}</p> : null}
@@ -94,104 +120,71 @@ export default function ShopDepositConfigPage() {
                 </label>
               </div>
 
-              <div
-                className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 border-t border-primary/10 pt-8 transition-all"
-                style={{
-                  opacity: depositEnabled ? 1 : 0.5,
-                  pointerEvents: depositEnabled ? 'auto' : 'none',
-                  filter: depositEnabled ? 'blur(0px)' : 'blur(1px)'
-                }}
-              >
-                <div className="space-y-4">
-                  <label className="font-label-bold text-main block">Loại hình đặt cọc</label>
-                  <div className="space-y-3">
-                    <label className="flex items-center p-4 rounded-xl border border-primary/20 bg-white/50 cursor-pointer hover:bg-primary/5 transition-colors">
-                      <input
-                        className="w-5 h-5 text-primary focus:ring-primary border-slate-300"
-                        name="deposit_type"
-                        type="radio"
-                        value="fixed"
-                        checked={depositType === 'fixed'}
-                        onChange={() => setDepositType('fixed')}
-                      />
-                      <div className="ml-4">
-                        <span className="font-label-bold block">Số tiền cố định</span>
-                        <span className="text-xs text-main/70">Khách cọc một mức phí đồng nhất.</span>
-                      </div>
-                    </label>
-                    <label className="flex items-center p-4 rounded-xl border border-slate-300 bg-white/30 cursor-pointer hover:bg-primary/5 transition-colors">
-                      <input
-                        className="w-5 h-5 text-primary focus:ring-primary border-slate-300"
-                        name="deposit_type"
-                        type="radio"
-                        value="percent"
-                        checked={depositType === 'percent'}
-                        onChange={() => setDepositType('percent')}
-                      />
-                      <div className="ml-4">
-                        <span className="font-label-bold block">Phần trăm hóa đơn (%)</span>
-                        <span className="text-xs text-main/70">Cọc dựa trên tổng giá trị dịch vụ.</span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setDepositType('fixed')}
+                  className={`rounded-2xl border p-5 text-left transition-all ${
+                    depositType === 'fixed' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-white'
+                  }`}
+                >
+                  <span className="font-label-bold block">Số tiền cố định</span>
+                  <span className="text-xs text-main/70">Khách cọc một mức phí đồng nhất.</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDepositType('percent')}
+                  className={`rounded-2xl border p-5 text-left transition-all ${
+                    depositType === 'percent' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-white'
+                  }`}
+                >
+                  <span className="font-label-bold block">Phần trăm hóa đơn (%)</span>
+                  <span className="text-xs text-main/70">Cọc dựa trên tổng giá trị dịch vụ.</span>
+                </button>
+              </div>
 
-                <div className="space-y-4">
-                  <label className="font-label-bold text-main block">Mức tiền cọc</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-main/60 material-symbols-outlined">sell</span>
-                    <input
-                      className="w-full pl-12 pr-16 py-4 bg-white/80 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-bold text-xl"
-                      placeholder="Nhập số tiền"
-                      type="number"
-                      value={depositValue}
-                      onChange={(e) => setDepositValue(Number(e.target.value))}
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-primary">{depositSuffix}</span>
-                  </div>
-                  {depositType === 'fixed' ? (
-                    <div className="flex gap-2">
-                      {quickDepositValues.map((value) => (
+              <div className="mt-6">
+                <label className="font-label-bold text-main block mb-2">Mức tiền cọc</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={depositValue}
+                    onChange={(e) => setDepositValue(e.target.value)}
+                    placeholder="Nhập số tiền"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 pr-16 outline-none focus:border-primary"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-main/60 font-bold">{depositSuffix}</span>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {depositType === 'fixed'
+                    ? quickDepositValues.map((value) => (
                         <button
                           key={value}
                           type="button"
+                          className="px-4 py-2 rounded-full border border-slate-300 hover:border-primary hover:text-primary"
                           onClick={() => setDepositValue(value)}
-                          className={`px-4 py-2 rounded-full border text-xs transition-all ${
-                            depositValue === value
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-slate-300 hover:border-primary hover:text-primary'
-                          }`}
                         >
                           {Number(value || 0).toLocaleString('vi-VN')}đ
                         </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      {[10, 20, 30].map((value) => (
+                      ))
+                    : [10, 20, 30, 50].map((value) => (
                         <button
                           key={value}
                           type="button"
+                          className="px-4 py-2 rounded-full border border-slate-300 hover:border-primary hover:text-primary"
                           onClick={() => setDepositValue(value)}
-                          className={`px-4 py-2 rounded-full border text-xs transition-all ${
-                            depositValue === value
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-slate-300 hover:border-primary hover:text-primary'
-                          }`}
                         >
                           {value}%
                         </button>
                       ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </section>
 
             <section className="glass-card p-6 rounded-3xl bg-white/70">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-700">
-                  <span className="material-symbols-outlined text-[28px]">gavel</span>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                  <span className="material-symbols-outlined text-[28px]">policy</span>
                 </div>
                 <div>
                   <h3 className="font-h3 text-h3 text-main">Chính sách hủy & hoàn tiền</h3>
@@ -199,57 +192,53 @@ export default function ShopDepositConfigPage() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-100/80 border border-slate-200">
-                  <div className="flex-1">
-                    <p className="font-label-bold text-main">Hủy trước thời gian quy định</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs">Trước</span>
-                      <input
-                        className="w-16 px-2 py-1 bg-white border border-slate-300 rounded text-center font-bold"
-                        type="number"
-                        value={cancelHours}
-                        onChange={(e) => setCancelHours(Number(e.target.value))}
-                      />
-                      <span className="text-xs">giờ so với giờ hẹn</span>
-                    </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                  <p className="font-label-bold text-main">Hủy trước thời gian quy định</p>
+                  <div className="mt-3 flex items-end gap-2">
+                    <span className="text-xs">Trước</span>
+                    <input
+                      type="number"
+                      value={cancelHours}
+                      onChange={(e) => setCancelHours(e.target.value)}
+                      className="w-24 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center font-bold"
+                    />
+                    <span className="text-xs">giờ so với giờ hẹn</span>
                   </div>
-                  <div className="text-right">
+                  <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-100 p-4">
                     <p className="text-xs text-main/70 mb-1">Hoàn tiền</p>
-                    <span className="bg-primary text-white px-3 py-1 rounded-full font-bold text-xs">100%</span>
+                    <p className="font-bold text-emerald-700">100% tiền cọc</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/70 opacity-80">
-                  <div className="flex-1">
-                    <p className="font-label-bold text-main">Hủy sát giờ / No-show</p>
-                    <p className="text-xs text-main/70">Trong vòng {cancelHours} giờ trước lịch hẹn hoặc không đến.</p>
-                  </div>
-                  <div className="text-right">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                  <p className="font-label-bold text-main">Hủy sát giờ / No-show</p>
+                  <p className="text-xs text-main/70 mt-3">Trong vòng {cancelHours} giờ trước lịch hẹn hoặc không đến.</p>
+                  <div className="mt-4 rounded-xl bg-rose-50 border border-rose-100 p-4">
                     <p className="text-xs text-main/70 mb-1">Hoàn tiền</p>
-                    <span className="bg-red-600 text-white px-3 py-1 rounded-full font-bold text-xs">0%</span>
+                    <p className="font-bold text-rose-700">0% tiền cọc</p>
                   </div>
                 </div>
               </div>
 
-              <button type="button" className="mt-6 flex items-center gap-2 text-primary font-label-bold hover:underline">
-                <span className="material-symbols-outlined">add_circle</span>
+              <button
+                type="button"
+                className="mt-4 text-primary font-bold hover:underline"
+                onClick={() => window.alert('Tính năng thêm mốc thời gian hoàn tiền sẽ được mở rộng sau.')}
+              >
                 Thêm mốc thời gian hoàn tiền khác
               </button>
             </section>
-
-
           </div>
 
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-primary text-white p-6 rounded-3xl shadow-xl relative overflow-hidden group">
-              <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="material-symbols-outlined text-cyan-100">verified_user</span>
-                  <h4 className="font-h3 text-h3">Cơ chế LumiX Escrow</h4>
-                </div>
-                <p className="text-sm opacity-90 mb-6 leading-relaxed">
+            <div className="glass-card p-6 rounded-3xl bg-gradient-to-br from-primary to-[#0f5666] text-white">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="material-symbols-outlined text-[28px]">shield_lock</span>
+                <h4 className="font-h3 text-h3">Cơ chế LumiX Escrow</h4>
+              </div>
+              <div className="space-y-4 text-sm leading-6">
+                <p>
                   Tiền cọc của khách hàng sẽ được <b>LumiX giữ trung gian</b>. Tiền chỉ được chuyển vào ví của bạn sau khi:
                 </p>
                 <ul className="space-y-3 text-xs">
@@ -325,5 +314,5 @@ export default function ShopDepositConfigPage() {
         </footer>
       </main>
     </div>
-  );
+  )
 }

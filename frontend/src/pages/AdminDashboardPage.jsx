@@ -6,10 +6,6 @@ import { useToast } from '../components/ui/ToastProvider'
 import { useShop } from '../context/ShopContext'
 import { apiRequest } from '../lib/api'
 
-function formatVnd(value) {
-  return `${Number(value || 0).toLocaleString('vi-VN')}đ`
-}
-
 function downloadCsv(filename, rows) {
   const escapeCell = (value) => {
     const text = String(value ?? '')
@@ -123,3 +119,4 @@ export default function AdminDashboardPage() {
     </AdminLayout>
   )
 }
+

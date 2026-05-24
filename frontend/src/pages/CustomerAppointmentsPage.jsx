@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
@@ -36,7 +36,8 @@ export default function CustomerAppointmentsPage() {
 
   const initialPhone = searchParams.get('phone') || ''
   const [phone, setPhone] = useState(initialPhone)
-  const [searchedPhone, setSearchedPhone] = useState(initialPhone)\r\n  const [searchError, setSearchError] = useState('')
+  const [searchedPhone, setSearchedPhone] = useState(initialPhone)
+  const [searchError, setSearchError] = useState('')
   const [tab, setTab] = useState('upcoming') // upcoming | completed | cancelled
   const [nowTs, setNowTs] = useState(() => Date.now())
 
@@ -68,6 +69,11 @@ export default function CustomerAppointmentsPage() {
   }
 
   useEffect(() => {
+    const t = setInterval(() => setNowTs(Date.now()), 30_000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
     if (!searchedPhone) return
     const next =
       upcoming.length > 0 ? 'upcoming' : completed.length > 0 ? 'completed' : cancelled.length > 0 ? 'cancelled' : 'upcoming'
@@ -85,6 +91,7 @@ export default function CustomerAppointmentsPage() {
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`
     window.open(mapsUrl, '_blank', 'noopener,noreferrer')
   }
+
   const handleCancel = (booking) => {
     if (!isUpcoming(booking, nowTs)) return
 
@@ -103,140 +110,101 @@ export default function CustomerAppointmentsPage() {
         `- Hoàn cọc: ${refundPercent}% (${formatVnd(refundAmount)})`
       ].join('\n')
     )
-    if (!ok) return
 
-    updateBooking(booking.id, {
-      status: 'canceled',
-      cancellationType: isValidCancel ? 'valid' : 'late',
-      refundPercent
-    })
+    if (!ok) return
+    updateBooking(booking.id, { status: 'canceled', refundAmount, refundPercent })
   }
 
-  useEffect(() => {
-    const t = setInterval(() => setNowTs(Date.now()), 60_000)
-    return () => clearInterval(t)
-  }, [])
-
   return (
-    <div className="min-h-screen bg-slate-50 text-main">
-      {!isCorrectSlug && (
-        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-sm text-center">
-          Bạn đang mở slug <b>{slug}</b> không khớp shop hiện tại. Demo đang hiển thị dữ liệu của <b>{shop.name}</b>.
-        </div>
-      )}
-
-      <header className="bg-white/80 backdrop-blur-xl border-b border-primary/10 sticky top-0 z-50 shadow-sm">
-        <nav className="flex justify-between items-center max-w-[1200px] mx-auto px-6 md:px-10 h-20">
-          <div className="font-h3 text-h3 font-bold text-primary">{shop.name}</div>
-          <div className="flex items-center gap-3">
-            <Link className="px-5 py-2 rounded-full font-bold text-main/70 hover:bg-primary/10 transition-all" to={`/${shop.slug}`}>
-              Trang chủ
-            </Link>
-            <Link className="px-5 py-2 rounded-full font-bold bg-primary text-white shadow-lg hover:brightness-110 transition-all" to={`/${shop.slug}/book`}>
-              Đặt lịch
-            </Link>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 text-main">
+      <header className="px-4 md:px-10 py-6 flex items-center justify-between">
+        <Link to={`/${shop.slug}`} className="font-bold text-primary text-lg">
+          {shop.name || 'LumiX'}
+        </Link>
+        <nav className="flex items-center gap-3">
+          <Link className="px-4 py-2 rounded-xl bg-white/80 hover:bg-white border border-primary/10" to={`/${shop.slug}`}>
+            Trang chủ
+          </Link>
+          <Link className="px-4 py-2 rounded-xl bg-primary text-white hover:brightness-110" to={`/${shop.slug}/book`}>
+            Đặt lịch
+          </Link>
         </nav>
       </header>
 
-      <main className="pt-10 pb-16 px-6 md:px-10 max-w-[1200px] mx-auto">
-        <section className="text-center mb-12">
-          <h1 className="font-h2 text-h2 text-primary mb-3">Tra cứu lịch hẹn</h1>
-          <p className="text-main/70 max-w-2xl mx-auto mb-6">
-            Nhập số điện thoại đã dùng để đặt lịch để tra cứu, quản lý hoặc hủy lịch hẹn.
-          </p>
+      <main className="px-4 md:px-10 pb-16">
+        {!isCorrectSlug ? (
+          <div className="max-w-3xl mx-auto glass-card bg-white/70 rounded-3xl p-6 border border-rose-200 text-rose-700">
+            Bạn đang mở slug <b>{slug}</b> không khớp shop hiện tại. Demo đang hiển thị dữ liệu của <b>{shop.name}</b>.
+          </div>
+        ) : null}
 
-          <div className="relative max-w-md mx-auto">
-            {searchError ? <p className="text-sm text-red-600 mb-2">{searchError}</p> : null}
-            <div className="relative flex items-center bg-white rounded-2xl p-1 shadow-xl border border-primary/10">
-              <span className="material-symbols-outlined ml-4 text-primary">call</span>
+        <div className="max-w-4xl mx-auto">
+          <div className="glass-card bg-white/70 rounded-3xl p-8 mb-8">
+            <h1 className="font-h2 text-h2 text-primary mb-3">Tra cứu lịch hẹn</h1>
+            <p className="text-main/70">
+              Nhập số điện thoại đã dùng để đặt lịch để tra cứu, quản lý hoặc hủy lịch hẹn.
+            </p>
+
+            <div className="mt-6 flex flex-col md:flex-row gap-3">
               <input
-                className="w-full border-none focus:ring-0 px-4 py-3 text-lg placeholder:text-slate-400 bg-transparent outline-none"
+                className="flex-1 px-5 py-4 rounded-2xl border border-primary/10 bg-white/80 focus:outline-none focus:ring-2 focus:ring-primary/20"
                 placeholder="Nhập số điện thoại..."
-                type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') doSearch()
-                }}
               />
               <button
-                className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-secondary transition-colors"
+                className="px-6 py-4 rounded-2xl bg-primary text-white font-bold hover:brightness-110"
                 onClick={doSearch}
+                type="button"
               >
-                <span>Tra cứu</span>
-                <span className="material-symbols-outlined text-[20px]">search</span>
+                Tra cứu
               </button>
             </div>
-            {searchedPhone && (
-              <div className="mt-3 text-xs text-main/60">
-                Kết quả cho SĐT: <b className="text-primary">{searchedPhone}</b>
-              </div>
-            )}
-          </div>
-        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-3">
-            <div className="glass-card bg-white/70 rounded-3xl p-4 sticky top-24 border border-primary/10">
-              <nav className="flex flex-col gap-2">
-                <button
-                  className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
-                    tab === 'upcoming' ? 'bg-primary/10 text-primary font-bold' : 'text-main/70 hover:bg-primary/5'
-                  }`}
-                  onClick={() => setTab('upcoming')}
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === 'upcoming' ? "'FILL' 1" : "'FILL' 0" }}>
-                      event_upcoming
-                    </span>
-                    <span>Sắp tới</span>
-                  </span>
-                  <span className="bg-white/60 px-2 rounded-full text-xs">{upcoming.length}</span>
-                </button>
+            {searchError ? <p className="mt-3 text-sm text-rose-600 font-semibold">{searchError}</p> : null}
 
-                <button
-                  className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
-                    tab === 'completed' ? 'bg-primary/10 text-primary font-bold' : 'text-main/70 hover:bg-primary/5'
-                  }`}
-                  onClick={() => setTab('completed')}
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="material-symbols-outlined">check_circle</span>
-                    <span>Hoàn thành</span>
-                  </span>
-                  <span className="bg-white/60 px-2 rounded-full text-xs">{completed.length}</span>
-                </button>
+            {searchedPhone ? (
+              <div className="mt-6">
+                <p className="text-main/70">
+                  Kết quả cho SĐT: <b className="text-primary">{searchedPhone}</b>
+                </p>
 
-                <button
-                  className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${
-                    tab === 'cancelled' ? 'bg-primary/10 text-primary font-bold' : 'text-main/70 hover:bg-primary/5'
-                  }`}
-                  onClick={() => setTab('cancelled')}
-                >
-                  <span className="flex items-center gap-3">
-                    <span className="material-symbols-outlined">cancel</span>
-                    <span>Đã hủy</span>
-                  </span>
-                  <span className="bg-white/60 px-2 rounded-full text-xs">{cancelled.length}</span>
-                </button>
-              </nav>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-xl font-bold ${tab === 'upcoming' ? 'bg-primary text-white' : 'bg-white/70 text-main/70'}`}
+                    onClick={() => setTab('upcoming')}
+                  >
+                    Sắp tới
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-xl font-bold ${tab === 'completed' ? 'bg-primary text-white' : 'bg-white/70 text-main/70'}`}
+                    onClick={() => setTab('completed')}
+                  >
+                    Hoàn thành
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-xl font-bold ${tab === 'cancelled' ? 'bg-primary text-white' : 'bg-white/70 text-main/70'}`}
+                    onClick={() => setTab('cancelled')}
+                  >
+                    Đã hủy
+                  </button>
+                </div>
 
-              <div className="mt-6 pt-6 border-t border-primary/10">
-                <p className="text-xs text-main/60 leading-relaxed">
+                <p className="mt-4 text-sm text-main/70">
                   Cần hỗ trợ đổi lịch gấp? Hãy gọi hotline <b className="text-primary">{shop.phone}</b>.
                 </p>
               </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-9 space-y-6">
-            {!searchedPhone && (
-              <div className="glass-card bg-white/70 rounded-3xl p-8 border border-primary/10 text-center text-main/70">
+            ) : (
+              <div className="mt-6 text-center text-main/60">
                 Nhập số điện thoại để bắt đầu tra cứu.
               </div>
             )}
+          </div>
 
+          <div className="space-y-6">
             {searchedPhone && list.length === 0 && (
               <div className="text-center py-12">
                 <span className="material-symbols-outlined text-[64px] text-slate-300 mb-4">event_busy</span>
@@ -257,7 +225,10 @@ export default function CustomerAppointmentsPage() {
                 )
 
               return (
-                <div key={b.id} className="glass-card bg-white/70 rounded-3xl overflow-hidden flex flex-col md:flex-row border border-primary/10">
+                <div
+                  key={b.id}
+                  className="glass-card bg-white/70 rounded-3xl overflow-hidden flex flex-col md:flex-row border border-primary/10"
+                >
                   <div className="w-full md:w-1/3 relative h-48 md:h-auto overflow-hidden bg-slate-100">
                     <div className="absolute top-4 left-4">{badge}</div>
                     <div className="w-full h-full flex items-center justify-center text-primary/40">
@@ -297,12 +268,17 @@ export default function CustomerAppointmentsPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-3 pt-4 border-t border-primary/10">
-                      <button className="flex-1 min-w-[140px] py-2 px-4 rounded-xl bg-slate-100 text-primary font-bold flex items-center justify-center gap-2 hover:bg-primary/10 transition-all" onClick={handleDirections}>
+                      <button
+                        type="button"
+                        className="flex-1 min-w-[140px] py-2 px-4 rounded-xl bg-slate-100 text-primary font-bold flex items-center justify-center gap-2 hover:bg-primary/10 transition-all"
+                        onClick={handleDirections}
+                      >
                         <span className="material-symbols-outlined text-[18px]">directions</span>
                         <span>Chỉ đường</span>
                       </button>
                       {tab === 'upcoming' && (
                         <button
+                          type="button"
                           className="flex-1 min-w-[140px] py-2 px-4 rounded-xl border border-rose-300 text-rose-700 font-bold flex items-center justify-center gap-2 hover:bg-rose-50 transition-all"
                           onClick={() => handleCancel(b)}
                         >
@@ -321,4 +297,3 @@ export default function CustomerAppointmentsPage() {
     </div>
   )
 }
-
