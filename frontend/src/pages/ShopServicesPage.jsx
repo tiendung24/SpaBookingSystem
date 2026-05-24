@@ -24,6 +24,11 @@ export default function ShopServicesPage() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: '', category: 'spa', durationMinutes: 45, priceVnd: 150000, visible: true, imageUrl: fallbackImage, staffIds: [] });
 
+  const toSafeNumber = (value) => {
+    const digitsOnly = String(value ?? '').replace(/\D/g, '');
+    return Number(digitsOnly || 0);
+  };
+
   const counts = useMemo(() => {
     const result = { all: services.length };
     for (const cat of categories) result[cat.key] = 0;
@@ -248,8 +253,8 @@ export default function ShopServicesPage() {
                 <option value="spa">Spa & Skincare</option>
                 <option value="massage">Massage</option>
               </select>
-              <input className="p-3 rounded-xl border border-slate-300" type="number" placeholder="Thời gian (phút)" value={form.durationMinutes} onChange={(e) => setForm((p) => ({ ...p, durationMinutes: Number(e.target.value) }))} />
-              <input className="p-3 rounded-xl border border-slate-300" type="number" placeholder="Giá (VNĐ)" value={form.priceVnd} onChange={(e) => setForm((p) => ({ ...p, priceVnd: Number(e.target.value) }))} />
+              <input className="p-3 rounded-xl border border-slate-300" type="text" inputMode="numeric" placeholder="Thời gian (phút)" value={form.durationMinutes} onChange={(e) => setForm((p) => ({ ...p, durationMinutes: toSafeNumber(e.target.value) }))} />
+              <input className="p-3 rounded-xl border border-slate-300" type="text" inputMode="numeric" placeholder="Giá (VNĐ)" value={form.priceVnd} onChange={(e) => setForm((p) => ({ ...p, priceVnd: toSafeNumber(e.target.value) }))} />
               <div className="md:col-span-2">
                 <label className="text-sm font-bold text-main/70">Ảnh dịch vụ</label>
                 <input

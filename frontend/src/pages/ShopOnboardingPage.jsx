@@ -27,6 +27,11 @@ export default function ShopOnboardingPage() {
 
   const bookingLink = useMemo(() => `lumix.vn/${shop.slug || slugifyVietnamese(shop.name) || 'ten-tiem'}`, [shop.slug, shop.name]);
 
+  const toSafeNumber = (value) => {
+    const digitsOnly = String(value ?? '').replace(/\D/g, '');
+    return Number(digitsOnly || 0);
+  };
+
   const canNext = () => {
     if (step === 1) return services.length > 0;
     if (step === 2) return staff.length > 0;
@@ -74,8 +79,8 @@ export default function ShopOnboardingPage() {
             <h2 className="font-h3 text-h3 text-primary mb-4">Thiết lập dịch vụ</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <input className="p-3 rounded-xl border border-slate-300" placeholder="Tên dịch vụ" value={newService.name} onChange={(e) => setNewService((p) => ({ ...p, name: e.target.value }))} />
-              <input className="p-3 rounded-xl border border-slate-300" type="number" placeholder="Giá (VNĐ)" value={newService.priceVnd} onChange={(e) => setNewService((p) => ({ ...p, priceVnd: Number(e.target.value) }))} />
-              <input className="p-3 rounded-xl border border-slate-300" type="number" placeholder="Thời gian (phút)" value={newService.durationMinutes} onChange={(e) => setNewService((p) => ({ ...p, durationMinutes: Number(e.target.value) }))} />
+              <input className="p-3 rounded-xl border border-slate-300" type="text" inputMode="numeric" placeholder="Giá (VNĐ)" value={newService.priceVnd} onChange={(e) => setNewService((p) => ({ ...p, priceVnd: toSafeNumber(e.target.value) }))} />
+              <input className="p-3 rounded-xl border border-slate-300" type="text" inputMode="numeric" placeholder="Thời gian (phút)" value={newService.durationMinutes} onChange={(e) => setNewService((p) => ({ ...p, durationMinutes: toSafeNumber(e.target.value) }))} />
               <button
                 type="button"
                 className="rounded-xl bg-primary text-white font-bold"
