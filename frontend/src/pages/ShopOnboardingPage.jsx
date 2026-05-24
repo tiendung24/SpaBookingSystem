@@ -25,7 +25,7 @@ export default function ShopOnboardingPage() {
   const [newStaff, setNewStaff] = useState({ name: '', phone: '', role: 'tech', status: 'working', rating: 5.0, bookingEnabled: true, services: [] });
   const [hours, setHours] = useState(shop.hours);
 
-  const bookingLink = useMemo(() => `lumix.vn/${shop.slug || slugifyVietnamese(shop.name) || 'ten-tiem'}`, [shop.slug, shop.name]);
+  const bookingLink = useMemo(() => `${window.location.origin}/${shop.slug || slugifyVietnamese(shop.name) || 'ten-tiem'}`, [shop.slug, shop.name]);
 
   const toSafeNumber = (value) => {
     const digitsOnly = String(value ?? '').replace(/\D/g, '');

@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import AdminHeaderNav from '../components/admin/AdminHeaderNav'
@@ -116,7 +116,7 @@ export default function AdminDashboardPage() {
         <article className="glass-card bg-white rounded-3xl p-6">
           <p className="text-sm text-main/60">Ví LumiX (tổng)</p>
           <p className="text-3xl font-bold text-primary mt-1">{formatVnd(stats.totalWallet)}</p>
-          <p className="text-sm text-main/60 mt-2">Topup hôm nay (mock): <b className="text-primary">{formatVnd(stats.totalTopup)}</b></p>
+          <p className="text-sm text-main/60 mt-2">Topup hôm nay: <b className="text-primary">{formatVnd(stats.totalTopup)}</b></p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
           <p className="text-sm text-main/60">Ticket hỗ trợ mở</p>

@@ -60,7 +60,7 @@ export default function ShopDashboardPage() {
   const [dateFilter, setDateFilter] = useState('today')
   const [customDate, setCustomDate] = useState(new Date().toISOString().slice(0, 10))
 
-  const bookingLink = `https://lumix.vn/${shop.slug}`
+  const bookingLink = `${window.location.origin}/${shop.slug}`
 
   const todayBookings = useMemo(() => bookings.filter((item) => isToday(item.time)), [bookings])
   const pendingBookings = useMemo(() => bookings.filter((item) => item.status === 'pending'), [bookings])

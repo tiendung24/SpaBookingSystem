@@ -6,13 +6,11 @@ import { useShop } from '../context/ShopContext';
 const quickDepositValues = [50000, 100000, 200000];
 
 export default function ShopDepositConfigPage() {
-  const { shop, setShop } = useShop();
+  const { shop, updateDepositConfig } = useShop();
   const [depositEnabled, setDepositEnabled] = useState(shop.deposit.enabled);
   const [depositType, setDepositType] = useState(shop.deposit.type);
   const [depositValue, setDepositValue] = useState(shop.deposit.value);
   const [cancelHours, setCancelHours] = useState(shop.deposit.cancelHours);
-  const [whistleblowerReward, setWhistleblowerReward] = useState(shop.deposit.whistleblowerReward ?? 20000);
-  const [shopPenalty, setShopPenalty] = useState(shop.deposit.shopPenalty ?? 50000);
   const servicePrice = 250000;
 
   const previewDeposit = useMemo(() => {
@@ -25,19 +23,19 @@ export default function ShopDepositConfigPage() {
 
   const depositSuffix = depositType === 'percent' ? '%' : 'VNĐ';
 
-  const save = () => {
-    setShop((prev) => ({
-      ...prev,
-      deposit: {
-        ...prev.deposit,
+  const save = async () => {
+    try {
+      await updateDepositConfig({
         enabled: depositEnabled,
         type: depositType,
         value: Number(depositValue),
-        cancelHours: Number(cancelHours),
-        whistleblowerReward: Number(whistleblowerReward),
-        shopPenalty: Number(shopPenalty)
-      }
-    }));
+        cancelHours: Number(cancelHours)
+      });
+      alert('Đã lưu cấu hình đặt cọc thành công!');
+    } catch (error) {
+      console.error('Lỗi khi lưu cấu hình đặt cọc:', error);
+      alert('Có lỗi xảy ra: ' + error.message);
+    }
   };
 
   return (
@@ -237,32 +235,7 @@ export default function ShopDepositConfigPage() {
               </button>
             </section>
 
-            <section className="glass-card p-6 rounded-3xl bg-white/70">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
-                  <span className="material-symbols-outlined text-[28px]">policy</span>
-                </div>
-                <div>
-                  <h3 className="font-h3 text-h3 text-main">Smart Deposit & chống gian lận</h3>
-                  <p className="text-xs text-main/70">Cấu hình phạt vi phạm và phần thưởng tố giác.</p>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-bold text-main/70">Thưởng khách tố giác</label>
-                  <input className="w-full mt-1 p-3 rounded-xl border border-slate-300" type="number" value={whistleblowerReward} onChange={(e) => setWhistleblowerReward(Number(e.target.value))} />
-                </div>
-                <div>
-                  <label className="text-sm font-bold text-main/70">Phạt shop vi phạm</label>
-                  <input className="w-full mt-1 p-3 rounded-xl border border-slate-300" type="number" value={shopPenalty} onChange={(e) => setShopPenalty(Number(e.target.value))} />
-                </div>
-              </div>
-
-              <div className="mt-4 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-900 text-sm">
-                Nếu shop yêu cầu khách tự hủy để lách phí, LumiX sẽ phạt <b>{Number(shopPenalty).toLocaleString('vi-VN')}đ</b> và thưởng khách <b>{Number(whistleblowerReward).toLocaleString('vi-VN')}đ</b> sau xác minh.
-              </div>
-            </section>
           </div>
 
           <div className="lg:col-span-4 space-y-6">

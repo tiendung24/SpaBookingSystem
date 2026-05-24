@@ -53,13 +53,28 @@ export default function ShopWalletPage() {
     setCardTransform('perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)');
   };
 
-  const createPayosQr = () => {
+  const [payosData, setPayosData] = useState(null);
+  const [loadingQr, setLoadingQr] = useState(false);
+
+  const createPayosQr = async () => {
+    setLoadingQr(true);
     setQrVisible(true);
+    try {
+      const res = await topupWallet(Number(topupAmount || 0));
+      if (res && res.topup) {
+        setPayosData(res.topup);
+      }
+    } catch (err) {
+      console.error("Lỗi tạo link nạp tiền:", err);
+    } finally {
+      setLoadingQr(false);
+    }
   };
 
   const confirmTopup = () => {
-    topupWallet(Number(topupAmount || 0));
+    // Reload shop data to update balance
     setQrVisible(false);
+    setPayosData(null);
   };
 
   return (
@@ -229,38 +244,58 @@ export default function ShopWalletPage() {
           <div className="bg-white rounded-3xl p-6 w-full max-w-md">
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="font-h3 text-h3 text-primary">Nạp ví qua PayOS (mock)</h3>
+                <h3 className="font-h3 text-h3 text-primary">Nạp ví qua PayOS</h3>
                 <p className="text-sm text-main/70">Chọn số tiền, hệ thống sẽ “tạo QR” và cộng số dư khi bạn bấm xác nhận.</p>
               </div>
               <button type="button" className="text-main/60 hover:text-main" onClick={() => setQrVisible(false)}>✕</button>
             </div>
 
             <div className="mt-5 space-y-3">
-              <label className="text-sm font-bold text-main/70">Số tiền nạp</label>
-              <input
-                className="w-full p-3 rounded-xl border border-slate-300"
-                type="number"
-                value={topupAmount}
-                onChange={(e) => setTopupAmount(Number(e.target.value))}
-              />
-              <div className="flex gap-2">
-                {[100000, 200000, 500000].map((v) => (
-                  <button key={v} type="button" className="px-3 py-2 rounded-full border border-slate-300 hover:border-primary" onClick={() => setTopupAmount(v)}>
-                    {v.toLocaleString('vi-VN')}đ
+              {!payosData ? (
+                <>
+                  <label className="text-sm font-bold text-main/70">Số tiền nạp</label>
+                  <input
+                    className="w-full p-3 rounded-xl border border-slate-300"
+                    type="number"
+                    value={topupAmount}
+                    onChange={(e) => setTopupAmount(Number(e.target.value))}
+                  />
+                  <div className="flex gap-2">
+                    {[100000, 200000, 500000].map((v) => (
+                      <button key={v} type="button" className="px-3 py-2 rounded-full border border-slate-300 hover:border-primary" onClick={() => setTopupAmount(v)}>
+                        {v.toLocaleString('vi-VN')}đ
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" className="w-full mt-4 py-3 rounded-xl bg-primary text-white font-bold flex items-center justify-center gap-2" onClick={createPayosQr} disabled={loadingQr}>
+                    {loadingQr ? <span className="material-symbols-outlined animate-spin">refresh</span> : null}
+                    {loadingQr ? 'Đang tạo link...' : 'Tạo link nạp tiền'}
                   </button>
-                ))}
-              </div>
+                </>
+              ) : (
+                <>
+                  <div className="mt-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                    <div className="w-48 h-48 mx-auto rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden p-2">
+                       {payosData.qrCodeUrl ? (
+                         <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payosData.qrCodeUrl)}`} alt="PayOS QR" className="w-full h-full object-contain" />
+                       ) : (
+                         <span className="text-main/60 text-sm font-bold">QR PayOS</span>
+                       )}
+                    </div>
+                    <p className="text-lg font-bold text-primary mt-3">{Number(payosData.amount || topupAmount).toLocaleString('vi-VN')}đ</p>
+                    <p className="text-xs text-main/60 mt-1">Mã GD: {payosData.description || payosData.topupId}</p>
+                  </div>
 
-              <div className="mt-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-                <div className="w-44 h-44 mx-auto rounded-2xl bg-white border border-slate-200 flex items-center justify-center">
-                  <span className="text-main/60 text-sm font-bold">QR PayOS</span>
-                </div>
-                <p className="text-xs text-main/60 mt-2">Demo UI: thay QR thật khi tích hợp PayOS.</p>
-              </div>
-
-              <button type="button" className="w-full mt-2 py-3 rounded-xl bg-primary text-white font-bold" onClick={confirmTopup}>
-                Tôi đã thanh toán (cộng số dư)
-              </button>
+                  {payosData.checkoutUrl && (
+                    <a href={payosData.checkoutUrl} target="_blank" rel="noreferrer" className="w-full block text-center mt-2 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-md">
+                      Mở trang thanh toán (PayOS)
+                    </a>
+                  )}
+                  <button type="button" className="w-full mt-2 py-3 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary hover:text-white transition-colors" onClick={confirmTopup}>
+                    Đóng
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

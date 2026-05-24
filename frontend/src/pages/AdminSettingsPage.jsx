@@ -7,6 +7,8 @@ export default function AdminSettingsPage() {
   const [otpLimit, setOtpLimit] = useState(5)
   const [minWallet, setMinWallet] = useState(100000)
   const [cancelThreshold, setCancelThreshold] = useState(25)
+  const [whistleblowerReward, setWhistleblowerReward] = useState(20000)
+  const [shopPenalty, setShopPenalty] = useState(50000)
 
   return (
     <AdminLayout>
@@ -66,6 +68,33 @@ export default function AdminSettingsPage() {
             </label>
           </div>
         </article>
+      </section>
+
+      <section className="glass-card p-6 rounded-3xl bg-white space-y-4 mt-6">
+        <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+            <span className="material-symbols-outlined text-[28px]">policy</span>
+          </div>
+          <div>
+            <h3 className="font-h3 text-h3 text-main">Smart Deposit & Chống gian lận</h3>
+            <p className="text-xs text-main/70">Thiết lập chung mức phạt vi phạm và phần thưởng tố giác toàn hệ thống.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          <div>
+            <label className="text-sm font-bold text-main/70 mb-2 block">Thưởng khách tố giác (VND)</label>
+            <input className="w-full p-4 rounded-xl border border-slate-200" type="number" value={whistleblowerReward} onChange={(e) => setWhistleblowerReward(Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-sm font-bold text-main/70 mb-2 block">Phạt shop vi phạm (VND)</label>
+            <input className="w-full p-4 rounded-xl border border-slate-200" type="number" value={shopPenalty} onChange={(e) => setShopPenalty(Number(e.target.value))} />
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-900 text-sm">
+          Nếu shop yêu cầu khách tự hủy để lách phí nền tảng, hệ thống sẽ phạt shop <b>{Number(shopPenalty).toLocaleString('vi-VN')}đ</b> trừ thẳng vào ví LumiX và thưởng <b>{Number(whistleblowerReward).toLocaleString('vi-VN')}đ</b> cho khách báo cáo gian lận thành công.
+        </div>
       </section>
 
       <section className="glass-card bg-white rounded-3xl p-6">

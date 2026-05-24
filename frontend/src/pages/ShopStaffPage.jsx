@@ -23,7 +23,7 @@ function statusBadge(status) {
 }
 
 export default function ShopStaffPage() {
-  const { staff, addStaff, updateStaff, deleteStaff, services } = useShop();
+  const { staff, addStaff, updateStaff, deleteStaff, services, bookings } = useShop();
   const [query, setQuery] = useState('');
   const [activeRole, setActiveRole] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -51,10 +51,14 @@ export default function ShopStaffPage() {
   const stats = useMemo(() => {
     const total = staff.length;
     const working = staff.filter((s) => s.status === 'working').length;
-    const bookingsToday = 42;
+    const bookingsToday = (bookings || []).filter((b) => {
+      const d = new Date(b.time);
+      const now = new Date();
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }).length;
     const ratingAvg = staff.length === 0 ? 0 : Math.round((staff.reduce((sum, s) => sum + (s.rating ?? 0), 0) / staff.length) * 10) / 10;
     return { total, working, bookingsToday, ratingAvg };
-  }, [staff]);
+  }, [staff, bookings]);
 
   const openCreate = () => {
     setEditingId(null);

@@ -292,7 +292,7 @@ export function ShopProvider({ children }) {
   }
 
   const updateService = async (id, patch) => {
-    if (Object.prototype.hasOwnProperty.call(patch, 'visible')) {
+    if (Object.keys(patch).length === 1 && Object.prototype.hasOwnProperty.call(patch, 'visible')) {
       const res = await apiRequest(`/api/shop/services/${id}/status`, {
         method: 'PUT',
         token,
@@ -334,7 +334,7 @@ export function ShopProvider({ children }) {
   }
 
   const updateStaff = async (id, patch) => {
-    if (Object.prototype.hasOwnProperty.call(patch, 'bookingEnabled')) {
+    if (Object.keys(patch).length === 1 && Object.prototype.hasOwnProperty.call(patch, 'bookingEnabled')) {
       const res = await apiRequest(`/api/shop/staffs/${id}/status`, {
         method: 'PUT',
         token,
@@ -397,6 +397,30 @@ export function ShopProvider({ children }) {
     return res
   }
 
+  const updateDepositConfig = async (config) => {
+    const payload = {
+      enabled: Boolean(config.enabled),
+      type: config.type,
+      value: Number(config.value || 0),
+      cancelHours: Number(config.cancelHours || 4)
+    }
+    const res = await apiRequest('/api/shop/deposit-settings', {
+      method: 'PUT',
+      token,
+      body: payload
+    })
+    setShop((prev) => ({
+      ...prev,
+      deposit: {
+        enabled: Boolean(res.depositConfig?.enabled),
+        type: res.depositConfig?.type || 'fixed',
+        value: Number(res.depositConfig?.value || 0),
+        cancelHours: Number(res.depositConfig?.cancelHours || 4)
+      }
+    }))
+    return res
+  }
+
   const value = useMemo(
     () => ({
       token,
@@ -425,6 +449,7 @@ export function ShopProvider({ children }) {
       deleteStaff,
       updateBooking,
       topupWallet,
+      updateDepositConfig,
       loginShop,
       loginAdmin,
       loginUnified,
