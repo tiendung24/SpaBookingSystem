@@ -111,6 +111,11 @@ export default function CustomerAppointmentsPage() {
     })
   }
 
+  useEffect(() => {
+    const t = setInterval(() => setNowTs(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+
   return (
     <div className="min-h-screen bg-slate-50 text-main">
       {!isCorrectSlug && (
@@ -314,8 +319,4 @@ export default function CustomerAppointmentsPage() {
     </div>
   )
 }
-  useEffect(() => {
-    const t = setInterval(() => setNowTs(Date.now()), 60_000)
-    return () => clearInterval(t)
-  }, [])
 

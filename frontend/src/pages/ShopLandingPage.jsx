@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿
 import TopNavBar from '../components/shop/TopNavBar';
 import HeroSection from '../components/shop/HeroSection';
 import ProblemSection from '../components/shop/ProblemSection';
