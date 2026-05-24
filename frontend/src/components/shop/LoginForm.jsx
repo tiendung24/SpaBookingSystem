@@ -20,14 +20,30 @@ export default function LoginForm() {
     setSubmitting(true)
     setError('')
     try {
-      const result = await loginUnified({ identity: formData.identity, password: formData.password })
+      // Normalize identity - trim whitespace
+      const normalizedIdentity = formData.identity.trim()
+      if (!normalizedIdentity || !formData.password) {
+        setError('Vui lòng nhập đầy đủ thông tin')
+        setSubmitting(false)
+        return
+      }
+
+      const result = await loginUnified({ identity: normalizedIdentity, password: formData.password })
       if (result.role === 'admin') {
         navigate('/admin/dashboard')
       } else {
         navigate('/shop/dashboard')
       }
     } catch (err) {
-      setError(err?.message || 'Đăng nhập thất bại')
+      console.error('Login error:', err)
+      // Provide more specific error messages
+      if (err?.status === 403) {
+        setError('Bạn không có quyền đăng nhập. Vui lòng kiểm tra lại tài khoản hoặc liên hệ hỗ trợ.')
+      } else if (err?.status === 401) {
+        setError('Sai số điện thoại/email hoặc mật khẩu')
+      } else {
+        setError(err?.message || 'Đăng nhập thất bại')
+      }
     } finally {
       setSubmitting(false)
     }
