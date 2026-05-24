@@ -1,6 +1,7 @@
 import { FraudReport, Penalty } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
+import { requireNumber } from '../../utils/validation.js'
 
 export async function getReports(req, res) {
   const query = {}
@@ -26,7 +27,7 @@ export async function approve(req, res) {
   const penalty = await Penalty.create({
     shopId: report.shopId,
     bookingId: report.bookingId,
-    amount: Number(req.body?.penaltyAmount || 50000),
+    amount: requireNumber(req.body?.penaltyAmount || 50000, 'penaltyAmount', { min: 1 }),
     reason: req.body?.reason || 'Fraud report approved',
     createdAt: new Date()
   })

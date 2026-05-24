@@ -1,6 +1,7 @@
 import { ShopClosureDay, ShopWorkingHour } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
+import { requireNumber, requireString, requireTimeOrder, toNumber } from '../../utils/validation.js'
 
 export async function getWorkingHours(req, res) {
   const shopId = req.auth.shopId
@@ -10,6 +11,11 @@ export async function getWorkingHours(req, res) {
 
 export async function updateWorkingHours(req, res) {
   const shopId = req.auth.shopId
+
+  requireString(req.body?.openTime, 'openTime')
+  requireString(req.body?.closeTime, 'closeTime')
+  requireTimeOrder(req.body?.openTime, req.body?.closeTime)
+
   const payload = {
     openTime: req.body?.openTime,
     closeTime: req.body?.closeTime,
@@ -44,7 +50,7 @@ export async function getHolidaySettings(req, res) {
 
 export async function createHoliday(req, res) {
   const shopId = req.auth.shopId
-  if (!req.body?.date) throw httpError(400, 'Thiếu date')
+  requireString(req.body?.date, 'date')
 
   const holiday = await ShopClosureDay.create({
     shopId,
@@ -87,8 +93,8 @@ export async function getSlotSettings(req, res) {
 
 export async function updateSlotSettings(req, res) {
   const shopId = req.auth.shopId
-  const slotDurationMinutes = Number(req.body?.slotDurationMinutes || 30)
-  const maxCustomersPerSlot = Number(req.body?.maxCustomersPerSlot || 1)
+  const slotDurationMinutes = requireNumber(req.body?.slotDurationMinutes || 30, 'slotDurationMinutes', { min: 15 })
+  const maxCustomersPerSlot = requireNumber(req.body?.maxCustomersPerSlot || 1, 'maxCustomersPerSlot', { min: 1 })
 
   const workingHours = await ShopWorkingHour.findOneAndUpdate(
     { shopId },

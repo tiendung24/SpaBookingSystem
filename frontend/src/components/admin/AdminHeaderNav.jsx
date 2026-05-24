@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+﻿import { Link, useLocation } from 'react-router-dom'
 
 const items = [
   { to: '/admin/dashboard', label: 'Tổng quan' },
@@ -12,10 +12,12 @@ const items = [
 
 export default function AdminHeaderNav() {
   const location = useLocation()
+
   return (
     <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
       {items.map((item) => {
         const active = location.pathname === item.to
+
         return (
           <Link
             key={item.to}

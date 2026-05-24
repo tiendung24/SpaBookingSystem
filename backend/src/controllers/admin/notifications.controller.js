@@ -1,9 +1,16 @@
-import { Notification, Shop } from '../../models/index.js'
+﻿import { Notification, Shop } from '../../models/index.js'
+import { httpError } from '../../utils/httpError.js'
 import { EmailService } from '../../services/email.service.js'
 
 export async function getNotifications(req, res) {
-  const items = await Notification.find({ userId: req.auth.userId }).sort({ createdAt: -1 }).lean()
+  const items = await Notification.find().sort({ createdAt: -1 }).lean()
   res.json({ items })
+}
+
+export async function getNotificationById(req, res) {
+  const notification = await Notification.findById(req.params.notificationId).lean()
+  if (!notification) throw httpError(404, 'Không tìm thấy notification')
+  res.json({ notification })
 }
 
 export async function sendNotification(req, res) {
@@ -27,7 +34,6 @@ export async function sendNotification(req, res) {
   }))
 
   const created = await Notification.insertMany(docs)
-
   const emailService = new EmailService()
   const channelResults = []
 

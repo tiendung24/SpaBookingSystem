@@ -11,6 +11,7 @@ export default function ShopDepositConfigPage() {
   const [depositType, setDepositType] = useState(shop.deposit.type);
   const [depositValue, setDepositValue] = useState(shop.deposit.value);
   const [cancelHours, setCancelHours] = useState(shop.deposit.cancelHours);
+  const [formError, setFormError] = useState('');
   const servicePrice = 250000;
 
   const previewDeposit = useMemo(() => {
@@ -66,6 +67,8 @@ export default function ShopDepositConfigPage() {
           </button>
         </header>
         <SystemConfigTabs />
+
+        {formError ? <p className="mb-4 text-sm text-red-600 font-bold">{formError}</p> : null}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 space-y-6">
@@ -314,9 +317,9 @@ export default function ShopDepositConfigPage() {
               <p className="text-xs text-main/60 mt-1">© 2024 LumiX Partner. Nền tảng Spa & Salon cao cấp.</p>
             </div>
             <div className="flex gap-6">
-              <a className="text-main/70 hover:text-primary transition-colors font-body-md" href="#">Điều khoản</a>
-              <a className="text-main/70 hover:text-primary transition-colors font-body-md" href="#">Bảo mật</a>
-              <a className="text-main/70 hover:text-primary transition-colors font-body-md" href="#">Hỗ trợ</a>
+              <a className="text-main/70 hover:text-primary transition-colors font-body-md" href="/" onClick={(e) => e.preventDefault()}>Điều khoản</a>
+              <a className="text-main/70 hover:text-primary transition-colors font-body-md" href="/" onClick={(e) => e.preventDefault()}>Bảo mật</a>
+              <a className="text-main/70 hover:text-primary transition-colors font-body-md" href="/" onClick={(e) => e.preventDefault()}>Hỗ trợ</a>
             </div>
           </div>
         </footer>

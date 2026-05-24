@@ -1,5 +1,6 @@
 import { Booking, Deposit, PayosPayment } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
+import { requireString } from '../../utils/validation.js'
 
 export async function getBookings(req, res) {
   const query = {}
@@ -18,7 +19,7 @@ export async function getBookingById(req, res) {
 export async function updateStatus(req, res) {
   const booking = await Booking.findByIdAndUpdate(
     req.params.bookingId,
-    { status: req.body?.status || 'pending', updatedAt: new Date() },
+    { status: (() => { const s = requireString(req.body?.status, 'status'); if (!['pending','confirmed','checked_in','completed','cancelled','canceled','no_show'].includes(s)) throw httpError(400, 'status không hợp lệ'); return s })(), updatedAt: new Date() },
     { new: true }
   ).lean()
   if (!booking) throw httpError(404, 'Không tìm thấy booking')

@@ -1,6 +1,7 @@
 import { Service, ServiceCategory } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
+import { normalizeSlug, requireNumber, requireString, toNumber } from '../../utils/validation.js'
 
 export async function getCategories(req, res) {
   const shopId = req.auth.shopId
@@ -11,13 +12,15 @@ export async function getCategories(req, res) {
 export async function createCategory(req, res) {
   const shopId = req.auth.shopId
   const { name, slug, sortOrder, status } = req.body || {}
-  if (!name) throw httpError(400, 'Thiếu name')
+
+  const categoryName = requireString(name, 'name')
+  const categorySlug = slug ? normalizeSlug(slug) : undefined
 
   const category = await ServiceCategory.create({
     shopId,
-    name,
-    slug: slug || undefined,
-    sortOrder: Number(sortOrder || 0),
+    name: categoryName,
+    slug: categorySlug || undefined,
+    sortOrder: toNumber(sortOrder || 0),
     status: status || 'active',
     createdAt: new Date(),
     updatedAt: new Date()
@@ -34,11 +37,14 @@ export async function createCategory(req, res) {
 
 export async function updateCategory(req, res) {
   const shopId = req.auth.shopId
-  const category = await ServiceCategory.findOneAndUpdate(
-    { _id: req.params.categoryId, shopId },
-    { ...req.body, updatedAt: new Date() },
-    { new: true }
-  ).lean()
+  const patch = { ...(req.body || {}) }
+
+  if (patch.name !== undefined) patch.name = requireString(patch.name, 'name')
+  if (patch.slug !== undefined) patch.slug = patch.slug ? normalizeSlug(patch.slug) : undefined
+  if (patch.sortOrder !== undefined) patch.sortOrder = toNumber(patch.sortOrder)
+  patch.updatedAt = new Date()
+
+  const category = await ServiceCategory.findOneAndUpdate({ _id: req.params.categoryId, shopId }, patch, { new: true }).lean()
   if (!category) throw httpError(404, 'Không tìm thấy danh mục')
   await writeAuditLog({
     actorUserId: req.auth.userId,
@@ -76,20 +82,25 @@ export async function getServices(req, res) {
 export async function createService(req, res) {
   const shopId = req.auth.shopId
   const { name, categoryId } = req.body || {}
-  if (!name || !categoryId) throw httpError(400, 'Thiếu name hoặc categoryId')
+
+  const serviceName = requireString(name, 'name')
+  const serviceCategoryId = requireString(categoryId, 'categoryId')
+  const price = requireNumber(req.body?.price ?? 0, 'price', { min: 0 })
+  const durationMinutes = requireNumber(req.body?.durationMinutes ?? 60, 'durationMinutes', { min: 15 })
+  const serviceSlug = req.body?.slug ? normalizeSlug(req.body.slug) : undefined
 
   const service = await Service.create({
     shopId,
-    categoryId,
-    name,
-    slug: req.body?.slug || undefined,
+    categoryId: serviceCategoryId,
+    name: serviceName,
+    slug: serviceSlug || undefined,
     description: req.body?.description || '',
-    price: Number(req.body?.price || 0),
-    durationMinutes: Number(req.body?.durationMinutes || 60),
+    price,
+    durationMinutes,
     imageUrl: req.body?.imageUrl || '',
     status: req.body?.status || 'active',
     availableStaffIds: Array.isArray(req.body?.availableStaffIds) ? req.body.availableStaffIds : [],
-    sortOrder: Number(req.body?.sortOrder || 0),
+    sortOrder: toNumber(req.body?.sortOrder || 0),
     createdAt: new Date(),
     updatedAt: new Date()
   })
@@ -98,7 +109,7 @@ export async function createService(req, res) {
     action: 'shop.service_create',
     entity: 'service',
     entityId: String(service._id),
-    meta: { shopId, categoryId }
+    meta: { shopId, categoryId: serviceCategoryId }
   })
   res.status(201).json({ service })
 }
@@ -112,11 +123,17 @@ export async function getServiceById(req, res) {
 
 export async function updateService(req, res) {
   const shopId = req.auth.shopId
-  const service = await Service.findOneAndUpdate(
-    { _id: req.params.serviceId, shopId },
-    { ...req.body, updatedAt: new Date() },
-    { new: true }
-  ).lean()
+  const patch = { ...(req.body || {}) }
+
+  if (patch.name !== undefined) patch.name = requireString(patch.name, 'name')
+  if (patch.categoryId !== undefined) patch.categoryId = requireString(patch.categoryId, 'categoryId')
+  if (patch.slug !== undefined) patch.slug = patch.slug ? normalizeSlug(patch.slug) : undefined
+  if (patch.price !== undefined) patch.price = requireNumber(patch.price, 'price', { min: 0 })
+  if (patch.durationMinutes !== undefined) patch.durationMinutes = requireNumber(patch.durationMinutes, 'durationMinutes', { min: 15 })
+  if (patch.sortOrder !== undefined) patch.sortOrder = toNumber(patch.sortOrder)
+  patch.updatedAt = new Date()
+
+  const service = await Service.findOneAndUpdate({ _id: req.params.serviceId, shopId }, patch, { new: true }).lean()
   if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
   await writeAuditLog({
     actorUserId: req.auth.userId,
@@ -145,9 +162,12 @@ export async function deleteService(req, res) {
 export async function updateServiceStatus(req, res) {
   const shopId = req.auth.shopId
   const { status } = req.body || {}
+  const statusText = String(status || '')
+  if (!['active', 'inactive'].includes(statusText)) throw httpError(400, 'status không hợp lệ')
+
   const service = await Service.findOneAndUpdate(
     { _id: req.params.serviceId, shopId },
-    { status: status || 'inactive', updatedAt: new Date() },
+    { status: statusText, updatedAt: new Date() },
     { new: true }
   ).lean()
   if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')

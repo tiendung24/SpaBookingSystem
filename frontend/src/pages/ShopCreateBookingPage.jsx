@@ -3,11 +3,22 @@ import { useNavigate } from 'react-router-dom'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import { useShop } from '../context/ShopContext'
 
+function normalizePhone(input) {
+  return String(input || '')
+    .trim()
+    .replace(/[\s.-]/g, '')
+}
+
+function isValidPhone(input) {
+  return /^(?:\+84|0)\d{9,10}$/.test(input)
+}
+
 export default function ShopCreateBookingPage() {
   const navigate = useNavigate()
   const { shop, services, staff, createBookingFromDraft, setBookingDraft } = useShop()
 
   const availableStaff = useMemo(() => staff.filter((item) => item.bookingEnabled), [staff])
+  const [formError, setFormError] = useState('')
   const [form, setForm] = useState({
     customerName: '',
     customerPhone: '',
@@ -19,13 +30,34 @@ export default function ShopCreateBookingPage() {
   })
 
   const handleCreate = async () => {
+    const customerName = String(form.customerName || '').trim()
+    const customerPhone = normalizePhone(form.customerPhone)
+
+    if (!customerName) {
+      setFormError('Vui lòng nhập họ tên khách hàng.')
+      return
+    }
+    if (!isValidPhone(customerPhone)) {
+      setFormError('Số điện thoại không hợp lệ (0 hoặc +84, 10-11 số).')
+      return
+    }
+    if (!form.serviceId) {
+      setFormError('Vui lòng chọn dịch vụ.')
+      return
+    }
+    if (!form.date || !form.time) {
+      setFormError('Vui lòng chọn ngày giờ hẹn.')
+      return
+    }
+
+    setFormError('')
     setBookingDraft({
       serviceId: form.serviceId,
       staffId: form.staffId || 'random',
       date: form.date,
       time: form.time,
-      customerName: form.customerName,
-      customerPhone: form.customerPhone,
+      customerName,
+      customerPhone,
       note: form.note
     })
 
@@ -68,13 +100,14 @@ export default function ShopCreateBookingPage() {
 
           <textarea rows={4} className="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Ghi chú thêm..." value={form.note} onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))} />
 
+          {formError ? <p className="text-sm text-red-600">{formError}</p> : null}
+
           <div className="flex gap-3">
-            <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold" onClick={handleCreate}>Tạo lịch hẹn</button>
-            <button className="px-5 py-3 rounded-xl bg-slate-100 text-main/70 font-bold" onClick={() => navigate('/shop/bookings')}>Quay lại</button>
+            <button type="button" className="px-5 py-3 rounded-xl bg-primary text-white font-bold" onClick={handleCreate}>Tạo lịch hẹn</button>
+            <button type="button" className="px-5 py-3 rounded-xl bg-slate-100 text-main/70 font-bold" onClick={() => navigate('/shop/bookings')}>Quay lại</button>
           </div>
         </section>
       </main>
     </div>
   )
 }
-

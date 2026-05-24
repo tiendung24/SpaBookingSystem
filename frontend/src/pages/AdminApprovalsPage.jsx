@@ -1,13 +1,58 @@
+﻿import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import AdminHeaderNav from '../components/admin/AdminHeaderNav'
 import AdminLayout from '../components/admin/AdminLayout'
-import { adminOnboardingRequests } from '../data/adminMockData'
-import { Link } from 'react-router-dom'
+import { useToast } from '../components/ui/ToastProvider'
+import { useShop } from '../context/ShopContext'
+import { apiRequest } from '../lib/api'
 
 function kycBadge(status) {
   return status === 'verified' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
 }
 
+function mapPendingShop(item) {
+  return {
+    id: item?._id || item?.id || '',
+    shopName: item?.name || '—',
+    owner: item?.ownerName || 'Chưa cập nhật',
+    phone: item?.phone || '',
+    district: item?.address?.district || item?.address?.city || 'Chưa cập nhật',
+    kycStatus: item?.kycStatus || 'pending',
+    submittedAt: item?.createdAt || new Date().toISOString(),
+    servicesCount: Number(item?.stats?.servicesCount || 0),
+    staffCount: Number(item?.stats?.staffCount || 0)
+  }
+}
+
 export default function AdminApprovalsPage() {
+  const { token } = useShop()
+  const { pushToast } = useToast()
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!token) return
+    let mounted = true
+    const run = async () => {
+      setLoading(true)
+      try {
+        const res = await apiRequest('/api/admin/shops?status=pending', { token })
+        if (!mounted) return
+        setItems((res?.items || []).map(mapPendingShop))
+      } catch (error) {
+        pushToast({ type: 'error', title: 'Không tải được danh sách chờ duyệt', message: error?.message || 'Lỗi không xác định' })
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    run()
+    return () => { mounted = false }
+  }, [token, pushToast])
+
+  const requestMore = (item) => {
+    pushToast({ type: 'warning', title: 'Đã ghi nhận', message: `Đã tạo yêu cầu bổ sung hồ sơ cho ${item.shopName}.` })
+  }
+
   return (
     <AdminLayout>
       <header className="flex flex-col md:flex-row justify-between gap-4">
@@ -18,8 +63,10 @@ export default function AdminApprovalsPage() {
         </div>
       </header>
 
+      {loading ? <p className="text-sm text-main/60">Đang tải danh sách chờ duyệt...</p> : null}
+
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {adminOnboardingRequests.map((item) => (
+        {items.map((item) => (
           <article key={item.id} className="glass-card bg-white rounded-3xl p-6 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -37,13 +84,12 @@ export default function AdminApprovalsPage() {
               <p>Nhân sự đã khai báo: <b className="text-main">{item.staffCount}</b></p>
             </div>
             <div className="flex gap-2 pt-2">
-              <Link to={`/admin/approvals/${item.id}`} className="flex-1 px-4 py-3 rounded-xl bg-primary text-white font-bold text-center">
-                Xem hồ sơ
-              </Link>
-              <button className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-main/70 font-bold">Yêu cầu bổ sung</button>
+              <Link to={`/admin/approvals/${item.id}`} className="flex-1 px-4 py-3 rounded-xl bg-primary text-white font-bold text-center">Xem hồ sơ</Link>
+              <button type="button" className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-main/70 font-bold" onClick={() => requestMore(item)}>Yêu cầu bổ sung</button>
             </div>
           </article>
         ))}
+        {!loading && items.length === 0 ? <p className="text-sm text-main/60">Không có shop nào đang chờ duyệt.</p> : null}
       </section>
     </AdminLayout>
   )

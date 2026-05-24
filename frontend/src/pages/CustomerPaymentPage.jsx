@@ -17,7 +17,17 @@ function formatCountdown(seconds) {
 }
 
 function buildPayContent(bookingCode) {
-  return `LUMIX_${bookingCode}`
+  return LUMIX_
+}
+
+function normalizePhone(input) {
+  return String(input || '')
+    .trim()
+    .replace(/[\s.-]/g, '')
+}
+
+function isValidPhone(input) {
+  return /^(?:\+84|0)\d{9,10}$/.test(input)
 }
 
 const qrPlaceholder =
@@ -104,7 +114,10 @@ export default function CustomerPaymentPage() {
   }, [service, shop.deposit])
 
   useEffect(() => {
-    if (!service || !bookingDraft.customerPhone) {
+    const phoneNormalized = normalizePhone(bookingDraft.customerPhone)
+    const phoneOk = isValidPhone(phoneNormalized)
+
+    if (!service || !phoneOk) {
       setCreating(false)
       return
     }

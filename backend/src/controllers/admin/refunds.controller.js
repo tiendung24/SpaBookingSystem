@@ -1,5 +1,6 @@
 import { Booking, Deposit, RefundRequest, Wallet, WalletTransaction } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
+import { requireNumber } from '../../utils/validation.js'
 import { getSettingNumber } from '../../utils/settings.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { buildRefundStatusEmailForCustomer, sendEmailBestEffort } from '../../utils/emailNotifications.js'
@@ -193,7 +194,7 @@ export async function splitNoShow(req, res) {
     )
     const amount = Number(deposit.amount || 0)
     const ratio = await getSettingNumber('no_show_platform_cut_ratio', 0.2)
-    const platformCut = Number(req.body?.platformCut || Math.round(amount * ratio))
+    const platformCut = requireNumber(req.body?.platformCut || Math.round(amount * ratio), 'platformCut', { min: 0, max: amount })
     const shopPart = Math.max(0, amount - platformCut)
     wallet.escrowBalance = Math.max(0, Number(wallet.escrowBalance || 0) - amount)
     wallet.balance = Number(wallet.balance || 0) + shopPart

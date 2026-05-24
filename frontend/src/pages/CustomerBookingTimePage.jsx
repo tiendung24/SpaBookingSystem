@@ -30,6 +30,16 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
+function normalizePhone(input) {
+  return String(input || '')
+    .trim()
+    .replace(/[\s.-]/g, '')
+}
+
+function isValidPhone(input) {
+  return /^(?:\+84|0)\d{9,10}$/.test(input)
+}
+
 export default function CustomerBookingTimePage() {
   const navigate = useNavigate()
   const { slug } = useParams()
@@ -68,6 +78,8 @@ export default function CustomerBookingTimePage() {
 
   const [name, setName] = useState(bookingDraft.customerName || '')
   const [phone, setPhone] = useState(bookingDraft.customerPhone || '')
+  const phoneTrimmed = normalizePhone(phone)
+  const phoneOk = isValidPhone(phoneTrimmed)
   const [email, setEmail] = useState(bookingDraft.customerEmail || '')
   const [note, setNote] = useState(bookingDraft.note || '')
 
@@ -104,7 +116,7 @@ export default function CustomerBookingTimePage() {
     return list
   }, [service, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId])
 
-  const canConfirm = Boolean(service && selectedTime && name.trim() && phone.trim() && emailOk)
+  const canConfirm = Boolean(service && selectedTime && name.trim() && phoneOk && emailOk)
 
   const confirmStep2 = () => {
     if (!canConfirm) return
@@ -113,7 +125,7 @@ export default function CustomerBookingTimePage() {
       date: selectedDate,
       time: selectedTime,
       customerName: name.trim(),
-      customerPhone: phone.trim(),
+      customerPhone: phoneTrimmed,
       customerEmail: emailTrimmed,
       note
     }))

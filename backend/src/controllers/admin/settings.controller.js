@@ -1,6 +1,7 @@
 import { SystemSetting } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
+import { requireObject, requireString } from '../../utils/validation.js'
 
 export async function getSettings(req, res) {
   const items = await SystemSetting.find().sort({ key: 1 }).lean()
@@ -8,17 +9,17 @@ export async function getSettings(req, res) {
 }
 
 export async function updateSettings(req, res) {
-  const patch = req.body
-  if (!patch || typeof patch !== 'object') throw httpError(400, 'Body phải là object key-value')
+  const patch = requireObject(req.body, 'Body phải là object key-value')
 
   const keys = Object.keys(patch)
   if (!keys.length) throw httpError(400, 'Không có setting nào để cập nhật')
 
   const updated = []
   for (const key of keys) {
+    const safeKey = requireString(key, 'key')
     const doc = await SystemSetting.findOneAndUpdate(
-      { key },
-      { key, value: patch[key], updatedAt: new Date() },
+      { key: safeKey },
+      { key: safeKey, value: patch[key], updatedAt: new Date() },
       { upsert: true, new: true }
     ).lean()
     updated.push(doc)

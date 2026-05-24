@@ -9,10 +9,25 @@ function slugifyVietnamese(input) {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
+    .replace(/\u0111/g, 'd')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-')
+}
+
+function normalizePhone(input) {
+  return String(input || '')
+    .trim()
+    .replace(/[\s.-]/g, '')
+}
+
+function isValidPhone(input) {
+  return /^(?:\+84|0)\d{9,10}$/.test(input)
+}
+
+function isValidEmail(input) {
+  if (!input) return true
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input)
 }
 
 export default function RegisterForm() {
@@ -31,11 +46,17 @@ export default function RegisterForm() {
   const [slugTouched, setSlugTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  const slugPreview = slugifyVietnamese(formData.slug || formData.shopName) || 'ten-tiem'
+  const bookingLinkPreview = `${window.location.origin}/${slugPreview}`
+
   const handleChange = (e) => {
     const { name, value } = e.target
+
     if (name === 'slug') {
       setSlugTouched(true)
-      setFormData((prev) => ({ ...prev, slug: value }))
+      const sanitized = slugifyVietnamese(value)
+      setFormData((prev) => ({ ...prev, slug: sanitized }))
       return
     }
 
@@ -55,20 +76,49 @@ export default function RegisterForm() {
     e.preventDefault()
     setSubmitting(true)
     setError('')
+
+    const ownerNameText = String(formData.ownerName || '').trim()
+    const shopNameText = String(formData.shopName || '').trim()
+    const phoneNormalized = normalizePhone(formData.phone)
+    const emailText = formData.email ? String(formData.email).toLowerCase().trim() : ''
+    const slugSanitized = slugifyVietnamese(formData.slug || shopNameText)
+    const passwordText = String(formData.password || '')
+
+    if (!ownerNameText || !shopNameText || !phoneNormalized || !passwordText) {
+      setError('Vui lòng nhập đầy đủ thông tin bắt buộc')
+      setSubmitting(false)
+      return
+    }
+    if (!isValidPhone(phoneNormalized)) {
+      setError('Số điện thoại không hợp lệ (0 hoặc +84, 10-11 số)')
+      setSubmitting(false)
+      return
+    }
+    if (!isValidEmail(emailText)) {
+      setError('Email không hợp lệ')
+      setSubmitting(false)
+      return
+    }
+    if (passwordText.length < 6) {
+      setError('Mật khẩu phải từ 6 ký tự trở lên')
+      setSubmitting(false)
+      return
+    }
+    if (!slugSanitized) {
+      setError('Slug không hợp lệ')
+      setSubmitting(false)
+      return
+    }
+
     try {
-      // Normalize email giống backend
-      const normalizedEmail = formData.email ? String(formData.email).toLowerCase().trim() : ''
-      
       await registerShop({
-        fullName: formData.ownerName,
-        phone: formData.phone.trim(),
-        email: normalizedEmail || undefined,
-        password: formData.password,
-        shopName: formData.shopName,
-        slug: formData.slug.trim()
+        fullName: ownerNameText,
+        phone: phoneNormalized,
+        email: emailText || undefined,
+        password: passwordText,
+        shopName: shopNameText,
+        slug: slugSanitized
       })
-      
-      // Đăng ký thành công, chuyển đến trang đăng nhập
       navigate('/login')
     } catch (err) {
       console.error('Register error:', err)
@@ -90,7 +140,8 @@ export default function RegisterForm() {
         <input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="Email công việc" className="w-full p-3 rounded-xl border border-slate-300" />
         <input name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Mật khẩu" className="w-full p-3 rounded-xl border border-slate-300" required />
         <input name="shopName" value={formData.shopName} onChange={handleChange} placeholder="Tên tiệm" className="w-full p-3 rounded-xl border border-slate-300" required />
-        <input name="slug" value={formData.slug} onChange={handleChange} placeholder="/ slug shop (vd: my-spa-name)" className="w-full p-3 rounded-xl border border-slate-300" required />
+        <input name="slug" value={formData.slug} onChange={handleChange} placeholder="slug shop (vd: my-spa-name)" className="w-full p-3 rounded-xl border border-slate-300" required />
+        <p className="text-xs text-main/70 -mt-1">Link đặt lịch của bạn: <span className="font-bold text-primary">{bookingLinkPreview}</span></p>
         <input name="address" value={formData.address} onChange={handleChange} placeholder="Địa chỉ tiệm" className="w-full p-3 rounded-xl border border-slate-300" />
         <button disabled={submitting} type="submit" className="w-full bg-primary text-white font-bold py-4 rounded-xl disabled:opacity-60">
           {submitting ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}

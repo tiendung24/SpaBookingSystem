@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
@@ -36,7 +36,7 @@ export default function CustomerAppointmentsPage() {
 
   const initialPhone = searchParams.get('phone') || ''
   const [phone, setPhone] = useState(initialPhone)
-  const [searchedPhone, setSearchedPhone] = useState(initialPhone)
+  const [searchedPhone, setSearchedPhone] = useState(initialPhone)\r\n  const [searchError, setSearchError] = useState('')
   const [tab, setTab] = useState('upcoming') // upcoming | completed | cancelled
   const [nowTs, setNowTs] = useState(() => Date.now())
 
@@ -60,9 +60,10 @@ export default function CustomerAppointmentsPage() {
 
   const doSearch = () => {
     if (!phone.trim()) {
-      alert('Vui lòng nhập số điện thoại')
+      setSearchError('Vui lòng nhập số điện thoại')
       return
     }
+    setSearchError('')
     setSearchedPhone(phone.trim())
   }
 
@@ -146,6 +147,7 @@ export default function CustomerAppointmentsPage() {
           </p>
 
           <div className="relative max-w-md mx-auto">
+            {searchError ? <p className="text-sm text-red-600 mb-2">{searchError}</p> : null}
             <div className="relative flex items-center bg-white rounded-2xl p-1 shadow-xl border border-primary/10">
               <span className="material-symbols-outlined ml-4 text-primary">call</span>
               <input
