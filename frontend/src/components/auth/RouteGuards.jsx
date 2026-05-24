@@ -16,6 +16,9 @@ export function RequireRole({ allow, children }) {
     if (!isOnboardingDone && !isOnboardingRoute) {
       return <Navigate to="/shop/onboarding" replace state={{ from: location.pathname }} />
     }
+    if (isOnboardingDone && isOnboardingRoute) {
+      return <Navigate to="/shop/dashboard" replace />
+    }
   }
   if (!allow.includes(role)) {
     if (role === 'admin') return <Navigate to="/admin/dashboard" replace />

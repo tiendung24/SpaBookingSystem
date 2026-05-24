@@ -23,7 +23,7 @@ function statusBadge(status) {
 }
 
 export default function ShopStaffPage() {
-  const { staff, addStaff, updateStaff, deleteStaff, services, bookings } = useShop();
+  const { staff, addStaff, updateStaff, deleteStaff, services, bookings, uploadImage } = useShop();
   const [query, setQuery] = useState('');
   const [activeRole, setActiveRole] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -76,7 +76,8 @@ export default function ShopStaffPage() {
       rating: member.rating,
       bookingEnabled: member.bookingEnabled,
       services: member.services || [],
-      shifts: member.shifts || ['Sáng']
+      shifts: member.shifts || ['Sáng'],
+      avatar: member.avatar || avatarFallback
     });
     setModalOpen(true);
   };
@@ -92,8 +93,24 @@ export default function ShopStaffPage() {
   const handleAvatarUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Tạo preview URL tạm thời
     const localUrl = URL.createObjectURL(file);
     setForm((prev) => ({ ...prev, avatar: localUrl }));
+
+    // Upload lên server
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const base64 = reader.result;
+        const uploadedUrl = await uploadImage(base64);
+        setForm((prev) => ({ ...prev, avatar: uploadedUrl }));
+      } catch (err) {
+        console.error('Lỗi upload avatar:', err);
+        alert('Lỗi tải ảnh lên server, vui lòng thử lại.');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const toggleBookingEnabled = (id) => updateStaff(id, { bookingEnabled: !staff.find((s) => s.id === id)?.bookingEnabled });

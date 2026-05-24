@@ -2,14 +2,8 @@ import { useMemo, useState } from 'react';
 import ShopSidebar from '../components/shop/ShopSidebar';
 import { useShop } from '../context/ShopContext';
 
-const escrowItems = [
-  { bookingId: '#88219', eta: '26/10', amount: '200.000' },
-  { bookingId: '#88224', eta: '27/10', amount: '500.000' },
-  { bookingId: '#88229', eta: '27/10', amount: '500.000' }
-];
-
 export default function ShopWalletPage() {
-  const { shop, walletTransactions, topupWallet } = useShop();
+  const { shop, walletTransactions, topupWallet, bookings } = useShop();
   const [cardTransform, setCardTransform] = useState('perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)');
   const [topupAmount, setTopupAmount] = useState(200000);
   const [qrVisible, setQrVisible] = useState(false);
@@ -34,6 +28,42 @@ export default function ShopWalletPage() {
       };
     });
   }, [walletTransactions]);
+
+  const escrowItems = useMemo(() => {
+    return (bookings || [])
+      .filter((b) => b.status === 'confirmed' || b.status === 'checked_in')
+      .slice(0, 5)
+      .map((b) => {
+        const depositAmount = (b.total || 0) * 0.2; // Ước tính cọc 20%
+        const etaDate = new Date(b.time);
+        etaDate.setDate(etaDate.getDate() + 1); // Tiền về sau 1 ngày dự kiến
+        const eta = `${etaDate.getDate()}/${etaDate.getMonth() + 1}`;
+        return {
+          bookingId: b.bookingCode || `#${b.id.substring(0, 5)}`,
+          eta: eta,
+          amount: `${Number(depositAmount).toLocaleString('vi-VN')}đ`
+        }
+      });
+  }, [bookings]);
+
+  const walletStats = useMemo(() => {
+    let topup = 0;
+    let fee = 0;
+    let penalty = 0;
+    walletTransactions.forEach(t => {
+      if (t.type === 'topup') topup += Number(t.amount || 0);
+      else if (t.type === 'fee') fee += Math.abs(Number(t.amount || 0));
+      else penalty += Math.abs(Number(t.amount || 0));
+    });
+    return { topup, fee, penalty };
+  }, [walletTransactions]);
+
+  const formatShortValue = (val) => {
+    if (val === 0) return '0đ';
+    if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+    if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
+    return val + 'đ';
+  };
 
   const handleCardMove = (event) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -72,7 +102,6 @@ export default function ShopWalletPage() {
   };
 
   const confirmTopup = () => {
-    // Reload shop data to update balance
     setQrVisible(false);
     setPayosData(null);
   };
@@ -118,7 +147,7 @@ export default function ShopWalletPage() {
             <div className="flex items-end justify-between z-10 mt-8">
               <div className="flex flex-col">
                 <span className="font-body-sm text-body-sm opacity-80">Số hiệu ví</span>
-                <span className="font-label-bold text-label-bold">LMX-8899-2422</span>
+                <span className="font-label-bold text-label-bold">LMX-{shop.id?.substring(0, 8).toUpperCase() || '8899-2422'}</span>
               </div>
               <button onClick={createPayosQr} className="bg-cyan-100 text-cyan-900 font-label-bold text-label-bold px-5 py-3 rounded-xl hover:bg-cyan-200 transition-all shadow-lg">
                 Nạp tiền (PayOS)
@@ -141,16 +170,16 @@ export default function ShopWalletPage() {
 
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="p-4 rounded-xl bg-slate-100">
-                <p className="font-body-sm text-body-sm text-main/70 uppercase">Tổng nạp tháng</p>
-                <p className="font-h3 text-h3 text-primary">+2.5M</p>
+                <p className="font-body-sm text-body-sm text-main/70 uppercase">Tổng nạp</p>
+                <p className="font-h3 text-h3 text-primary">+{formatShortValue(walletStats.topup)}</p>
               </div>
               <div className="p-4 rounded-xl bg-slate-100">
                 <p className="font-body-sm text-body-sm text-main/70 uppercase">Tổng phí booking</p>
-                <p className="font-h3 text-h3 text-main">-340K</p>
+                <p className="font-h3 text-h3 text-main">-{formatShortValue(walletStats.fee)}</p>
               </div>
               <div className="p-4 rounded-xl bg-slate-100">
-                <p className="font-body-sm text-body-sm text-main/70 uppercase">Khách hủy/Phạt</p>
-                <p className="font-h3 text-h3 text-red-600">0 VNĐ</p>
+                <p className="font-body-sm text-body-sm text-main/70 uppercase">Phạt/Khác</p>
+                <p className="font-h3 text-h3 text-red-600">-{formatShortValue(walletStats.penalty)}</p>
               </div>
             </div>
           </div>

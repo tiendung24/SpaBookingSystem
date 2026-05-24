@@ -35,7 +35,8 @@ function mapService(item) {
     priceVnd: Number(item.price || 0),
     durationMinutes: Number(item.durationMinutes || 0),
     visible: item.status !== 'inactive',
-    imageUrl: item.imageUrl || ''
+    imageUrl: item.imageUrl || '',
+    staffIds: item.availableStaffIds || []
   }
 }
 
@@ -280,10 +281,11 @@ export function ShopProvider({ children }) {
   const addService = async (service) => {
     const payload = {
       name: service.name,
-      categoryId: service.categoryId || service.category || '',
+      categoryId: service.category || service.categoryId,
       price: Number(service.priceVnd ?? service.price ?? 0),
       durationMinutes: Number(service.durationMinutes || 0),
-      status: service.visible === false ? 'inactive' : 'active'
+      imageUrl: service.imageUrl || '',
+      availableStaffIds: service.staffIds || []
     }
     const res = await apiRequest('/api/shop/services', { method: 'POST', token, body: payload })
     const mapped = mapService(res.service)
@@ -307,7 +309,9 @@ export function ShopProvider({ children }) {
       name: patch.name,
       categoryId: patch.categoryId || patch.category,
       price: Number(patch.priceVnd ?? patch.price ?? 0),
-      durationMinutes: Number(patch.durationMinutes || 0)
+      durationMinutes: Number(patch.durationMinutes || 0),
+      imageUrl: patch.imageUrl || '',
+      availableStaffIds: patch.staffIds || []
     }
     const res = await apiRequest(`/api/shop/services/${id}`, { method: 'PUT', token, body: payload })
     const mapped = mapService(res.service)
@@ -421,6 +425,14 @@ export function ShopProvider({ children }) {
     return res
   }
 
+  const uploadImage = async (imageBase64) => {
+    const res = await apiRequest('/api/uploads/image', {
+      method: 'POST',
+      body: { imageBase64 }
+    })
+    return res.url
+  }
+
   const value = useMemo(
     () => ({
       token,
@@ -450,6 +462,7 @@ export function ShopProvider({ children }) {
       updateBooking,
       topupWallet,
       updateDepositConfig,
+      uploadImage,
       loginShop,
       loginAdmin,
       loginUnified,

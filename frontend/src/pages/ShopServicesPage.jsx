@@ -17,7 +17,7 @@ function formatVnd(number) {
 }
 
 export default function ShopServicesPage() {
-  const { services, addService, updateService, deleteService, staff } = useShop();
+  const { services, addService, updateService, deleteService, staff, uploadImage } = useShop();
   const [activeCategory, setActiveCategory] = useState('all');
   const [query, setQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -75,8 +75,24 @@ export default function ShopServicesPage() {
   const handleImageUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    
+    // Tạo preview URL tạm thời cho người dùng xem ngay
     const localUrl = URL.createObjectURL(file);
     setForm((prev) => ({ ...prev, imageUrl: localUrl }));
+
+    // Convert file to base64 and upload to server
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const base64 = reader.result;
+        const uploadedUrl = await uploadImage(base64);
+        setForm((prev) => ({ ...prev, imageUrl: uploadedUrl }));
+      } catch (err) {
+        console.error('Lỗi upload ảnh:', err);
+        alert('Lỗi tải ảnh lên server, vui lòng thử lại.');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const toggleVisibility = (id) => updateService(id, { visible: !services.find((s) => s.id === id)?.visible });
