@@ -1,5 +1,4 @@
-﻿import React from 'react';
-
+﻿
 export default function FeaturesSection() {
   return (
     <section className="py-24 px-4 md:px-10 max-w-7xl mx-auto" id="features">

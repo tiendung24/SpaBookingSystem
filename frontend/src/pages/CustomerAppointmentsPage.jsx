@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
 function formatVnd(v) {
-  return `${Number(v || 0).toLocaleString('vi-VN')}Ä‘`
+  return `${Number(v || 0).toLocaleString('vi-VN')}đ`
 }
 
 function formatDateVi(isoOrDateString) {
@@ -98,7 +98,7 @@ export default function CustomerAppointmentsPage() {
       [
         'Xác nhận hủy lịch hẹn?',
         `- Mã: ${booking.id}`,
-        `- Thá»i gian: ${formatDateVi(booking.time)} ${formatTimeHHmm(booking.time)}`,
+        `- Thời gian: ${formatDateVi(booking.time)} ${formatTimeHHmm(booking.time)}`,
         `- Hoàn cọc: ${refundPercent}% (${formatVnd(refundAmount)})`
       ].join('\n')
     )
@@ -129,10 +129,10 @@ export default function CustomerAppointmentsPage() {
           <div className="font-h3 text-h3 font-bold text-primary">{shop.name}</div>
           <div className="flex items-center gap-3">
             <Link className="px-5 py-2 rounded-full font-bold text-main/70 hover:bg-primary/10 transition-all" to={`/${shop.slug}`}>
-              Trang chá»§
+              Trang chủ
             </Link>
             <Link className="px-5 py-2 rounded-full font-bold bg-primary text-white shadow-lg hover:brightness-110 transition-all" to={`/${shop.slug}/book`}>
-              Äáº·t lá»‹ch
+              Đặt lịch
             </Link>
           </div>
         </nav>
@@ -140,7 +140,7 @@ export default function CustomerAppointmentsPage() {
 
       <main className="pt-10 pb-16 px-6 md:px-10 max-w-[1200px] mx-auto">
         <section className="text-center mb-12">
-          <h1 className="font-h2 text-h2 text-primary mb-3">Tra cá»©u lá»‹ch háº¹n</h1>
+          <h1 className="font-h2 text-h2 text-primary mb-3">Tra cứu lịch hẹn</h1>
           <p className="text-main/70 max-w-2xl mx-auto mb-6">
             Nhập số điện thoại đã dùng để đặt lịch để tra cứu, quản lý hoặc hủy lịch hẹn.
           </p>
@@ -150,7 +150,7 @@ export default function CustomerAppointmentsPage() {
               <span className="material-symbols-outlined ml-4 text-primary">call</span>
               <input
                 className="w-full border-none focus:ring-0 px-4 py-3 text-lg placeholder:text-slate-400 bg-transparent outline-none"
-                placeholder="Nháº­p sá»‘ Ä‘iá»‡n thoáº¡i..."
+                placeholder="Nhập số điện thoại..."
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -162,13 +162,13 @@ export default function CustomerAppointmentsPage() {
                 className="bg-primary text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-secondary transition-colors"
                 onClick={doSearch}
               >
-                <span>Tra cá»©u</span>
+                <span>Tra cứu</span>
                 <span className="material-symbols-outlined text-[20px]">search</span>
               </button>
             </div>
             {searchedPhone && (
               <div className="mt-3 text-xs text-main/60">
-                Káº¿t quáº£ cho SÄT: <b className="text-primary">{searchedPhone}</b>
+                Kết quả cho SĐT: <b className="text-primary">{searchedPhone}</b>
               </div>
             )}
           </div>
@@ -188,7 +188,7 @@ export default function CustomerAppointmentsPage() {
                     <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === 'upcoming' ? "'FILL' 1" : "'FILL' 0" }}>
                       event_upcoming
                     </span>
-                    <span>Sáº¯p tá»›i</span>
+                    <span>Sắp tới</span>
                   </span>
                   <span className="bg-white/60 px-2 rounded-full text-xs">{upcoming.length}</span>
                 </button>
@@ -231,7 +231,7 @@ export default function CustomerAppointmentsPage() {
           <div className="lg:col-span-9 space-y-6">
             {!searchedPhone && (
               <div className="glass-card bg-white/70 rounded-3xl p-8 border border-primary/10 text-center text-main/70">
-                Nháº­p sá»‘ Ä‘iá»‡n thoáº¡i Ä‘á»ƒ báº¯t Ä‘áº§u tra cá»©u.
+                Nhập số điện thoại để bắt đầu tra cứu.
               </div>
             )}
 
@@ -247,7 +247,7 @@ export default function CustomerAppointmentsPage() {
               const stf = getStaff(b.staffId)
               const badge =
                 tab === 'upcoming' ? (
-                  <span className="bg-primary text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">Sáº¯p tá»›i</span>
+                  <span className="bg-primary text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">Sắp tới</span>
                 ) : tab === 'completed' ? (
                   <span className="bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">Hoàn thành</span>
                 ) : (
@@ -288,7 +288,7 @@ export default function CustomerAppointmentsPage() {
                         <div className="flex items-center gap-2">
                           <span className="material-symbols-outlined text-[20px] text-primary">payments</span>
                           <span>
-                            Cá»c: <strong className="text-main">{formatVnd(b.deposit || 0)}</strong>
+                            Cọc: <strong className="text-main">{formatVnd(b.deposit || 0)}</strong>
                           </span>
                         </div>
                       </div>
@@ -297,7 +297,7 @@ export default function CustomerAppointmentsPage() {
                     <div className="flex flex-wrap gap-3 pt-4 border-t border-primary/10">
                       <button className="flex-1 min-w-[140px] py-2 px-4 rounded-xl bg-slate-100 text-primary font-bold flex items-center justify-center gap-2 hover:bg-primary/10 transition-all" onClick={handleDirections}>
                         <span className="material-symbols-outlined text-[18px]">directions</span>
-                        <span>Chá»‰ Ä‘Æ°á»ng</span>
+                        <span>Chỉ đường</span>
                       </button>
                       {tab === 'upcoming' && (
                         <button
@@ -305,7 +305,7 @@ export default function CustomerAppointmentsPage() {
                           onClick={() => handleCancel(b)}
                         >
                           <span className="material-symbols-outlined text-[18px]">cancel</span>
-                          <span>Há»§y lá»‹ch</span>
+                          <span>Hủy lịch</span>
                         </button>
                       )}
                     </div>

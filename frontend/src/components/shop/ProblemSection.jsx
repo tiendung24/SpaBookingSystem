@@ -1,10 +1,9 @@
-﻿import React from 'react';
-
+﻿
 const problems = [
   {
     icon: 'event_busy',
     title: 'Khó kiểm soát lịch',
-    description: 'Lịch hẹn chồng chéo, khách phải chờ lâu gây ảnh hưởng đến uy tín của shop.'
+    description: 'Lịch hạn chồng chéo, khách phải chờ lâu gây ảnh hưởng đến uy tín của shop.'
   },
   {
     icon: 'notifications_off',
@@ -13,7 +12,7 @@ const problems = [
   },
   {
     icon: 'group_remove',
-    title: 'CRM rời rạc',
+    title: 'CRM rối rạc',
     description: 'Thông tin khách hàng lưu trên sổ sách dễ thất lạc, khó tra cứu lịch sử dịch vụ.'
   },
   {
@@ -44,3 +43,5 @@ export default function ProblemSection() {
     </section>
   );
 }
+
+
