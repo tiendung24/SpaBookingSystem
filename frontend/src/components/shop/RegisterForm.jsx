@@ -85,7 +85,7 @@ export default function RegisterForm() {
         <input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="Email công việc" className="w-full p-3 rounded-xl border border-slate-300" />
         <input name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Mật khẩu" className="w-full p-3 rounded-xl border border-slate-300" required />
         <input name="shopName" value={formData.shopName} onChange={handleChange} placeholder="Tên tiệm" className="w-full p-3 rounded-xl border border-slate-300" required />
-        <input name="slug" value={formData.slug} onChange={handleChange} placeholder="slug shop" className="w-full p-3 rounded-xl border border-slate-300" required />
+        <input name="slug" value={formData.slug} onChange={handleChange} placeholder="/ slug shop (vd: my-spa-name)" className="w-full p-3 rounded-xl border border-slate-300" required />
         <input name="address" value={formData.address} onChange={handleChange} placeholder="Địa chỉ tiệm" className="w-full p-3 rounded-xl border border-slate-300" />
         <button disabled={submitting} type="submit" className="w-full bg-primary text-white font-bold py-4 rounded-xl disabled:opacity-60">
           {submitting ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
