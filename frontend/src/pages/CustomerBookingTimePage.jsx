@@ -43,7 +43,7 @@ function isValidPhone(input) {
 export default function CustomerBookingTimePage() {
   const navigate = useNavigate()
   const { slug } = useParams()
-  const { shop, services, staff, bookings, bookingDraft, setBookingDraft, loadPublicShop, holdBookingSlot } = useShop()
+  const { shop, services, staff, bookings, bookingDraft, setBookingDraft, loadPublicShop, holdBookingSlot, getAvailableSlots } = useShop()
   const hours = shop.hours || {}
   const openTime = hours.open || '09:00'
   const closeTime = hours.close || '20:00'
@@ -70,11 +70,33 @@ export default function CustomerBookingTimePage() {
 
   const [selectedDate, setSelectedDate] = useState(bookingDraft.date || dateOnly(today))
   const [selectedTime, setSelectedTime] = useState(bookingDraft.time || '')
+  const [availableSlots, setAvailableSlots] = useState([])
 
   useEffect(() => {
     if (!slug) return
     loadPublicShop(slug).catch(() => {})
   }, [slug, loadPublicShop])
+
+  useEffect(() => {
+    if (!slug || !bookingDraft.serviceId || !selectedDate) return
+    let active = true
+    const staffId = bookingDraft.staffId === 'random' ? null : bookingDraft.staffId
+
+    const run = async () => {
+      try {
+        const slots = await getAvailableSlots(slug, { serviceId: bookingDraft.serviceId, date: selectedDate, staffId })
+        if (active) setAvailableSlots(Array.isArray(slots) ? slots : [])
+      } catch {
+        if (active) setAvailableSlots([])
+      }
+    }
+
+    run()
+    return () => {
+      active = false
+    }
+  }, [slug, bookingDraft.serviceId, bookingDraft.staffId, selectedDate, getAvailableSlots])
+
 
   // Restore holdToken from localStorage if exists
   useEffect(() => {
@@ -112,6 +134,9 @@ export default function CustomerBookingTimePage() {
   const slots = useMemo(() => {
     if (!service) return []
 
+    const hasBackendSlots = Array.isArray(availableSlots) && availableSlots.length > 0
+    const availableSet = hasBackendSlots ? new Set(availableSlots) : null
+
     const start = toMinutes(openTime)
     const end = toMinutes(closeTime)
     const duration = slotDuration
@@ -133,16 +158,21 @@ export default function CustomerBookingTimePage() {
       }).length
 
       const limit = bookingDraft.staffId === 'random' ? shopCapacity : 1
-      const available = !inLunch && occupied < limit
+      const available = !inLunch && (hasBackendSlots ? availableSet.has(slotStart) : occupied < limit)
       list.push({ start: slotStart, occupied, limit, available })
     }
     return list
-  }, [service, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId])
+  }, [service, availableSlots, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId])
 
   const canConfirm = Boolean(service && selectedTime && name.trim() && phoneOk && emailOk)
 
   const confirmStep2 = async () => {
     if (!canConfirm) return
+    if (availableSlots.length > 0 && !availableSlots.includes(selectedTime)) {
+      alert('Khung giờ bạn chọn vừa kín. Vui lòng chọn giờ khác.')
+      setSelectedTime('')
+      return
+    }
     setHolding(true)
     try {
       const payload = {
@@ -296,7 +326,7 @@ export default function CustomerBookingTimePage() {
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                 {slots.map((slot) => {
-                  const selected = selectedTime === slot.start
+                  const selected = selectedTime === slot.start && slot.available
                   if (!slot.available) {
                     return (
                       <div

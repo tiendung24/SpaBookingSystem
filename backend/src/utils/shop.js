@@ -56,9 +56,9 @@ export async function getShopContextBySlug(slug) {
 }
 
 export async function getWorkingPlan(shopId, date) {
-  const targetDate = new Date(date)
-  const iso = targetDate.toISOString().slice(0, 10)
-  const weekday = targetDate.getDay()
+  const targetDate = new Date(`${date}T00:00:00Z`)
+  const iso = date
+  const weekday = targetDate.getUTCDay()
   const [workingHours, closureDays] = await Promise.all([
     ShopWorkingHour.findOne({ shopId }).lean(),
     ShopClosureDay.find({ shopId }).lean()
@@ -101,17 +101,33 @@ export async function getWorkingPlan(shopId, date) {
   }
 }
 
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function getShopTimezoneOffsetMinutes() {
+  const offset = Number(process.env.SHOP_TIMEZONE_OFFSET_MINUTES || 420)
+  return Number.isFinite(offset) ? offset : 420
+}
+
 export function buildTimeOnDate(dateString, hhmm) {
-  return new Date(`${dateString}T${hhmm}:00`)
+  const [year, month, day] = String(dateString || '').split('-').map((v) => Number(v))
+  const [hour, minute] = String(hhmm || '').split(':').map((v) => Number(v))
+  const offsetMinutes = getShopTimezoneOffsetMinutes()
+  const utcMillis = Date.UTC(year, month - 1, day, hour, minute) - offsetMinutes * 60 * 1000
+  return new Date(utcMillis)
 }
 
 export function formatHm(date) {
-  return new Date(date).toISOString().slice(11, 16)
+  const offsetMinutes = getShopTimezoneOffsetMinutes()
+  const localMillis = new Date(date).getTime() + offsetMinutes * 60 * 1000
+  const local = new Date(localMillis)
+  return `${pad2(local.getUTCHours())}:${pad2(local.getUTCMinutes())}`
 }
 
 export async function getBookingsInDate(shopId, dateString) {
-  const start = new Date(`${dateString}T00:00:00`)
-  const end = new Date(`${dateString}T23:59:59.999`)
+  const start = buildTimeOnDate(dateString, '00:00')
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1)
   return Booking.find({
     shopId,
     startTime: { $gte: start, $lte: end },
