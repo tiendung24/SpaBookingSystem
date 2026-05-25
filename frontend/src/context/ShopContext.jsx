@@ -321,7 +321,20 @@ export function ShopProvider({ children }) {
       holdToken: bookingDraft.holdToken || undefined,
       note: bookingDraft.note
     }
-    const res = await apiRequest(`/api/public/shops/${slug}/bookings`, { method: 'POST', body: payload })
+    let res = null
+    try {
+      // expose payload for easier debugging in deployed site
+      try { window.__lastBookingPayload = payload } catch (e) {}
+      console.log('[ShopContext] createBookingFromDraft payload', payload)
+      res = await apiRequest(`/api/public/shops/${slug}/bookings`, { method: 'POST', body: payload })
+      try { window.__lastBookingRes = res } catch (e) {}
+      console.log('[ShopContext] createBookingFromDraft res', res)
+    } catch (err) {
+      try { window.__lastBookingError = err } catch (e) {}
+      console.error('[ShopContext] createBookingFromDraft error', err)
+      throw err
+    }
+
     if (res?.booking) {
       setBookings((prev) => [mapBooking(res.booking), ...prev])
       // Clean up hold token after successful booking
