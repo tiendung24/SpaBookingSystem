@@ -1,41 +1,43 @@
-import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import ShopSidebar from '../components/shop/ShopSidebar';
-import { useShop } from '../context/ShopContext';
+﻿import { useMemo, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import ShopSidebar from '../components/shop/ShopSidebar'
+import { useShop } from '../context/ShopContext'
 
 const statusMeta = {
+  awaiting_deposit: { label: 'Chờ thanh toán cọc', color: 'text-amber-700' },
   pending: { label: 'Chờ xác nhận', color: 'text-amber-700' },
   confirmed: { label: 'Đã xác nhận', color: 'text-primary' },
   checked_in: { label: 'Đang phục vụ', color: 'text-primary' },
   completed: { label: 'Hoàn thành', color: 'text-emerald-600' },
   canceled: { label: 'Đã hủy', color: 'text-red-600' },
+  cancelled: { label: 'Đã hủy', color: 'text-red-600' },
   no_show: { label: 'No-show', color: 'text-red-600' }
-};
+}
 
 function fmtVnd(v) {
-  return `${Number(v || 0).toLocaleString('vi-VN')}đ`;
+  return `${Number(v || 0).toLocaleString('vi-VN')}đ`
 }
 
 export default function ShopBookingDetailPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { bookings, services, staff, shop, updateBooking } = useShop();
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { bookings, services, staff, shop, updateBooking } = useShop()
 
-  const booking = bookings.find((b) => b.id === id);
-  const service = services.find((s) => s.id === booking?.serviceId);
-  const employee = staff.find((s) => s.id === booking?.staffId);
-  const meta = statusMeta[booking?.status] ?? { label: 'Không rõ', color: 'text-main' };
+  const booking = bookings.find((b) => b.id === id)
+  const service = services.find((s) => s.id === booking?.serviceId)
+  const employee = staff.find((s) => s.id === booking?.staffId)
+  const meta = statusMeta[booking?.status] ?? { label: 'Không rõ', color: 'text-main' }
 
-  const [cancelMode, setCancelMode] = useState(null); // valid | late | no_show
-  const [cancelReason, setCancelReason] = useState('Có việc đột xuất');
-  const [refund, setRefund] = useState({ bank: '', account: '', name: '' });
+  const [cancelMode, setCancelMode] = useState(null)
+  const [cancelReason, setCancelReason] = useState('Có việc đột xuất')
+  const [refund, setRefund] = useState({ bank: '', account: '', name: '' })
 
-  const isCancelable = booking && !['completed', 'canceled', 'no_show'].includes(booking.status);
+  const isCancelable = booking && !['completed', 'canceled', 'cancelled', 'no_show'].includes(booking.status)
 
   const cancelPolicy = useMemo(() => {
-    const hours = shop.deposit.cancelHours ?? 4;
-    return { hours };
-  }, [shop.deposit.cancelHours]);
+    const hours = shop.deposit.cancelHours ?? 4
+    return { hours }
+  }, [shop.deposit.cancelHours])
 
   if (!booking) {
     return (
@@ -46,49 +48,32 @@ export default function ShopBookingDetailPage() {
           <Link className="text-primary underline" to="/shop/bookings">Quay lại danh sách</Link>
         </main>
       </div>
-    );
+    )
   }
 
-  const setStatus = (status) => updateBooking(booking.id, { status });
-
-  const confirmBooking = () => setStatus('confirmed');
-  const checkIn = () => setStatus('checked_in');
-  const checkOut = () => setStatus('completed');
+  const setStatus = (status) => updateBooking(booking.id, { status })
+  const confirmBooking = () => setStatus('confirmed')
+  const checkIn = () => setStatus('checked_in')
+  const checkOut = () => setStatus('completed')
 
   const cancelValid = () => {
     if (!refund.bank || !refund.account || !refund.name) {
-      alert('Vui lòng nhập đủ thông tin hoàn tiền.');
-      return;
+      alert('Vui lòng nhập đủ thông tin hoàn tiền.')
+      return
     }
-    updateBooking(booking.id, {
-      status: 'canceled',
-      cancellationType: 'valid',
-      refundPercent: 100,
-      cancelReason,
-      refundInfo: refund
-    });
-    setCancelMode(null);
-  };
+    updateBooking(booking.id, { status: 'canceled', cancellationType: 'valid', refundPercent: 100, cancelReason, refundInfo: refund })
+    setCancelMode(null)
+  }
 
   const cancelLate = () => {
-    updateBooking(booking.id, {
-      status: 'canceled',
-      cancellationType: 'late',
-      refundPercent: 0,
-      cancelReason
-    });
-    setCancelMode(null);
-  };
+    updateBooking(booking.id, { status: 'canceled', cancellationType: 'late', refundPercent: 0, cancelReason })
+    setCancelMode(null)
+  }
 
   const markNoShow = () => {
-    updateBooking(booking.id, {
-      status: 'no_show',
-      cancellationType: 'no_show',
-      refundPercent: 0,
-      cancelReason
-    });
-    setCancelMode(null);
-  };
+    updateBooking(booking.id, { status: 'no_show', cancellationType: 'no_show', refundPercent: 0, cancelReason })
+    setCancelMode(null)
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-main">
@@ -97,8 +82,14 @@ export default function ShopBookingDetailPage() {
         <div className="flex items-center justify-between">
           <div>
             <Link className="text-primary hover:underline" to="/shop/bookings">← Danh sách lịch hẹn</Link>
-            <h1 className="font-h2 text-h2 text-primary mt-2">{`Booking #${booking.id}`}</h1>
+            <h1 className="font-h2 text-h2 text-primary mt-2">{`Booking #${booking.bookingCode || booking.id}`}</h1>
             <p className={`font-bold ${meta.color}`}>{meta.label}</p>
+            {booking.status === 'awaiting_deposit' ? (
+              <div className="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold">
+                <span className="material-symbols-outlined text-[18px]">warning</span>
+                <span>Khách chưa thanh toán cọc. Không nên xác nhận trước khi hệ thống ghi nhận PayOS.</span>
+              </div>
+            ) : null}
           </div>
           <button className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-white" type="button" onClick={() => navigate(-1)}>
             Đóng
@@ -145,6 +136,11 @@ export default function ShopBookingDetailPage() {
         <section className="glass-card bg-white/70 rounded-3xl p-6">
           <h2 className="font-h3 text-h3 text-primary mb-4">Thao tác trạng thái</h2>
           <div className="flex flex-wrap gap-3">
+            {booking.status === 'awaiting_deposit' && (
+              <button className="px-5 py-3 rounded-xl bg-slate-200 text-slate-500 font-bold cursor-not-allowed" type="button" disabled title="Chờ hệ thống ghi nhận thanh toán cọc PayOS">
+                Chờ khách thanh toán cọc
+              </button>
+            )}
             {booking.status === 'pending' && (
               <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90" onClick={confirmBooking} type="button">
                 Xác nhận
@@ -236,6 +232,5 @@ export default function ShopBookingDetailPage() {
         </section>
       </main>
     </div>
-  );
+  )
 }
-

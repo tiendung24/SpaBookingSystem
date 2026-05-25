@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
@@ -14,6 +14,9 @@ const categoryLabels = {
   other: 'Khác'
 }
 
+const serviceFallbackImage = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop'
+const staffFallbackImage = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop'
+
 export default function CustomerSelectServicePage() {
   const navigate = useNavigate()
   const { slug } = useParams()
@@ -22,7 +25,7 @@ export default function CustomerSelectServicePage() {
   const [category, setCategory] = useState('all')
   const [query, setQuery] = useState('')
   const [selectedServiceId, setSelectedServiceId] = useState(bookingDraft.serviceId || null)
-  const [selectedStaffId, setSelectedStaffId] = useState(bookingDraft.staffId || 'random') // random | staffId
+  const [selectedStaffId, setSelectedStaffId] = useState(bookingDraft.staffId || 'random')
 
   useEffect(() => {
     if (!slug) return
@@ -40,13 +43,12 @@ export default function CustomerSelectServicePage() {
     const q = query.trim().toLowerCase()
     return visibleServices.filter((s) => {
       const matchCategory = category === 'all' || s.category === category
-      const matchQuery = !q || s.name.toLowerCase().includes(q)
+      const matchQuery = !q || String(s.name || '').toLowerCase().includes(q)
       return matchCategory && matchQuery
     })
   }, [visibleServices, category, query])
 
   const availableStaff = useMemo(() => staff.filter((s) => s.bookingEnabled), [staff])
-
   const selectedService = services.find((s) => s.id === selectedServiceId) || null
   const selectedStaff = staff.find((s) => s.id === selectedStaffId) || null
 
@@ -55,11 +57,7 @@ export default function CustomerSelectServicePage() {
 
   const goNext = () => {
     if (!selectedServiceId) return
-    setBookingDraft((prev) => ({
-      ...prev,
-      serviceId: selectedServiceId,
-      staffId: selectedStaffId
-    }))
+    setBookingDraft((prev) => ({ ...prev, serviceId: selectedServiceId, staffId: selectedStaffId }))
     navigate(`/${slug || shop.slug}/book/time`)
   }
 
@@ -77,30 +75,16 @@ export default function CustomerSelectServicePage() {
         <div className="max-w-[1440px] mx-auto px-6 md:px-10 flex justify-between items-center h-20">
           <div className="font-h3 text-h3 tracking-tight text-primary">{shop.name}</div>
           <div className="hidden md:flex items-center gap-6">
-            <Link className="text-primary font-bold border-b-2 border-primary pb-1" to={`/${slug || shop.slug}#services`}>
-              Dịch vụ
-            </Link>
-            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#staff`}>
-              Nhân sự
-            </Link>
-            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#reviews`}>
-              Đánh giá
-            </Link>
+            <Link className="text-primary font-bold border-b-2 border-primary pb-1" to={`/${slug || shop.slug}#services`}>Dịch vụ</Link>
+            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#staff`}>Nhân sự</Link>
+            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#reviews`}>Đánh giá</Link>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex bg-slate-100 border border-slate-200 rounded-full px-4 py-2 items-center gap-2">
               <span className="material-symbols-outlined text-primary">search</span>
-              <input
-                className="bg-transparent border-none outline-none w-32 md:w-48"
-                placeholder="Tìm dịch vụ..."
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
+              <input className="bg-transparent border-none outline-none w-32 md:w-48" placeholder="Tìm dịch vụ..." type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
             </div>
-            <Link className="bg-primary text-white px-6 py-2.5 rounded-full font-bold shadow-lg active:scale-95 transition-transform" to={`/${slug || shop.slug}/book`}>
-              Đặt lịch
-            </Link>
+            <Link className="bg-primary text-white px-6 py-2.5 rounded-full font-bold shadow-lg active:scale-95 transition-transform" to={`/${slug || shop.slug}/book`}>Đặt lịch</Link>
           </div>
         </div>
       </nav>
@@ -111,17 +95,10 @@ export default function CustomerSelectServicePage() {
             <section className="glass-card bg-white/60 p-6 rounded-3xl">
               <div className="flex items-center justify-between relative max-w-2xl mx-auto">
                 <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 -translate-y-1/2" />
-                <div className="absolute top-1/2 left-0 w-1/4 h-0.5 bg-primary -translate-y-1/2 transition-all duration-700" />
-                {[
-                  { n: 1, t: 'Chọn dịch vụ', active: true },
-                  { n: 2, t: 'Thời gian', active: false },
-                  { n: 3, t: 'Thanh toán', active: false }
-                ].map((s) => (
-                  <div key={s.n} className="relative z-10 flex flex-col items-center gap-2">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-md ${s.active ? 'bg-primary text-white' : 'bg-white border-2 border-slate-200 text-main/60'}`}>
-                      {s.n}
-                    </div>
-                    <span className={`text-sm font-bold ${s.active ? 'text-primary' : 'text-main/60'}`}>{s.t}</span>
+                {[{ n: 1, t: 'Chọn dịch vụ', active: true }, { n: 2, t: 'Chọn thời gian' }, { n: 3, t: 'Thanh toán' }].map((step) => (
+                  <div key={step.n} className="relative z-10 flex flex-col items-center gap-2">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold ${step.active ? 'bg-primary text-white' : 'bg-white border border-slate-200 text-main/60'}`}>{step.n}</div>
+                    <span className={`text-sm font-bold ${step.active ? 'text-primary' : 'text-main/60'}`}>{step.t}</span>
                   </div>
                 ))}
               </div>
@@ -133,17 +110,15 @@ export default function CustomerSelectServicePage() {
                 <p className="text-main/70">Tận hưởng trải nghiệm chăm sóc sắc đẹp cao cấp.</p>
               </div>
 
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              <div className="flex gap-2 flex-wrap">
                 {categories.map((c) => {
-                  const active = category === c
+                  const active = c === category
                   return (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setCategory(c)}
-                      className={`px-7 py-3 rounded-full font-bold whitespace-nowrap transition-colors ${
-                        active ? 'bg-primary text-white shadow-md' : 'bg-white border border-primary/20 text-main/70 hover:bg-slate-50'
-                      }`}
+                      className={`px-7 py-3 rounded-full font-bold whitespace-nowrap transition-colors ${active ? 'bg-primary text-white shadow-md' : 'bg-white border border-primary/20 text-main/70 hover:bg-slate-50'}`}
                     >
                       {categoryLabels[c] || c}
                     </button>
@@ -156,28 +131,19 @@ export default function CustomerSelectServicePage() {
                   const selected = service.id === selectedServiceId
                   return (
                     <div key={service.id} className={`glass-card bg-white/70 p-6 rounded-3xl transition-all border ${selected ? 'border-primary shadow-xl' : 'border-primary/10 hover:shadow-lg'}`}>
+                      <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200">
+                        <img src={service.imageUrl || serviceFallbackImage} alt={service.name} className="w-full h-40 object-cover" />
+                      </div>
                       <div className="flex items-start justify-between gap-4 mb-3">
                         <h3 className="font-h3 text-h3 text-main">{service.name}</h3>
                         <span className="font-bold text-primary">{formatVnd(service.priceVnd)}</span>
                       </div>
                       <p className="text-sm text-main/70 mb-4 line-clamp-3">{service.description || 'Dịch vụ chất lượng cao, thực hiện bởi đội ngũ chuyên gia.'}</p>
                       <div className="flex items-center gap-4 text-sm text-main/70 mb-5">
-                        <div className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[18px] text-primary">schedule</span>
-                          <span>{service.durationMinutes} phút</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[18px] text-primary">payments</span>
-                          <span>{formatVnd(service.priceVnd)}</span>
-                        </div>
+                        <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[18px] text-primary">schedule</span><span>{service.durationMinutes} phút</span></div>
+                        <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[18px] text-primary">payments</span><span>{formatVnd(service.priceVnd)}</span></div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedServiceId(service.id)}
-                        className={`w-full py-3 rounded-2xl font-bold transition-all active:scale-[0.98] ${
-                          selected ? 'bg-primary text-white' : 'bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white'
-                        }`}
-                      >
+                      <button type="button" onClick={() => setSelectedServiceId(service.id)} className={`w-full py-3 rounded-2xl font-bold transition-all active:scale-[0.98] ${selected ? 'bg-primary text-white' : 'bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white'}`}>
                         {selected ? 'Đã chọn' : 'Chọn'}
                       </button>
                     </div>
@@ -196,9 +162,7 @@ export default function CustomerSelectServicePage() {
                 <button
                   type="button"
                   onClick={() => setSelectedStaffId('random')}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-3xl transition-transform active:scale-95 ${
-                    selectedStaffId === 'random' ? 'bg-primary/10 border-2 border-primary shadow-lg' : 'bg-white/60 border border-primary/10 hover:bg-white'
-                  }`}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-3xl transition-transform active:scale-95 ${selectedStaffId === 'random' ? 'bg-primary/10 border-2 border-primary shadow-lg' : 'bg-white/60 border border-primary/10 hover:bg-white'}`}
                 >
                   <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white shadow-inner">
                     <span className="material-symbols-outlined text-[40px]">shuffle</span>
@@ -213,12 +177,10 @@ export default function CustomerSelectServicePage() {
                       key={m.id}
                       type="button"
                       onClick={() => setSelectedStaffId(m.id)}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-3xl transition-transform active:scale-95 ${
-                        isSelected ? 'bg-primary/10 border-2 border-primary shadow-lg' : 'bg-white/60 border border-primary/10 hover:bg-white'
-                      }`}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-3xl transition-transform active:scale-95 ${isSelected ? 'bg-primary/10 border-2 border-primary shadow-lg' : 'bg-white/60 border border-primary/10 hover:bg-white'}`}
                     >
                       <div className={`w-20 h-20 rounded-full overflow-hidden border p-1 bg-white ${isSelected ? 'border-primary' : 'border-transparent'}`}>
-                        <img className="w-full h-full object-cover rounded-full" alt={m.name} src={m.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop'} />
+                        <img className="w-full h-full object-cover rounded-full" alt={m.name} src={m.avatar || staffFallbackImage} />
                       </div>
                       <span className="font-bold text-center text-main">{m.name}</span>
                       <span className="text-xs text-main/60 font-bold">{m.role || 'Chuyên viên'}</span>
@@ -239,26 +201,25 @@ export default function CustomerSelectServicePage() {
               </div>
 
               {selectedService ? (
-                <div className="flex justify-between items-start border-b border-slate-200 pb-4">
-                  <div className="flex flex-col">
-                    <span className="font-bold text-main">{selectedService.name}</span>
-                    <span className="text-xs text-main/60">Thợ: {selectedStaffId === 'random' ? 'Ngẫu nhiên' : selectedStaff?.name ?? '—'}</span>
+                <div className="border-b border-slate-200 pb-4">
+                  <div className="flex items-start gap-3">
+                    <img src={selectedService.imageUrl || serviceFallbackImage} alt={selectedService.name} className="w-14 h-14 rounded-xl object-cover border border-slate-200" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-bold text-main line-clamp-2">{selectedService.name}</span>
+                        <span className="font-bold text-primary whitespace-nowrap">{formatVnd(selectedService.priceVnd)}</span>
+                      </div>
+                      <span className="text-xs text-main/60">Thợ: {selectedStaffId === 'random' ? 'Ngẫu nhiên' : selectedStaff?.name ?? '—'}</span>
+                    </div>
                   </div>
-                  <span className="font-bold text-primary">{formatVnd(selectedService.priceVnd)}</span>
                 </div>
               ) : (
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-main/60 text-sm">Chưa chọn dịch vụ.</div>
               )}
 
               <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center text-main/70">
-                  <span>Tạm tính:</span>
-                  <span>{formatVnd(totalPrice)}</span>
-                </div>
-                <div className="flex justify-between items-center text-main/70">
-                  <span>Giảm giá:</span>
-                  <span>0đ</span>
-                </div>
+                <div className="flex justify-between items-center text-main/70"><span>Tạm tính:</span><span>{formatVnd(totalPrice)}</span></div>
+                <div className="flex justify-between items-center text-main/70"><span>Giảm giá:</span><span>0đ</span></div>
                 <div className="flex justify-between items-center mt-3 border-t border-slate-200 pt-3">
                   <span className="font-bold text-main">Tổng cộng:</span>
                   <div className="flex flex-col items-end">
@@ -268,20 +229,11 @@ export default function CustomerSelectServicePage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={!selectedServiceId}
-                onClick={goNext}
-                className={`w-full py-4 rounded-2xl font-bold shadow-xl transition-all active:scale-[0.98] ${
-                  selectedServiceId ? 'bg-primary text-white hover:scale-[1.02]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                }`}
-              >
+              <button type="button" disabled={!selectedServiceId} onClick={goNext} className={`w-full py-4 rounded-2xl font-bold shadow-xl transition-all active:scale-[0.98] ${selectedServiceId ? 'bg-primary text-white hover:scale-[1.02]' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
                 Tiếp tục
               </button>
               <p className="text-xs text-main/60 text-center">Bước tiếp theo: Chọn thời gian phù hợp.</p>
             </div>
-
-
           </aside>
         </div>
       </main>
@@ -290,18 +242,10 @@ export default function CustomerSelectServicePage() {
         <div className="max-w-[1440px] mx-auto px-6 md:px-10 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="font-label-bold text-label-bold uppercase tracking-widest text-primary">LumiX Partner</div>
           <div className="flex gap-6 flex-wrap justify-center">
-            <a className="text-main/70 hover:text-primary text-xs" href="#">
-              Chính sách bảo mật
-            </a>
-            <a className="text-main/70 hover:text-primary text-xs" href="#">
-              Điều khoản
-            </a>
-            <a className="text-main/70 hover:text-primary text-xs" href="#">
-              Liên hệ
-            </a>
-            <a className="text-main/70 hover:text-primary text-xs" href="#">
-              Hỗ trợ
-            </a>
+            <a className="text-main/70 hover:text-primary text-xs" href="#">Chính sách bảo mật</a>
+            <a className="text-main/70 hover:text-primary text-xs" href="#">Điều khoản</a>
+            <a className="text-main/70 hover:text-primary text-xs" href="#">Liên hệ</a>
+            <a className="text-main/70 hover:text-primary text-xs" href="#">Hỗ trợ</a>
           </div>
           <p className="text-xs text-main/60">© 2024 LumiX Partner. Powered by LumiX.</p>
         </div>

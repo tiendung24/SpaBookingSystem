@@ -1,4 +1,4 @@
-import { PayOSService } from '../../services/payos.service.js'
+﻿import { PayOSService } from '../../services/payos.service.js'
 import mongoose from 'mongoose'
 import { Booking, BookingSlotLock, Deposit, PayosPayment, Service, ServiceCategory, ShopStaff } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
@@ -14,6 +14,22 @@ import {
   getWorkingPlan,
   isShopBookable
 } from '../../utils/shop.js'
+
+function calcDepositAmount({ shop, service }) {
+  const cfg = shop?.depositConfig || {}
+  if (!cfg.enabled) return 0
+
+  const type = cfg.type || 'fixed'
+  const value = Number(cfg.value || 0)
+  if (value <= 0) return 0
+
+  if (type === 'percent') {
+    const total = Number(service?.price || 0)
+    return Math.max(0, Math.round((total * value) / 100))
+  }
+
+  return Math.max(0, value)
+}
 
 export async function getShopBySlug(req, res) {
   const shop = await findShopBySlug(req.params.slug)
@@ -117,7 +133,7 @@ export async function createBooking(req, res) {
   if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
   const overlapping = await Booking.find({
     shopId: String(shop._id),
-    status: { $in: ['pending', 'confirmed', 'checked_in'] },
+    status: { $in: ['awaiting_deposit', 'pending', 'confirmed', 'checked_in'] },
     startTime: { $lt: endTime },
     endTime: { $gt: startTime }
   }).lean()
@@ -136,10 +152,12 @@ export async function createBooking(req, res) {
     staffId = String(availableStaff._id)
   }
 
+  const depositAmount = calcDepositAmount({ shop, service })
+  const needsDeposit = depositAmount > 0
+
   const bookingCode = `BK${Math.floor(Math.random() * 900000 + 100000)}`
   const session = await mongoose.startSession()
   let booking
-  let payment
   try {
     await session.withTransaction(async () => {
       await BookingSlotLock.create(
@@ -161,15 +179,15 @@ export async function createBooking(req, res) {
             shopId: String(shop._id),
             customerId: String(customer._id),
             customerName,
-            customerPhone: phone,
+            customerPhone: String(phone).replace(/\s+/g, ''),
             customerEmail: email ? String(email).toLowerCase() : undefined,
             serviceId,
             staffId: staffId || null,
             startTime,
             endTime,
             note: note || '',
-            status: 'pending',
-            depositAmount: Number(service.depositAmount || 0),
+            status: needsDeposit ? 'awaiting_deposit' : 'pending',
+            depositAmount: Number(depositAmount || 0),
             totalAmount: Number(service.price || 0),
             createdAt: new Date(),
             updatedAt: new Date()
@@ -186,25 +204,27 @@ export async function createBooking(req, res) {
   }
   await session.endSession()
 
-  const payos = new PayOSService()
-  payment = await payos.createDepositPayment({
-    bookingCode,
-    amount: Number(booking.depositAmount || 0),
-    description: `LUMIX_${bookingCode}`
-  })
+  let payment = null
 
-  await PayosPayment.create({
-    bookingId: String(booking._id),
-    shopId: String(shop._id),
-    amount: payment.amount,
-    orderCode: String(payment.payosOrderId || ''),
-    status: payment.status,
-    raw: payment,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  })
+  if (needsDeposit) {
+    const payos = new PayOSService()
+    payment = await payos.createDepositPayment({
+      bookingCode,
+      amount: Number(booking.depositAmount || 0),
+      description: `LUMIX_${bookingCode}`
+    })
 
-  if (Number(booking.depositAmount || 0) > 0) {
+    await PayosPayment.create({
+      bookingId: String(booking._id),
+      shopId: String(shop._id),
+      amount: payment.amount,
+      orderCode: String(payment.payosOrderId || ''),
+      status: payment.status,
+      raw: payment,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+
     await Deposit.create({
       bookingId: String(booking._id),
       shopId: String(shop._id),
@@ -225,7 +245,8 @@ export async function createBooking(req, res) {
       shopId: String(shop._id),
       customerPhone: phone,
       serviceId,
-      staffId
+      staffId,
+      depositAmount: Number(booking.depositAmount || 0)
     }
   })
 

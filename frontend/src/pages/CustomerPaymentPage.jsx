@@ -38,41 +38,33 @@ function ConfettiLayer({ active }) {
 
   const items = useMemo(() => {
     if (!active) return []
-    const colors = ['#14677a', '#2a6673', '#cb8d56', '#afe9f9', '#ffdcc1']
-    return Array.from({ length: 50 }, (_, i) => ({
-      id: i,
-      left: pseudo(i + 1) * 100,
-      color: colors[Math.floor(pseudo(i + 11) * colors.length)],
-      duration: pseudo(i + 21) * 3 + 2,
-      delay: pseudo(i + 31) * 0.2,
-      round: pseudo(i + 41) > 0.5
-    }))
+    const colors = ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ec4899']
+    return Array.from({ length: 32 }).map((_, idx) => {
+      const left = Math.round(pseudo(idx + 1) * 100)
+      const size = 8 + Math.round(pseudo(idx + 10) * 10)
+      const delay = pseudo(idx + 20) * 0.4
+      const duration = 1.2 + pseudo(idx + 30) * 0.8
+      const rotate = Math.round(pseudo(idx + 40) * 360)
+      const color = colors[idx % colors.length]
+      return { id: idx, left, size, delay, duration, rotate, color }
+    })
   }, [active])
 
   if (!active) return null
 
   return (
     <>
-      <style>{`
-        @keyframes confetti-fall {
-          0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-        }
-      `}</style>
       {items.map((item) => (
-        <div
+        <span
           key={item.id}
+          className="fixed top-0 z-[60] rounded-md"
           style={{
-            position: 'fixed',
-            width: 10,
-            height: 10,
-            left: `${item.left}vw`,
-            top: -20,
+            left: `${item.left}%`,
+            width: item.size,
+            height: item.size,
             backgroundColor: item.color,
-            borderRadius: item.round ? '50%' : 2,
-            pointerEvents: 'none',
-            zIndex: 100,
-            animation: `confetti-fall ${item.duration}s linear ${item.delay}s forwards`
+            transform: `rotate(${item.rotate}deg)`,
+            animation: `lumixConfettiFall ${item.duration}s linear ${item.delay}s forwards`
           }}
         />
       ))}
@@ -82,16 +74,7 @@ function ConfettiLayer({ active }) {
 
 export default function CustomerPaymentPage() {
   const { slug } = useParams()
-  const {
-    shop,
-    services,
-    staff,
-    bookingDraft,
-    createBookingFromDraft,
-    resetBookingDraft,
-    loadPublicShop,
-    checkBookingStatus
-  } = useShop()
+  const { shop, services, staff, bookingDraft, createBookingFromDraft, resetBookingDraft, loadPublicShop, checkBookingStatus } = useShop()
 
   const service = services.find((item) => item.id === bookingDraft.serviceId)
   const selectedStaff = bookingDraft.staffId === 'random' ? null : staff.find((item) => item.id === bookingDraft.staffId)
@@ -136,8 +119,15 @@ export default function CustomerPaymentPage() {
         if (res?.booking) {
           setCreatedBookingId(res.booking.bookingCode || res.booking._id)
         }
+
         if (res?.payment) {
           setPayosData(res.payment)
+        } else if (depositAmount <= 0) {
+          // Không yêu cầu đặt cọc -> coi như hoàn tất bước thanh toán
+          setSuccess(true)
+          setConfetti(true)
+          setTimeout(() => setConfetti(false), 2500)
+          resetBookingDraft()
         }
       } catch (err) {
         console.error(err)
@@ -153,7 +143,7 @@ export default function CustomerPaymentPage() {
     return () => {
       mounted = false
     }
-  }, [service, bookingDraft.customerPhone, slug, createdBookingId, createBookingFromDraft])
+  }, [service, bookingDraft.customerPhone, slug, createdBookingId, createBookingFromDraft, depositAmount, resetBookingDraft])
 
   useEffect(() => {
     if (success) return
@@ -171,7 +161,7 @@ export default function CustomerPaymentPage() {
       try {
         const res = await checkBookingStatus(createdBookingId)
         const booking = res?.booking || res?.data?.booking || null
-        const paid = Boolean(booking?.isPaid || booking?.paid || booking?.paymentStatus === 'paid')
+        const paid = booking?.status === 'confirmed'
 
         if (paid && mounted) {
           setSuccess(true)
@@ -196,7 +186,7 @@ export default function CustomerPaymentPage() {
     try {
       const res = await checkBookingStatus(createdBookingId)
       const booking = res?.booking || res?.data?.booking || null
-      const paid = Boolean(booking?.isPaid || booking?.paid || booking?.paymentStatus === 'paid')
+      const paid = booking?.status === 'confirmed'
       if (paid) {
         setSuccess(true)
         setConfetti(true)
@@ -271,124 +261,101 @@ export default function CustomerPaymentPage() {
 
           <div className={`w-full lg:w-7/12 order-2 lg:order-1 ${success ? 'hidden' : ''}`}>
             <div className="glass-card bg-white/70 rounded-3xl p-6 border border-primary/10 shadow-xl">
-              <h1 className="font-h2 text-h2 text-primary mb-3">Thanh toán cọc</h1>
-              <p className="text-main/70 mb-6">Vui lòng chuyển khoản trước khi hết thời gian giữ slot.</p>
-
-              {creating ? (
-                <div className="flex flex-col items-center justify-center py-12 text-primary">
-                  <span className="material-symbols-outlined text-4xl animate-spin mb-4">autorenew</span>
-                  <p className="font-bold">Đang khởi tạo phiên thanh toán...</p>
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center">
-                    {payosData?.qrCodeUrl ? (
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payosData.qrCodeUrl)}`}
-                        alt="QR thanh toán PayOS"
-                        className="w-full rounded-xl"
-                      />
-                    ) : (
-                      <div className="w-full h-48 bg-slate-100 flex items-center justify-center rounded-xl text-slate-500">
-                        {depositAmount > 0 ? 'Không lấy được QR. Vui lòng mở link PayOS.' : 'Không cần đặt cọc'}
-                      </div>
-                    )}
-                    {payosData?.checkoutUrl ? (
-                      <a
-                        href={payosData.checkoutUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-block mt-4 text-sm font-bold text-blue-600 hover:underline"
-                      >
-                        Mở trang PayOS
-                      </a>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="text-sm rounded-xl bg-slate-100 px-4 py-3">
-                      Còn lại: <b className="text-primary">{formatCountdown(timeLeft)}</b>
-                    </div>
-
-                    <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-main/60">Số tiền:</span>
-                        <span className="font-bold text-primary">{formatVnd(depositAmount)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-main/60">Nội dung:</span>
-                        <span className="font-bold text-main">{buildPayContent(createdBookingId || '')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-main/60">Ngân hàng:</span>
-                        <span className="font-bold text-main">VietinBank (PayOS)</span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleTransferred}
-                      disabled={timeLeft <= 0}
-                      className={`w-full py-4 rounded-xl font-bold transition-all ${
-                        timeLeft > 0
-                          ? 'bg-primary text-white hover:brightness-110 active:scale-[0.98]'
-                          : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                      }`}
-                    >
-                      Tôi đã chuyển khoản
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <aside className="w-full lg:w-5/12 order-1 lg:order-2 sticky top-24 h-fit">
-            <div className="glass-card bg-white/70 rounded-3xl p-6 border border-primary/10">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden border border-primary/10 bg-white flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                    spa
-                  </span>
-                </div>
+              <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-h3 text-h3 text-main">{shop.name}</h2>
-                  <p className="text-xs text-main/60">{shop.address}</p>
+                  <h1 className="font-h2 text-h2 text-primary">Thanh toán đặt cọc</h1>
+                  <p className="text-main/70 text-sm">Giữ chỗ trong {formatCountdown(timeLeft)}.</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-main/60">Mã đặt lịch</div>
+                  <div className="font-bold text-primary">{createdBookingId ? `#${createdBookingId}` : '#LMX-????'}</div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between py-2 border-b border-slate-200">
-                  <span className="text-main/60">Mã đặt lịch:</span>
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-3xl p-5 border border-slate-200">
+                  <h3 className="font-bold mb-3">Quét QR để thanh toán</h3>
+                  <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 min-h-[320px]">
+                    {creating ? (
+                      <div className="text-main/60">Đang tạo đơn thanh toán...</div>
+                    ) : payosData?.qrCodeUrl ? (
+                      <img
+                        className="w-[300px] h-[300px] rounded-2xl"
+                        alt="PayOS QR"
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payosData.qrCodeUrl)}`}
+                      />
+                    ) : (
+                      <div className="text-main/60 text-center">
+                        {depositAmount > 0 ? 'Không lấy được QR. Vui lòng mở link PayOS.' : 'Không cần đặt cọc.'}
+                      </div>
+                    )}
+                  </div>
+
+                  {payosData?.checkoutUrl ? (
+                    <a
+                      className="mt-4 inline-flex w-full items-center justify-center px-5 py-3 rounded-2xl bg-primary text-white font-bold hover:brightness-110"
+                      href={payosData.checkoutUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Mở trang PayOS
+                    </a>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    className="mt-3 w-full px-5 py-3 rounded-2xl bg-white border border-primary text-primary font-bold hover:bg-primary hover:text-white"
+                    onClick={handleTransferred}
+                  >
+                    Tôi đã chuyển khoản
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-3xl p-5 border border-slate-200">
+                  <h3 className="font-bold mb-4">Thông tin đơn</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between"><span className="text-main/60">Dịch vụ</span><span className="font-bold text-main">{service.name}</span></div>
+                    <div className="flex justify-between"><span className="text-main/60">Nhân viên</span><span className="font-bold text-main">{bookingDraft.staffId === 'random' ? 'Ngẫu nhiên' : selectedStaff?.name ?? '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-main/60">Thời lượng</span><span className="font-bold text-main">{service.durationMinutes} phút</span></div>
+                    <div className="flex justify-between"><span className="text-main/60">Giá</span><span className="font-bold text-main">{formatVnd(service.priceVnd)}</span></div>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-primary/10">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-primary">Cọc trước (khấu trừ):</span>
+                      <span className="text-2xl font-bold text-primary">{formatVnd(depositAmount)}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-main/60">Nội dung chuyển khoản</span>
+                      <span className="font-mono font-bold text-main">{buildPayContent(createdBookingId || '')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside className="w-full lg:w-5/12 order-1 lg:order-2">
+            <div className="glass-card bg-white/80 rounded-3xl p-6 border border-primary/10 shadow-xl">
+              <h3 className="font-h3 text-h3 text-main">Xác nhận đặt lịch</h3>
+              <p className="text-main/70 mt-1">Vui lòng kiểm tra thông tin trước khi thanh toán.</p>
+
+              <div className="mt-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-main/60">Mã đặt lịch</span>
                   <span className="font-bold text-primary">{createdBookingId ? `#${createdBookingId}` : '#LMX-????'}</span>
                 </div>
-
-                <div className="space-y-2">
-                  <span className="text-xs text-main/60 uppercase tracking-wider">Dịch vụ</span>
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold">{service.name}</span>
-                    <span className="font-bold">{formatVnd(service.priceVnd)}</span>
-                  </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-main/60">Dịch vụ</span>
+                  <span className="font-bold text-main">{service.name}</span>
                 </div>
-
-                <div className="space-y-2">
-                  <span className="text-xs text-main/60 uppercase tracking-wider">Thời gian</span>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
-                    <span className="font-bold">
-                      {bookingDraft.time
-                        ? `${bookingDraft.time} - ${new Date(bookingDraft.date || new Date()).toLocaleDateString('vi-VN')}`
-                        : '—'}
-                    </span>
-                  </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-main/60">Nhân viên</span>
+                  <span className="font-bold text-main">{bookingDraft.staffId === 'random' ? 'Ngẫu nhiên' : selectedStaff?.name ?? '—'}</span>
                 </div>
-
-                <div className="space-y-2">
-                  <span className="text-xs text-main/60 uppercase tracking-wider">Nhân viên</span>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[20px]">person</span>
-                    <span className="font-bold">{bookingDraft.staffId === 'random' ? 'Ngẫu nhiên' : selectedStaff?.name ?? '—'}</span>
-                  </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-main/60">Thời gian</span>
+                  <span className="font-bold text-main">{bookingDraft.date} {bookingDraft.time}</span>
                 </div>
               </div>
 
@@ -406,7 +373,13 @@ export default function CustomerPaymentPage() {
           </aside>
         </div>
       </main>
+
+      <style>{`
+        @keyframes lumixConfettiFall {
+          0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+      `}</style>
     </div>
   )
 }
-

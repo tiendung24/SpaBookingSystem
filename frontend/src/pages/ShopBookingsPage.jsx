@@ -1,46 +1,54 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import ShopSidebar from '../components/shop/ShopSidebar';
-import { useShop } from '../context/ShopContext';
+﻿import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import ShopSidebar from '../components/shop/ShopSidebar'
+import { useShop } from '../context/ShopContext'
 
-const statuses = ['Tất cả', 'Chờ xác nhận', 'Đã xác nhận', 'Đang phục vụ', 'Hoàn thành', 'Đã hủy'];
+const statuses = ['Tất cả', 'Chờ xác nhận', 'Đã xác nhận', 'Đang phục vụ', 'Hoàn thành', 'Đã hủy']
 
 const mapStatus = {
+  awaiting_deposit: 'Chờ thanh toán cọc',
   pending: 'Chờ xác nhận',
   confirmed: 'Đã xác nhận',
   checked_in: 'Đang phục vụ',
   completed: 'Hoàn thành',
   canceled: 'Đã hủy',
+  cancelled: 'Đã hủy',
   no_show: 'Đã hủy'
-};
+}
 
 function statusClass(label) {
-  if (label === 'Hoàn thành') return 'text-emerald-600';
-  if (label === 'Chờ xác nhận') return 'text-amber-700';
-  if (label === 'Đã xác nhận' || label === 'Đang phục vụ') return 'text-primary';
-  return 'text-red-600';
+  if (label === 'Hoàn thành') return 'text-emerald-600'
+  if (label === 'Chờ xác nhận' || label === 'Chờ thanh toán cọc') return 'text-amber-700'
+  if (label === 'Đã xác nhận' || label === 'Đang phục vụ') return 'text-primary'
+  return 'text-red-600'
 }
 
 export default function ShopBookingsPage() {
-  const { bookings, services, staff } = useShop();
-  const [selectedStatus, setSelectedStatus] = useState('Tất cả');
+  const { bookings, services, staff } = useShop()
+  const [selectedStatus, setSelectedStatus] = useState('Tất cả')
 
   const rows = useMemo(() => {
     return bookings.map((booking) => {
-      const service = services.find((s) => s.id === booking.serviceId);
-      const employee = staff.find((s) => s.id === booking.staffId);
-      const status = mapStatus[booking.status] ?? 'Chờ xác nhận';
+      const service = services.find((s) => s.id === booking.serviceId)
+      const employee = staff.find((s) => s.id === booking.staffId)
+      const status = mapStatus[booking.status] ?? 'Chờ xác nhận'
       return {
         ...booking,
         statusLabel: status,
         serviceName: service?.name ?? 'Dịch vụ',
         staffName: employee?.name ?? 'Chưa phân công',
         timeLabel: `${new Date(booking.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${new Date(booking.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
-      };
-    });
-  }, [bookings, services, staff]);
+      }
+    })
+  }, [bookings, services, staff])
 
-  const filtered = rows.filter((row) => selectedStatus === 'Tất cả' || row.statusLabel === selectedStatus);
+  const filtered = rows.filter((row) => {
+    if (selectedStatus === 'Tất cả') return true
+    if (selectedStatus === 'Chờ xác nhận') {
+      return row.statusLabel === 'Chờ xác nhận' || row.statusLabel === 'Chờ thanh toán cọc'
+    }
+    return row.statusLabel === selectedStatus
+  })
 
   return (
     <div className="min-h-screen bg-[linear-gradient(135deg,#f9f9ff_0%,#e7eeff_100%)] text-main">
@@ -79,7 +87,7 @@ export default function ShopBookingsPage() {
               <tbody className="divide-y divide-slate-200">
                 {filtered.map((booking) => (
                   <tr key={booking.id} className="hover:bg-white/60">
-                    <td className="p-4 font-bold text-primary">{`#${booking.id}`}</td>
+                    <td className="p-4 font-bold text-primary">{`#${booking.bookingCode || booking.id}`}</td>
                     <td className="p-4">
                       <p className="font-semibold">{booking.customer}</p>
                       <p className="text-xs text-main/60">{booking.phone}</p>
@@ -102,5 +110,5 @@ export default function ShopBookingsPage() {
         </section>
       </main>
     </div>
-  );
+  )
 }
