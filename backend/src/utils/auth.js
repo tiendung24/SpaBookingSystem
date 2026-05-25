@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 
-const DEFAULT_EXPIRES_IN = '7d'
+const DEFAULT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h'
 
 export function signAccessToken(payload) {
   const secret = process.env.JWT_SECRET || 'change_me'

@@ -1,7 +1,7 @@
-﻿/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { apiRequest } from '../lib/api'
-import { AUTH_EXPIRED_EVENT, clearStoredAuth, getStoredRole, getStoredToken, setStoredAuth } from '../lib/auth'
+import { AUTH_EXPIRED_EVENT, clearStoredAuth, getStoredRole, getStoredToken, setStoredAuth, emitAuthExpired } from '../lib/auth'
 
 const ShopContext = createContext(null)
 
@@ -78,6 +78,7 @@ export function ShopProvider({ children }) {
   const [role, setRole] = useState(getStoredRole())
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [meLoaded, setMeLoaded] = useState(false)
   const [error, setError] = useState('')
   const [shop, setShop] = useState({
     name: '',
@@ -155,18 +156,46 @@ export function ShopProvider({ children }) {
       }))
       setError('')
     } catch (err) {
-      setError(err.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c dá»¯ liá»‡u')
+      setError(err?.message || 'Không tải được dữ liệu')
     } finally {
       setLoading(false)
+      setMeLoaded(true)
     }
   }, [token])
 
   useEffect(() => {
     if (!token || role === 'admin') return
+    // load current user/shop immediately
     const t = setTimeout(() => {
       loadMeAndShop(token)
     }, 0)
-    return () => clearTimeout(t)
+
+    // schedule token expiry handling
+    let expiryTimer = null
+    try {
+      const parts = token.split('.')
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+        if (payload && payload.exp) {
+          const msLeft = payload.exp * 1000 - Date.now()
+          if (msLeft > 0) {
+            expiryTimer = setTimeout(() => {
+              emitAuthExpired({ reason: 'token_expired' })
+            }, msLeft)
+          } else {
+            // already expired
+            emitAuthExpired({ reason: 'token_expired' })
+          }
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+
+    return () => {
+      clearTimeout(t)
+      if (expiryTimer) clearTimeout(expiryTimer)
+    }
   }, [token, role, loadMeAndShop])
 
   useEffect(() => {
@@ -183,7 +212,7 @@ export function ShopProvider({ children }) {
         currentPath.startsWith('/forgot-password') ||
         /^\/[^/]+(\/book(\/time|\/pay)?|\/appointments)?$/.test(currentPath)
       if (!isPublicPath) {
-        sessionStorage.setItem('lumix_flash_message', 'PhiÃªn Ä‘Äƒng nháº­p Ä‘Ã£ háº¿t háº¡n, vui lÃ²ng Ä‘Äƒng nháº­p láº¡i.')
+        sessionStorage.setItem('lumix_flash_message', 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.')
         window.location.href = '/login'
       }
     }
@@ -236,6 +265,7 @@ export function ShopProvider({ children }) {
     setToken('')
     setRole('')
     setUser(null)
+    setMeLoaded(false)
   }
 
   const loadPublicShop = async (slug) => {
@@ -258,6 +288,18 @@ export function ShopProvider({ children }) {
     setStaff((staffsRes.items || []).map(mapStaff))
   }
 
+  const getAvailableSlots = async (slug, { serviceId, date, staffId } = {}) => {
+    if (!slug || !serviceId || !date) return []
+    try {
+      const query = new URLSearchParams({ serviceId, date })
+      if (staffId) query.set('staffId', staffId)
+      const res = await apiRequest(`/api/public/shops/${slug}/available-slots?${query.toString()}`)
+      return res.slots || []
+    } catch {
+      return []
+    }
+  }
+
   const createBookingFromDraft = async (slug) => {
     if (!slug) return null
     const payload = {
@@ -268,6 +310,7 @@ export function ShopProvider({ children }) {
       email: bookingDraft.customerEmail || undefined,
       date: bookingDraft.date,
       time: bookingDraft.time,
+      holdToken: bookingDraft.holdToken || undefined,
       note: bookingDraft.note
     }
     const res = await apiRequest(`/api/public/shops/${slug}/bookings`, { method: 'POST', body: payload })
@@ -451,6 +494,7 @@ export function ShopProvider({ children }) {
     isAuthenticated: Boolean(token),
     user,
     loading,
+    meLoaded,
     error,
     shop,
     setShop,
@@ -466,6 +510,7 @@ export function ShopProvider({ children }) {
     resetBookingDraft,
     createBookingFromDraft,
     holdBookingSlot,
+    getAvailableSlots,
     addService,
     updateService,
     deleteService,
@@ -494,6 +539,7 @@ export function useShop() {
   if (!ctx) throw new Error('useShop must be used within ShopProvider')
   return ctx
 }
+
 
 
 

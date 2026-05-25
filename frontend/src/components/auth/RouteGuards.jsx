@@ -2,7 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 
 export function RequireRole({ allow, children }) {
-  const { isAuthenticated, role, shop, loading } = useShop()
+  const { isAuthenticated, role, shop, meLoaded } = useShop()
   const location = useLocation()
 
   if (!isAuthenticated) {
@@ -11,8 +11,8 @@ export function RequireRole({ allow, children }) {
 
 
   if (role === 'shop') {
-    // If shop data is still loading, don't decide yet — avoid premature redirect
-    if (loading) return null
+    // If shop data hasn't been loaded yet, wait to avoid premature redirect
+    if (!meLoaded) return null
 
     const isOnboardingDone = shop?.onboardingCompleted === true
     const isOnboardingRoute = location.pathname === '/shop/onboarding'

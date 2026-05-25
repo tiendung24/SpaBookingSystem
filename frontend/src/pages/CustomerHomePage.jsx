@@ -14,7 +14,7 @@ function formatVnd(v) {
 
 export default function CustomerHomePage() {
   const { slug } = useParams()
-  const { shop, services, staff, loadPublicShop } = useShop()
+  const { shop, services, staff, loadPublicShop, isAuthenticated, role, user, logout } = useShop()
 
   useEffect(() => {
     if (!slug) return
@@ -61,9 +61,19 @@ export default function CustomerHomePage() {
               Đánh giá
             </a>
           </nav>
-          <Link className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:brightness-110 transition-all" to={`/${shop.slug}/book`}>
-            Đặt lịch ngay
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:brightness-110 transition-all" to={`/${shop.slug}/book`}>
+              Đặt lịch ngay
+            </Link>
+            {isAuthenticated && role === 'shop' ? (
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
+                  {user?.fullName?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <button onClick={logout} className="text-main/70 hover:text-primary">Đăng xuất</button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 

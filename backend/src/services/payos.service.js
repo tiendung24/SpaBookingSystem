@@ -116,9 +116,40 @@ export class PayOSService {
       }
 
       // Fallback: kiểm tra chữ ký dạng HMAC trên chuỗi JSON (dev only)
-      const raw = JSON.stringify(payload ?? {})
-      const signature = crypto.createHmac('sha256', this.checksumKey).update(raw).digest('hex')
-      return Boolean(signature)
+      // Nếu payload chứa trường chữ ký (signature/checksum), so sánh HMAC an toàn.
+      // Compute HMAC over payload WITHOUT the signature field
+      const incoming = String(payload?.signature || payload?.checksum || payload?.sig || payload?.hmac || '')
+      if (!incoming) return false
+      try {
+        const copy = { ...payload }
+        delete copy.signature
+        delete copy.checksum
+        delete copy.sig
+        delete copy.hmac
+        const raw = JSON.stringify(copy ?? {})
+        const expected = crypto.createHmac('sha256', this.checksumKey).update(raw).digest('hex')
+        // Also accept signature computed over `data` payload alone (some integrations sign only inner data)
+        let expectedData = null
+        try {
+          if (copy && copy.data) {
+            expectedData = crypto.createHmac('sha256', this.checksumKey).update(JSON.stringify(copy.data)).digest('hex')
+          }
+        } catch (e) {
+          expectedData = null
+        }
+        const a = Buffer.from(expected)
+        const b = Buffer.from(incoming)
+        if (a.length !== b.length) return false
+        if (crypto.timingSafeEqual(a, b)) return true
+        if (expectedData) {
+          const c = Buffer.from(expectedData)
+          if (c.length === b.length && crypto.timingSafeEqual(c, b)) return true
+        }
+        return false
+        return false
+      } catch (e) {
+        return false
+      }
     } catch {
       return false
     }
