@@ -141,6 +141,14 @@ export async function createBooking(req, res) {
 export async function getBookings(req, res) {
   const shopId = req.auth.shopId
   const query = { shopId }
+
+  // Default: only return "active" bookings unless explicitly requested.
+  // This avoids showing expired/unpaid or cancelled bookings as if they are still active.
+  const includeHistory = String(req.query.includeHistory || '').trim() === '1'
+  if (!includeHistory && !req.query.status) {
+    query.status = { $in: ['awaiting_deposit', 'pending', 'confirmed', 'checked_in'] }
+  }
+
   if (req.query.status) query.status = req.query.status
   if (req.query.staffId) query.staffId = req.query.staffId
   if (req.query.date) {

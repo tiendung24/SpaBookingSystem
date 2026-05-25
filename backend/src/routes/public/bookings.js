@@ -8,7 +8,7 @@ export const publicBookingsRouter = Router()
  * @openapi
  * /api/public/bookings/{bookingCode}:
  *   get:
- *     summary: Xem chi tiết booking theo mã
+ *     summary: Xem chi tiáº¿t booking theo mÃ£
  *     tags: [Public]
  *     responses:
  *       200:
@@ -27,7 +27,7 @@ publicBookingsRouter.get('/:bookingCode', asyncHandler(PublicBookingsController.
  * @openapi
  * /api/public/bookings/{bookingCode}/cancel:
  *   post:
- *     summary: Khách hủy lịch
+ *     summary: KhÃ¡ch há»§y lá»‹ch
  *     tags: [Public]
  *     requestBody:
  *       required: true
@@ -48,7 +48,7 @@ publicBookingsRouter.post('/:bookingCode/cancel', asyncHandler(PublicBookingsCon
  * @openapi
  * /api/public/bookings/{bookingCode}/refund-info:
  *   post:
- *     summary: Nhập thông tin hoàn tiền
+ *     summary: Nháº­p thÃ´ng tin hoÃ n tiá»n
  *     tags: [Public]
  *     responses:
  *       200:
@@ -67,7 +67,7 @@ publicBookingsRouter.post('/:bookingCode/refund-info', asyncHandler(PublicBookin
  * @openapi
  * /api/public/bookings/{bookingCode}/refund-status:
  *   get:
- *     summary: Xem trạng thái hoàn tiền
+ *     summary: Xem tráº¡ng thÃ¡i hoÃ n tiá»n
  *     tags: [Public]
  *     responses:
  *       200:
@@ -80,7 +80,7 @@ publicBookingsRouter.get('/:bookingCode/refund-status', asyncHandler(PublicBooki
  * @openapi
  * /api/public/bookings/{bookingCode}/report-shop-fraud:
  *   post:
- *     summary: Tố giác shop gian lận
+ *     summary: Tá»‘ giÃ¡c shop gian láº­n
  *     tags: [Public]
  *     responses:
  *       200:
@@ -93,10 +93,12 @@ publicBookingsRouter.post('/:bookingCode/report-shop-fraud', asyncHandler(Public
  * @openapi
  * /api/public/bookings/{bookingCode}/reviews:
  *   post:
- *     summary: Đánh giá sau dịch vụ
+ *     summary: ÄÃ¡nh giÃ¡ sau dá»‹ch vá»¥
  *     tags: [Public]
  *     responses:
  *       200: { description: "Review saved" }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
 publicBookingsRouter.post('/:bookingCode/reviews', asyncHandler(PublicBookingsController.createReview))
+
+publicBookingsRouter.post('/:bookingCode/expire-unpaid', asyncHandler(PublicBookingsController.expireUnpaidBooking))

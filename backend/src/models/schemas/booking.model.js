@@ -12,6 +12,7 @@ export const Booking = createModel('Booking', 'bookings', {
   endTime: Date,
   note: String,
   status: { type: String, index: true },
+  depositExpiresAt: { type: Date, index: true },
   depositAmount: Number,
   totalAmount: Number,
   cancelReasonId: String,

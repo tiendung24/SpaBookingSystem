@@ -1,11 +1,11 @@
-import { Booking, Deposit, FraudReport, RefundRequest } from '../../models/index.js'
+import { Booking, BookingSlotLock, Deposit, FraudReport, RefundRequest } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { getBookingWithRelations } from '../../utils/shop.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { buildBookingStatusEmailForCustomer, sendEmailBestEffort } from '../../utils/emailNotifications.js'
 
 function getCancelCutoffMinutes() {
-  return Number(process.env.CUSTOMER_CANCEL_CUTOFF_MINUTES || 120) // mặc định 2h
+  return Number(process.env.CUSTOMER_CANCEL_CUTOFF_MINUTES || 120) // máº·c Ä‘á»‹nh 2h
 }
 
 export async function getBookingByCode(req, res) {
@@ -15,10 +15,10 @@ export async function getBookingByCode(req, res) {
 
 export async function cancelBooking(req, res) {
   const booking = await Booking.findOne({ bookingCode: req.params.bookingCode })
-  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  if (!booking) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
 
   if (!['pending', 'confirmed'].includes(booking.status)) {
-    throw httpError(409, `Không thể hủy booking ở trạng thái: ${booking.status}`)
+    throw httpError(409, `KhÃ´ng thá»ƒ há»§y booking á»Ÿ tráº¡ng thÃ¡i: ${booking.status}`)
   }
 
   const cutoffMin = getCancelCutoffMinutes()
@@ -52,7 +52,7 @@ export async function cancelBooking(req, res) {
       shopName: '',
       bookingCode: booking.bookingCode,
       startTime: booking.startTime,
-      statusLabel: eligibleForRefund ? 'Đã hủy (chờ hoàn cọc)' : 'Đã hủy (không hoàn cọc)'
+      statusLabel: eligibleForRefund ? 'ÄÃ£ há»§y (chá» hoÃ n cá»c)' : 'ÄÃ£ há»§y (khÃ´ng hoÃ n cá»c)'
     })
     await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
   }
@@ -62,7 +62,7 @@ export async function cancelBooking(req, res) {
 
 export async function submitRefundInfo(req, res) {
   const booking = await Booking.findOne({ bookingCode: req.params.bookingCode })
-  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  if (!booking) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
 
   const refund = await RefundRequest.create({
     bookingId: String(booking._id),
@@ -93,20 +93,20 @@ export async function submitRefundInfo(req, res) {
 
 export async function getRefundStatus(req, res) {
   const booking = await Booking.findOne({ bookingCode: req.params.bookingCode }).lean()
-  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  if (!booking) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
   const refund = await RefundRequest.findOne({ bookingId: String(booking._id) }).sort({ createdAt: -1 }).lean()
   res.json({ bookingCode: booking.bookingCode, status: refund?.status || 'none', refund })
 }
 
 export async function reportShopFraud(req, res) {
   const booking = await Booking.findOne({ bookingCode: req.params.bookingCode }).lean()
-  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  if (!booking) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
 
   const report = await FraudReport.create({
     bookingId: String(booking._id),
     shopId: String(booking.shopId),
     customerPhone: booking.customerPhone,
-    reason: req.body?.reason || 'Khách tố giác shop',
+    reason: req.body?.reason || 'KhÃ¡ch tá»‘ giÃ¡c shop',
     status: 'pending',
     createdAt: new Date(),
     updatedAt: new Date()
@@ -125,7 +125,7 @@ export async function reportShopFraud(req, res) {
 
 export async function createReview(req, res) {
   const booking = await Booking.findOne({ bookingCode: req.params.bookingCode })
-  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  if (!booking) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
   booking.review = {
     rating: Number(req.body?.rating || 0),
     comment: req.body?.comment || '',
@@ -141,4 +141,47 @@ export async function createReview(req, res) {
     meta: { bookingCode: booking.bookingCode, rating: booking.review?.rating || 0 }
   })
   res.json({ bookingCode: booking.bookingCode, created: true })
+}
+
+export async function expireUnpaidBooking(req, res) {
+  const booking = await Booking.findOne({ bookingCode: req.params.bookingCode })
+  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+
+  if (booking.status !== 'awaiting_deposit') {
+    return res.json({ bookingCode: booking.bookingCode, expired: false, status: booking.status })
+  }
+
+  const now = new Date()
+  const expiresAt = booking.depositExpiresAt ? new Date(booking.depositExpiresAt) : null
+  const force = Boolean(req.body?.force)
+  const isExpired = !expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt <= now
+
+  if (!force && !isExpired) {
+    return res.status(409).json({
+      bookingCode: booking.bookingCode,
+      expired: false,
+      status: booking.status,
+      reason: 'not_expired_yet'
+    })
+  }
+
+  booking.status = 'cancelled'
+  booking.updatedAt = now
+  await booking.save()
+
+  await BookingSlotLock.deleteMany({ bookingId: String(booking._id) })
+  await Deposit.updateMany(
+    { bookingId: String(booking._id), status: { $in: ['pending'] } },
+    { status: 'expired_unpaid', updatedAt: now }
+  )
+
+  await writeAuditLog({
+    actorUserId: '',
+    action: 'public.booking_expire_unpaid',
+    entity: 'booking',
+    entityId: String(booking._id),
+    meta: { bookingCode: booking.bookingCode, force, expiredAt: now }
+  })
+
+  res.json({ bookingCode: booking.bookingCode, expired: true, status: booking.status })
 }

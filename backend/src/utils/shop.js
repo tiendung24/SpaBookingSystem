@@ -2,6 +2,8 @@ import {
   Booking,
   Customer,
   PayosPayment,
+  Deposit,
+  BookingSlotLock,
   Service,
   ServiceCategory,
   Shop,
@@ -13,13 +15,13 @@ import { httpError } from './httpError.js'
 
 export async function findShopBySlug(slug) {
   const shop = await Shop.findOne({ slug }).lean()
-  if (!shop) throw httpError(404, 'Không tìm thấy shop')
+  if (!shop) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y shop')
   return shop
 }
 
 export async function findShopById(shopId) {
   const shop = await Shop.findById(shopId).lean()
-  if (!shop) throw httpError(404, 'Không tìm thấy shop')
+  if (!shop) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y shop')
   return shop
 }
 
@@ -136,8 +138,10 @@ export async function getBookingsInDate(shopId, dateString) {
 }
 
 export async function getBookingWithRelations(bookingQuery) {
-  const booking = await Booking.findOne(bookingQuery).lean()
+  let booking = await Booking.findOne(bookingQuery).lean()
   if (!booking) throw httpError(404, 'Không tìm thấy booking')
+
+  booking = await expireAwaitingDepositIfNeeded(booking)
 
   const [service, staff, shop, payment] = await Promise.all([
     booking.serviceId ? Service.findById(booking.serviceId).lean() : null,
@@ -147,4 +151,23 @@ export async function getBookingWithRelations(bookingQuery) {
   ])
 
   return { booking, service, staff, shop, payment }
+}
+
+async function expireAwaitingDepositIfNeeded(booking) {
+  if (!booking) return booking
+  if (booking.status !== 'awaiting_deposit') return booking
+  if (!booking.depositExpiresAt) return booking
+
+  const now = new Date()
+  const expiresAt = new Date(booking.depositExpiresAt)
+  if (Number.isNaN(expiresAt.getTime()) || expiresAt > now) return booking
+
+  await Booking.updateOne({ _id: booking._id }, { $set: { status: 'cancelled', updatedAt: now } })
+  await BookingSlotLock.deleteMany({ bookingId: String(booking._id) })
+  await Deposit.updateMany(
+    { bookingId: String(booking._id), status: { $in: ['pending'] } },
+    { $set: { status: 'expired_unpaid', updatedAt: now } }
+  )
+
+  return { ...booking, status: 'cancelled', updatedAt: now }
 }
