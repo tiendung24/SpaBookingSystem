@@ -18,6 +18,17 @@ const emptyDraft = {
   holdExpiresAt: ''
 }
 
+function loadStoredBookingDraft() {
+  try {
+    const raw = localStorage.getItem('public_booking_draft')
+    if (!raw) return emptyDraft
+    const parsed = JSON.parse(raw)
+    return { ...emptyDraft, ...(parsed || {}) }
+  } catch {
+    return emptyDraft
+  }
+}
+
 function normalizeOnboardingCompleted(value) {
   if (value === true) return true
   if (value === false) return false
@@ -107,10 +118,15 @@ export function ShopProvider({ children }) {
   const [staff, setStaff] = useState([])
   const [bookings, setBookings] = useState([])
   const [walletTransactions, setWalletTransactions] = useState([])
-  const [bookingDraft, setBookingDraft] = useState(emptyDraft)
+  const [bookingDraft, setBookingDraft] = useState(loadStoredBookingDraft)
 
   const resetBookingDraft = useCallback(() => {
     setBookingDraft(emptyDraft)
+    try {
+      localStorage.removeItem('public_booking_draft')
+    } catch {
+      // ignore
+    }
     // Clean up hold tokens from all shops (or specific slug if available)
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('hold_token_') || key.startsWith('hold_expires_')) {
@@ -118,6 +134,14 @@ export function ShopProvider({ children }) {
       }
     })
   }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('public_booking_draft', JSON.stringify(bookingDraft || emptyDraft))
+    } catch {
+      // ignore
+    }
+  }, [bookingDraft])
 
   const loadMeAndShop = useCallback(async (accessToken = token) => {
     if (!accessToken) return
@@ -337,6 +361,11 @@ export function ShopProvider({ children }) {
 
     if (res?.booking) {
       try { localStorage.setItem('last_booking_code_' + slug, String(res.booking.bookingCode || res.booking._id || '')) } catch { /* ignore */ }
+      try {
+        if (res?.payment) localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
+      } catch {
+        // ignore
+      }
       setBookings((prev) => [mapBooking(res.booking), ...prev])
       // Clean up hold token after successful booking
       localStorage.removeItem(`hold_token_${slug}`)

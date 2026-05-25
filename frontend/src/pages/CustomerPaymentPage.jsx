@@ -139,6 +139,14 @@ export default function CustomerPaymentPage() {
     const restore = async () => {
       try {
         const code = localStorage.getItem('last_booking_code_' + slug)
+        const paymentRaw = localStorage.getItem('last_payment_data_' + slug)
+        if (paymentRaw) {
+          try {
+            setPayosData(JSON.parse(paymentRaw))
+          } catch {
+            // ignore bad cached payment data
+          }
+        }
         if (!code) return
         const res = await checkBookingStatus(code)
         if (!mounted) return
@@ -147,6 +155,11 @@ export default function CustomerPaymentPage() {
         }
         if (res?.payment) {
           setPayosData(res.payment)
+          try {
+            localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
+          } catch {
+            // ignore
+          }
         }
       } catch {
         // ignore
@@ -184,6 +197,7 @@ export default function CustomerPaymentPage() {
           setPayosData(res.payment)
           try {
             window.__payosData = res.payment
+            localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
           } catch {
             // ignore
           }
@@ -245,6 +259,7 @@ export default function CustomerPaymentPage() {
       if (!mounted) return
       try {
         localStorage.removeItem('last_booking_code_' + slug)
+        localStorage.removeItem('last_payment_data_' + slug)
         localStorage.removeItem('hold_token_' + slug)
         localStorage.removeItem('hold_expires_' + slug)
       } catch {
