@@ -29,6 +29,37 @@ function buildQrImageSrc(value) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(raw)}`
 }
 
+function normalizePaymentPayload(payment) {
+  if (!payment || typeof payment !== 'object') return null
+  const raw = payment.raw && typeof payment.raw === 'object' ? payment.raw : null
+  const rawData = raw?.data && typeof raw.data === 'object' ? raw.data : null
+  const directData = payment.data && typeof payment.data === 'object' ? payment.data : null
+
+  const qrCodeUrl =
+    payment.qrCodeUrl ||
+    payment.qrCode ||
+    directData?.qrCodeUrl ||
+    directData?.qrCode ||
+    raw?.qrCodeUrl ||
+    raw?.qrCode ||
+    rawData?.qrCodeUrl ||
+    rawData?.qrCode ||
+    ''
+
+  const checkoutUrl =
+    payment.checkoutUrl ||
+    directData?.checkoutUrl ||
+    raw?.checkoutUrl ||
+    rawData?.checkoutUrl ||
+    ''
+
+  return {
+    ...payment,
+    qrCodeUrl,
+    checkoutUrl
+  }
+}
+
 function normalizePhone(input) {
   return String(input || '')
     .trim()
@@ -142,7 +173,7 @@ export default function CustomerPaymentPage() {
         const paymentRaw = localStorage.getItem('last_payment_data_' + slug)
         if (paymentRaw) {
           try {
-            setPayosData(JSON.parse(paymentRaw))
+            setPayosData(normalizePaymentPayload(JSON.parse(paymentRaw)))
           } catch {
             // ignore bad cached payment data
           }
@@ -154,7 +185,7 @@ export default function CustomerPaymentPage() {
           setCreatedBookingId(res.booking.bookingCode || res.booking._id)
         }
         if (res?.payment) {
-          setPayosData(res.payment)
+          setPayosData(normalizePaymentPayload(res.payment))
           try {
             localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
           } catch {
@@ -177,6 +208,22 @@ export default function CustomerPaymentPage() {
     const phoneNormalized = normalizePhone(bookingDraft.customerPhone)
     const phoneOk = isValidPhone(phoneNormalized)
 
+    // If the hold is missing or expired, don't try to create booking again.
+    // This prevents repeated API calls when user reloads the page many times.
+    const holdExpiresAt = bookingDraft?.holdExpiresAt ? new Date(bookingDraft.holdExpiresAt) : null
+    const hasHold = Boolean(bookingDraft?.holdToken)
+    const holdExpired =
+      !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
+
+    if (!hasHold || holdExpired) {
+      // If we already have a booking code (e.g. restored from cache), allow polling/QR.
+      if (createdBookingId) return
+      // Otherwise, go back to pick a slot.
+      window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+      navigate(`/${slug}/book/time`)
+      return
+    }
+
     if (!service || !phoneOk || createdBookingId) return
     if (autoBookingCalledRef.current) return
 
@@ -194,7 +241,7 @@ export default function CustomerPaymentPage() {
         }
 
         if (res?.payment) {
-          setPayosData(res.payment)
+          setPayosData(normalizePaymentPayload(res.payment))
           try {
             window.__payosData = res.payment
             localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
@@ -222,7 +269,18 @@ export default function CustomerPaymentPage() {
     return () => {
       mounted = false
     }
-  }, [service, bookingDraft.customerPhone, slug, createdBookingId, depositAmount, createBookingFromDraft, resetBookingDraft])
+  }, [
+    service,
+    bookingDraft.customerPhone,
+    bookingDraft.holdToken,
+    bookingDraft.holdExpiresAt,
+    slug,
+    createdBookingId,
+    depositAmount,
+    createBookingFromDraft,
+    resetBookingDraft,
+    navigate
+  ])
 
   // Countdown display
   useEffect(() => {
