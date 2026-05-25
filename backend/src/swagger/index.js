@@ -1,4 +1,4 @@
-import swaggerUi from 'swagger-ui-express'
+﻿import swaggerUi from 'swagger-ui-express'
 import swaggerJSDoc from 'swagger-jsdoc'
 
 export function buildSwaggerSpec() {
@@ -256,7 +256,10 @@ export function buildSwaggerSpec() {
             type: 'object',
             properties: {
               fileId: { type: 'string' },
-              url: { type: 'string' }
+              fileName: { type: 'string', nullable: true },
+              url: { type: 'string' },
+              size: { type: 'number', nullable: true },
+              publicId: { type: 'string', nullable: true }
             }
           },
           WebhookAckResponse: {
@@ -305,3 +308,4 @@ export function swaggerJsonHandler(spec) {
 }
 
 export { swaggerUi }
+

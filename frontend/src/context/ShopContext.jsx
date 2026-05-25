@@ -421,10 +421,12 @@ export function ShopProvider({ children }) {
     return res
   }
 
-  const uploadImage = async (imageBase64) => {
+  const uploadImage = async (imageFile) => {
+    const formData = new FormData()
+    formData.append('image', imageFile)
     const res = await apiRequest('/api/uploads/image', {
       method: 'POST',
-      body: { imageBase64 }
+      body: formData
     })
     return res.url
   }
@@ -481,5 +483,6 @@ export function useShop() {
   if (!ctx) throw new Error('useShop must be used within ShopProvider')
   return ctx
 }
+
 
 

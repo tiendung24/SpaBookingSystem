@@ -1,4 +1,4 @@
-import 'dotenv/config'
+﻿import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -23,6 +23,11 @@ app.use(
 app.use(express.json({ limit: '2mb' }))
 app.use(express.urlencoded({ extended: true }))
 app.use(morgan('dev'))
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*')
+  next()
+})
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')))
 
 // Health
@@ -44,12 +49,10 @@ connectDb()
   .then(() => {
     startJobs()
     app.listen(port, () => {
-      // eslint-disable-next-line no-console
       console.log(`[backend] listening on http://localhost:${port}`)
     })
   })
   .catch((err) => {
-    // eslint-disable-next-line no-console
     console.error('[db] connection failed', err)
     process.exit(1)
   })

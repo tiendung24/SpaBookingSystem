@@ -1,4 +1,4 @@
-import { emitAuthExpired } from './auth'
+﻿import { emitAuthExpired } from './auth'
 
 function getBaseUrl() {
   return import.meta.env.VITE_API_BASE_URL || ''
@@ -20,14 +20,21 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest(path, { method = 'GET', token, body, headers } = {}) {
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+
+  const mergedHeaders = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(headers || {})
+  }
+
+  if (!isFormData && body !== undefined) {
+    mergedHeaders['Content-Type'] = 'application/json'
+  }
+
   const res = await fetch(buildUrl(path), {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(headers || {})
-    },
-    body: body ? JSON.stringify(body) : undefined
+    headers: mergedHeaders,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined
   })
 
   const isJson = (res.headers.get('content-type') || '').includes('application/json')
