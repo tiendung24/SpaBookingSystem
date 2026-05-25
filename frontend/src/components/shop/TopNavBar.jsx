@@ -5,7 +5,8 @@ import { useShop } from '../../context/ShopContext'
 export default function TopNavBar() {
   const { isAuthenticated, role, user, logout } = useShop()
   const currentPath = typeof window !== 'undefined' ? window.location.pathname || '' : ''
-  // Treat public shop booking pages as customer-facing; hide shop admin profile there
+  // Treat public shop pages (including main shop page) as customer-facing
+  // Match: /shop-slug, /shop-slug/book, /shop-slug/appointments, etc
   const isPublicShopPath = /^\/[^/]+(\/book(\/time|\/pay)?|\/appointments)?$/.test(currentPath)
 
   return (
@@ -29,7 +30,7 @@ export default function TopNavBar() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {!isAuthenticated || role !== 'shop' || isPublicShopPath ? (
+          {isPublicShopPath || !isAuthenticated || role !== 'shop' ? (
             <>
               <Link to="/login" className="hidden md:block text-main hover:bg-gray-100 transition-all duration-300 font-label-bold text-label-bold px-4 py-2 rounded-xl">
                 Đăng nhập
