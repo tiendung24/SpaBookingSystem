@@ -324,14 +324,14 @@ export function ShopProvider({ children }) {
     let res = null
     try {
       // expose payload for easier debugging in deployed site
-      try { window.__lastBookingPayload = payload } catch (e) {}
+      try { window.__lastBookingPayload = payload } catch { /* ignore */ }
       console.log('[ShopContext] createBookingFromDraft payload', payload)
       res = await apiRequest(`/api/public/shops/${slug}/bookings`, { method: 'POST', body: payload })
-      try { window.__lastBookingRes = res } catch (e) {}
+        try { window.__lastBookingRes = res } catch { /* ignore */ }
       console.log('[ShopContext] createBookingFromDraft res', res)
     } catch (err) {
-      try { window.__lastBookingError = err } catch (e) {}
-      console.error('[ShopContext] createBookingFromDraft error', err)
+        try { window.__lastBookingError = err } catch { /* ignore */ }
+        console.error('[ShopContext] createBookingFromDraft error', err)
       throw err
     }
 
