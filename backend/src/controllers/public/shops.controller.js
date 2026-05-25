@@ -125,7 +125,7 @@ export async function getAvailableSlots(req, res) {
 }
 
 export async function holdSlot(req, res) {
-  const { serviceId, staffId: requestedStaffId, date, time } = req.body || {}
+  const { serviceId, staffId: requestedStaffId, date, time, holdToken: clientHoldToken } = req.body || {}
   if (!serviceId || !date || !time) throw httpError(400, 'Thiếu serviceId/date/time')
 
   const shop = await findShopBySlug(req.params.slug)
@@ -141,6 +141,28 @@ export async function holdSlot(req, res) {
   const plan = await getWorkingPlan(String(shop._id), date)
   if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
 
+  const now = new Date()
+
+  // Check if client is re-holding with existing token
+  if (clientHoldToken) {
+    const existingHold = await BookingSlotLock.findOne({
+      holdToken: clientHoldToken,
+      shopId: String(shop._id),
+      lockType: 'temp_hold',
+      expiresAt: { $gt: now }
+    }).lean()
+    if (existingHold) {
+      const lockStart = new Date(existingHold.startTime).getTime()
+      const lockEnd = new Date(existingHold.endTime).getTime()
+      const requestStart = startTime.getTime()
+      const requestEnd = endTime.getTime()
+      if (lockStart === requestStart && lockEnd === requestEnd && String(existingHold.serviceId || '') === String(serviceId)) {
+        // Token still valid for same slot/service, return it without creating new
+        return res.status(200).json({ holdToken: clientHoldToken, staffId: String(existingHold.staffId), expiresAt: existingHold.expiresAt })
+      }
+    }
+  }
+
   const overlapping = await Booking.find({
     shopId: String(shop._id),
     status: { $in: ['awaiting_deposit', 'pending', 'confirmed', 'checked_in'] },
@@ -153,7 +175,6 @@ export async function holdSlot(req, res) {
     ? activeStaffs.filter((s) => service.availableStaffIds.includes(String(s._id)))
     : activeStaffs
 
-  const now = new Date()
   const activeLocks = await BookingSlotLock.find({
     shopId: String(shop._id),
     expiresAt: { $gt: now },
@@ -184,6 +205,7 @@ export async function holdSlot(req, res) {
     await BookingSlotLock.create({
       shopId: String(shop._id),
       staffId: String(staffId),
+      serviceId: String(serviceId),
       startTime,
       endTime,
       bookingId: '',
@@ -320,6 +342,7 @@ export async function createBooking(req, res) {
             {
               shopId: String(shop._id),
               staffId: String(staffId),
+              serviceId: String(serviceId),
               startTime,
               endTime,
               bookingId: String(booking._id),
@@ -342,11 +365,17 @@ export async function createBooking(req, res) {
 
   if (needsDeposit) {
     const payos = new PayOSService()
-    payment = await payos.createDepositPayment({
-      bookingCode,
-      amount: Number(booking.depositAmount || 0),
-      description: `LUMIX_${bookingCode}`
-    })
+    try {
+      payment = await payos.createDepositPayment({
+        bookingCode,
+        amount: Number(booking.depositAmount || 0),
+        description: `LUMIX_${bookingCode}`
+      })
+      console.log('[createBooking] deposit payment created', { bookingCode, payosOrderId: payment.payosOrderId, checkoutUrl: payment.checkoutUrl })
+    } catch (err) {
+      console.error('[createBooking] createDepositPayment failed', err && err.message)
+      throw httpError(500, 'Không thể tạo link thanh toán cọc lúc này, vui lòng thử lại sau')
+    }
 
     await PayosPayment.create({
       bookingId: String(booking._id),

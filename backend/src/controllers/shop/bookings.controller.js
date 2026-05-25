@@ -92,7 +92,7 @@ export async function createBooking(req, res) {
   let booking
   try {
     await session.withTransaction(async () => {
-      await BookingSlotLock.create([{ shopId, staffId: String(staffId), startTime, endTime }], { session })
+      await BookingSlotLock.create([{ shopId, staffId: String(staffId), serviceId: String(serviceId), startTime, endTime }], { session })
 
       const created = await Booking.create(
         [

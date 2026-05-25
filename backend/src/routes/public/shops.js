@@ -181,6 +181,38 @@ publicShopsRouter.get('/:slug/available-slots', asyncHandler(PublicShopsControll
  */
 publicShopsRouter.get('/:slug/bookings', asyncHandler(PublicShopsController.getBookingsByPhone))
 publicShopsRouter.post('/:slug/bookings', asyncHandler(PublicShopsController.createBooking))
+/**
+ * @openapi
+ * /api/public/shops/{slug}/hold-slot:
+ *   post:
+ *     summary: Reserve (hold) a booking slot
+ *     tags: [Public]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [serviceId, date, time]
+ *             properties:
+ *               serviceId: { type: string }
+ *               staffId: { type: string, nullable: true }
+ *               date: { type: string, example: "2026-05-26" }
+ *               time: { type: string, example: "09:00" }
+ *     responses:
+ *       201:
+ *         description: Hold created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 holdToken: { type: string }
+ *                 staffId: { type: string }
+ *                 expiresAt: { type: string, format: date-time }
+ *       400: { $ref: '#/components/responses/BadRequest' }
+ *       409: { $ref: '#/components/responses/Conflict' }
+ */
 publicShopsRouter.post('/:slug/hold-slot', asyncHandler(PublicShopsController.holdSlot))
 
 

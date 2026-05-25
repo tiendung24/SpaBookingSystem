@@ -76,6 +76,28 @@ export default function CustomerBookingTimePage() {
     loadPublicShop(slug).catch(() => {})
   }, [slug, loadPublicShop])
 
+  // Restore holdToken from localStorage if exists
+  useEffect(() => {
+    if (!slug || bookingDraft.holdToken) return
+    const storedToken = localStorage.getItem(`hold_token_${slug}`)
+    const storedExpiresAt = localStorage.getItem(`hold_expires_${slug}`)
+    if (storedToken && storedExpiresAt) {
+      const expiresAt = new Date(storedExpiresAt)
+      if (expiresAt > new Date()) {
+        // Token still valid, restore it to context
+        setBookingDraft((prev) => ({
+          ...prev,
+          holdToken: storedToken,
+          holdExpiresAt: storedExpiresAt
+        }))
+      } else {
+        // Token expired, clean up
+        localStorage.removeItem(`hold_token_${slug}`)
+        localStorage.removeItem(`hold_expires_${slug}`)
+      }
+    }
+  }, [slug, bookingDraft.holdToken, setBookingDraft])
+
   const [name, setName] = useState(bookingDraft.customerName || '')
   const [phone, setPhone] = useState(bookingDraft.customerPhone || '')
   const phoneTrimmed = normalizePhone(phone)
@@ -129,7 +151,20 @@ export default function CustomerBookingTimePage() {
         date: selectedDate,
         time: selectedTime
       }
+      // If already holding a slot, reuse the token
+      if (bookingDraft.holdToken) {
+        payload.holdToken = bookingDraft.holdToken
+      }
       const res = await holdBookingSlot(slug, payload)
+      const newToken = res?.holdToken || bookingDraft.holdToken || ''
+      const newExpiresAt = res?.expiresAt || bookingDraft.holdExpiresAt || ''
+      
+      // Save token to localStorage
+      if (newToken) {
+        localStorage.setItem(`hold_token_${slug}`, newToken)
+        localStorage.setItem(`hold_expires_${slug}`, newExpiresAt)
+      }
+      
       setBookingDraft((prev) => ({
         ...prev,
         date: selectedDate,
@@ -138,8 +173,8 @@ export default function CustomerBookingTimePage() {
         customerPhone: phoneTrimmed,
         customerEmail: emailTrimmed,
         note,
-        holdToken: res?.holdToken || '',
-        holdExpiresAt: res?.expiresAt || '',
+        holdToken: newToken,
+        holdExpiresAt: newExpiresAt,
         staffId: res?.staffId || prev.staffId
       }))
       navigate(`/${slug}/book/pay`)

@@ -109,7 +109,15 @@ export function ShopProvider({ children }) {
   const [walletTransactions, setWalletTransactions] = useState([])
   const [bookingDraft, setBookingDraft] = useState(emptyDraft)
 
-  const resetBookingDraft = () => setBookingDraft(emptyDraft)
+  const resetBookingDraft = useCallback(() => {
+    setBookingDraft(emptyDraft)
+    // Clean up hold tokens from all shops (or specific slug if available)
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('hold_token_') || key.startsWith('hold_expires_')) {
+        localStorage.removeItem(key)
+      }
+    })
+  }, [])
 
   const loadMeAndShop = useCallback(async (accessToken = token) => {
     if (!accessToken) return
@@ -268,7 +276,7 @@ export function ShopProvider({ children }) {
     setMeLoaded(false)
   }
 
-  const loadPublicShop = async (slug) => {
+  const loadPublicShop = useCallback(async (slug) => {
     const [shopRes, servicesRes, staffsRes] = await Promise.all([
       apiRequest(`/api/public/shops/${slug}`),
       apiRequest(`/api/public/shops/${slug}/services`),
@@ -286,7 +294,7 @@ export function ShopProvider({ children }) {
     }))
     setServices((servicesRes.items || []).map(mapService))
     setStaff((staffsRes.items || []).map(mapStaff))
-  }
+  }, [])
 
   const getAvailableSlots = async (slug, { serviceId, date, staffId } = {}) => {
     if (!slug || !serviceId || !date) return []
@@ -300,7 +308,7 @@ export function ShopProvider({ children }) {
     }
   }
 
-  const createBookingFromDraft = async (slug) => {
+  const createBookingFromDraft = useCallback(async (slug) => {
     if (!slug) return null
     const payload = {
       serviceId: bookingDraft.serviceId,
@@ -316,14 +324,18 @@ export function ShopProvider({ children }) {
     const res = await apiRequest(`/api/public/shops/${slug}/bookings`, { method: 'POST', body: payload })
     if (res?.booking) {
       setBookings((prev) => [mapBooking(res.booking), ...prev])
+      // Clean up hold token after successful booking
+      localStorage.removeItem(`hold_token_${slug}`)
+      localStorage.removeItem(`hold_expires_${slug}`)
+      resetBookingDraft()
     }
     return res
-  }
+  }, [bookingDraft, resetBookingDraft])
 
-  const holdBookingSlot = async (slug, payload) => {
+  const holdBookingSlot = useCallback(async (slug, payload) => {
     if (!slug) return null
     return await apiRequest(`/api/public/shops/${slug}/hold-slot`, { method: 'POST', body: payload })
-  }
+  }, [])
 
   const addService = async (service) => {
     const payload = {
@@ -484,10 +496,10 @@ export function ShopProvider({ children }) {
     return res.url
   }
 
-  const checkBookingStatus = async (bookingCode) => {
+  const checkBookingStatus = useCallback(async (bookingCode) => {
     const res = await apiRequest(`/api/public/bookings/${bookingCode}`, { method: 'GET' })
     return res
-  }
+  }, [])
   const value = {
     token,
     role,

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
@@ -94,6 +94,7 @@ export default function CustomerPaymentPage() {
 
   const [payosData, setPayosData] = useState(null)
   const [creating, setCreating] = useState(true)
+  const autoBookingCalledRef = useRef(false)
 
   useEffect(() => {
     if (!slug) return
@@ -115,8 +116,11 @@ export default function CustomerPaymentPage() {
     const phoneOk = isValidPhone(phoneNormalized)
 
     if (!service || !phoneOk || createdBookingId) return
+    // Prevent duplicate auto-booking calls
+    if (autoBookingCalledRef.current) return
 
     let mounted = true
+    autoBookingCalledRef.current = true
 
     const run = async () => {
       if (mounted) setCreating(true)
@@ -151,7 +155,7 @@ export default function CustomerPaymentPage() {
     return () => {
       mounted = false
     }
-  }, [service, bookingDraft.customerPhone, slug, createdBookingId, createBookingFromDraft, depositAmount, resetBookingDraft])
+  }, [service, bookingDraft.customerPhone, slug, createdBookingId, depositAmount])
 
   useEffect(() => {
     if (success) return

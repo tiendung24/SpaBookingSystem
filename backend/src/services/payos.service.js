@@ -50,8 +50,13 @@ export class PayOSService {
         : [{ name: 'Payment', quantity: 1, price: Number(amount) }]
     }
 
-    const resp = await payOS.createPaymentLink(body)
-    return resp
+    try {
+      const resp = await payOS.createPaymentLink(body)
+      return resp
+    } catch (err) {
+      console.error('[PayOS createPaymentLink] error', err && err.message)
+      throw err
+    }
   }
 
   async createTopupPayment({ amount, description }) {
@@ -73,7 +78,10 @@ export class PayOSService {
   }
 
   async createDepositPayment({ bookingCode, amount, description }) {
+    // Ensure an explicit numeric orderCode is generated to avoid SDK/order collisions
+    const orderCode = randomOrderCode()
     const resp = await this.createPaymentLink({
+      orderCode,
       amount,
       description: description || `DEPOSIT_${bookingCode}`,
       items: [{ name: `Cọc ${bookingCode}`, quantity: 1, price: Number(amount) }]
