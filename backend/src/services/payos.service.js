@@ -59,6 +59,19 @@ export class PayOSService {
     }
   }
 
+  normalizePaymentResponse(resp) {
+    const data = resp?.data && typeof resp.data === 'object' ? resp.data : resp
+    return {
+      orderCode: data?.orderCode ?? resp?.orderCode,
+      amount: data?.amount ?? resp?.amount,
+      description: data?.description ?? resp?.description,
+      qrCode: data?.qrCode ?? data?.qrCodeUrl ?? resp?.qrCode ?? resp?.qrCodeUrl,
+      checkoutUrl: data?.checkoutUrl ?? resp?.checkoutUrl,
+      status: data?.status ?? resp?.status ?? 'pending',
+      raw: resp
+    }
+  }
+
   async createTopupPayment({ amount, description }) {
     const resp = await this.createPaymentLink({
       amount,
@@ -66,14 +79,16 @@ export class PayOSService {
       items: [{ name: 'Topup', quantity: 1, price: Number(amount) }]
     })
 
+    const payment = this.normalizePaymentResponse(resp)
+
     return {
-      topupId: String(resp.orderCode),
-      amount: resp.amount,
-      description: resp.description,
-      qrCodeUrl: resp.qrCode,
-      checkoutUrl: resp.checkoutUrl,
-      status: resp.status || 'pending',
-      raw: resp
+      topupId: String(payment.orderCode),
+      amount: payment.amount,
+      description: payment.description,
+      qrCodeUrl: payment.qrCode,
+      checkoutUrl: payment.checkoutUrl,
+      status: payment.status,
+      raw: payment.raw
     }
   }
 
@@ -87,15 +102,17 @@ export class PayOSService {
       items: [{ name: `Cọc ${bookingCode}`, quantity: 1, price: Number(amount) }]
     })
 
+    const payment = this.normalizePaymentResponse(resp)
+
     return {
       bookingCode,
-      amount: resp.amount,
-      description: resp.description,
-      qrCodeUrl: resp.qrCode,
-      checkoutUrl: resp.checkoutUrl,
-      payosOrderId: String(resp.orderCode),
-      status: resp.status || 'pending',
-      raw: resp
+      amount: payment.amount,
+      description: payment.description,
+      qrCodeUrl: payment.qrCode,
+      checkoutUrl: payment.checkoutUrl,
+      payosOrderId: String(payment.orderCode),
+      status: payment.status,
+      raw: payment.raw
     }
   }
 
@@ -163,4 +180,6 @@ export class PayOSService {
     }
   }
 }
+
+
 
