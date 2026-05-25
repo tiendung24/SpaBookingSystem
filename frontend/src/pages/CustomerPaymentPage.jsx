@@ -145,6 +145,9 @@ export default function CustomerPaymentPage() {
         if (res?.booking) {
           setCreatedBookingId(res.booking.bookingCode || res.booking._id)
         }
+        if (res?.payment) {
+          setPayosData(res.payment)
+        }
       } catch {
         // ignore
       }
