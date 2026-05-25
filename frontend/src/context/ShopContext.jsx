@@ -327,10 +327,14 @@ export function ShopProvider({ children }) {
       // Clean up hold token after successful booking
       localStorage.removeItem(`hold_token_${slug}`)
       localStorage.removeItem(`hold_expires_${slug}`)
-      resetBookingDraft()
+      setBookingDraft((prev) => ({
+        ...prev,
+        holdToken: '',
+        holdExpiresAt: ''
+      }))
     }
     return res
-  }, [bookingDraft, resetBookingDraft])
+  }, [bookingDraft])
 
   const holdBookingSlot = useCallback(async (slug, payload) => {
     if (!slug) return null
