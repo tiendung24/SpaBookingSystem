@@ -128,12 +128,16 @@ export default function CustomerPaymentPage() {
         const res = await createBookingFromDraft(slug)
         if (!mounted) return
 
+        console.log('[CustomerPaymentPage] createBookingFromDraft response', res)
+
         if (res?.booking) {
           setCreatedBookingId(res.booking.bookingCode || res.booking._id)
         }
 
         if (res?.payment) {
           setPayosData(res.payment)
+          window.__payosData = res.payment
+          console.log('[CustomerPaymentPage] payos data', res.payment)
         } else if (depositAmount <= 0) {
           // Không yêu cầu đặt cọc -> coi như hoàn tất bước thanh toán
           setSuccess(true)
