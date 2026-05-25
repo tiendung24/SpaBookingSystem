@@ -13,7 +13,9 @@ const emptyDraft = {
   customerName: '',
   customerPhone: '',
   customerEmail: '',
-  note: ''
+  note: '',
+  holdToken: '',
+  holdExpiresAt: ''
 }
 
 function normalizeOnboardingCompleted(value) {
@@ -274,6 +276,11 @@ export function ShopProvider({ children }) {
     return res
   }
 
+  const holdBookingSlot = async (slug, payload) => {
+    if (!slug) return null
+    return await apiRequest(`/api/public/shops/${slug}/hold-slot`, { method: 'POST', body: payload })
+  }
+
   const addService = async (service) => {
     const payload = {
       name: service.name,
@@ -455,6 +462,7 @@ export function ShopProvider({ children }) {
     setBookingDraft,
     resetBookingDraft,
     createBookingFromDraft,
+    holdBookingSlot,
     addService,
     updateService,
     deleteService,
@@ -483,6 +491,9 @@ export function useShop() {
   if (!ctx) throw new Error('useShop must be used within ShopProvider')
   return ctx
 }
+
+
+
 
 
 

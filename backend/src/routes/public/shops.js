@@ -1,4 +1,4 @@
-import { Router } from 'express'
+﻿import { Router } from 'express'
 import { asyncHandler } from '../../utils/asyncHandler.js'
 import * as PublicShopsController from '../../controllers/public/shops.controller.js'
 
@@ -27,7 +27,7 @@ publicShopsRouter.get('/:slug', asyncHandler(PublicShopsController.getShopBySlug
  * @openapi
  * /api/public/shops/{slug}/status:
  *   get:
- *     summary: Xem trạng thái shop
+ *     summary: Xem tráº¡ng thÃ¡i shop
  *     tags: [Public]
  *     responses:
  *       200:
@@ -40,7 +40,7 @@ publicShopsRouter.get('/:slug/status', asyncHandler(PublicShopsController.getSho
  * @openapi
  * /api/public/shops/{slug}/service-categories:
  *   get:
- *     summary: Xem danh mục dịch vụ
+ *     summary: Xem danh má»¥c dá»‹ch vá»¥
  *     tags: [Public]
  *     responses:
  *       200:
@@ -61,7 +61,7 @@ publicShopsRouter.get('/:slug/service-categories', asyncHandler(PublicShopsContr
  * @openapi
  * /api/public/shops/{slug}/services:
  *   get:
- *     summary: Xem danh sách dịch vụ
+ *     summary: Xem danh sÃ¡ch dá»‹ch vá»¥
  *     tags: [Public]
  *     responses:
  *       200:
@@ -81,7 +81,7 @@ publicShopsRouter.get('/:slug/services', asyncHandler(PublicShopsController.getS
  * @openapi
  * /api/public/shops/{slug}/services/{serviceId}:
  *   get:
- *     summary: Xem chi tiết dịch vụ
+ *     summary: Xem chi tiáº¿t dá»‹ch vá»¥
  *     tags: [Public]
  *     responses:
  *       200:
@@ -100,7 +100,7 @@ publicShopsRouter.get('/:slug/services/:serviceId', asyncHandler(PublicShopsCont
  * @openapi
  * /api/public/shops/{slug}/staffs:
  *   get:
- *     summary: Xem nhân viên
+ *     summary: Xem nhÃ¢n viÃªn
  *     tags: [Public]
  *     responses:
  *       200:
@@ -120,7 +120,7 @@ publicShopsRouter.get('/:slug/staffs', asyncHandler(PublicShopsController.getSta
  * @openapi
  * /api/public/shops/{slug}/available-slots:
  *   get:
- *     summary: Xem slot trống
+ *     summary: Xem slot trá»‘ng
  *     tags: [Public]
  *     responses:
  *       200:
@@ -133,7 +133,7 @@ publicShopsRouter.get('/:slug/available-slots', asyncHandler(PublicShopsControll
  * @openapi
  * /api/public/shops/{slug}/bookings:
  *   get:
- *     summary: Tra cứu booking theo số điện thoại
+ *     summary: Tra cá»©u booking theo sá»‘ Ä‘iá»‡n thoáº¡i
  *     tags: [Public]
  *     parameters:
  *       - in: query
@@ -149,7 +149,7 @@ publicShopsRouter.get('/:slug/available-slots', asyncHandler(PublicShopsControll
  *       400: { $ref: '#/components/responses/BadRequest' }
  *       404: { $ref: '#/components/responses/NotFound' }
  *   post:
- *     summary: Tạo booking (khách đặt lịch)
+ *     summary: Táº¡o booking (khÃ¡ch Ä‘áº·t lá»‹ch)
  *     tags: [Public]
  *     requestBody:
  *       required: true
@@ -181,4 +181,6 @@ publicShopsRouter.get('/:slug/available-slots', asyncHandler(PublicShopsControll
  */
 publicShopsRouter.get('/:slug/bookings', asyncHandler(PublicShopsController.getBookingsByPhone))
 publicShopsRouter.post('/:slug/bookings', asyncHandler(PublicShopsController.createBooking))
+publicShopsRouter.post('/:slug/hold-slot', asyncHandler(PublicShopsController.holdSlot))
+
 

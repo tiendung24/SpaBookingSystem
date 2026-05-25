@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
 function formatVnd(value) {
@@ -73,13 +73,21 @@ function ConfettiLayer({ active }) {
 }
 
 export default function CustomerPaymentPage() {
+  const navigate = useNavigate()
   const { slug } = useParams()
   const { shop, services, staff, bookingDraft, createBookingFromDraft, resetBookingDraft, loadPublicShop, checkBookingStatus } = useShop()
 
   const service = services.find((item) => item.id === bookingDraft.serviceId)
   const selectedStaff = bookingDraft.staffId === 'random' ? null : staff.find((item) => item.id === bookingDraft.staffId)
 
-  const [timeLeft, setTimeLeft] = useState(15 * 60)
+  const getInitialHoldSeconds = () => {
+    const expiresAt = bookingDraft?.holdExpiresAt
+    if (!expiresAt) return 15 * 60
+    const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
+    return Number.isFinite(diff) ? Math.max(0, diff) : 15 * 60
+  }
+
+  const [timeLeft, setTimeLeft] = useState(getInitialHoldSeconds)
   const [success, setSuccess] = useState(false)
   const [createdBookingId, setCreatedBookingId] = useState(null)
   const [confetti, setConfetti] = useState(false)
@@ -147,11 +155,28 @@ export default function CustomerPaymentPage() {
 
   useEffect(() => {
     if (success) return
+
     const timer = setInterval(() => {
+      const expiresAt = bookingDraft?.holdExpiresAt
+      if (expiresAt) {
+        const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
+        setTimeLeft(Number.isFinite(diff) ? Math.max(0, diff) : 0)
+        return
+      }
       setTimeLeft((prev) => (prev <= 0 ? 0 : prev - 1))
     }, 1000)
+
     return () => clearInterval(timer)
-  }, [success])
+  }, [success, bookingDraft?.holdExpiresAt])
+
+  useEffect(() => {
+    if (success) return
+    if (createdBookingId) return
+    if (timeLeft > 0) return
+
+    window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+    navigate(`/${slug}/book/time`)
+  }, [timeLeft, createdBookingId, success, navigate, slug])
 
   useEffect(() => {
     if (!createdBookingId || success) return
@@ -264,7 +289,7 @@ export default function CustomerPaymentPage() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h1 className="font-h2 text-h2 text-primary">Thanh toán đặt cọc</h1>
-                  <p className="text-main/70 text-sm">Giữ chỗ trong {formatCountdown(timeLeft)}.</p>
+                  <p className="text-main/70 text-sm">Giữ chỗ tạm trong {formatCountdown(timeLeft)}. Hết thời gian sẽ yêu cầu chọn lại khung giờ.</p>
                 </div>
                 <div className="text-right">
                   <div className="text-xs text-main/60">Mã đặt lịch</div>

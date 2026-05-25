@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
 function formatVnd(v) {
-  return `${Number(v || 0).toLocaleString('vi-VN')}đ`
+  return `${Number(v || 0).toLocaleString('vi-VN')}₫`
 }
 
 function toMinutes(timeHHmm) {
@@ -43,7 +43,7 @@ function isValidPhone(input) {
 export default function CustomerBookingTimePage() {
   const navigate = useNavigate()
   const { slug } = useParams()
-  const { shop, services, staff, bookings, bookingDraft, setBookingDraft, loadPublicShop } = useShop()
+  const { shop, services, staff, bookings, bookingDraft, setBookingDraft, loadPublicShop, holdBookingSlot } = useShop()
   const hours = shop.hours || {}
   const openTime = hours.open || '09:00'
   const closeTime = hours.close || '20:00'
@@ -82,6 +82,7 @@ export default function CustomerBookingTimePage() {
   const phoneOk = isValidPhone(phoneTrimmed)
   const [email, setEmail] = useState(bookingDraft.customerEmail || '')
   const [note, setNote] = useState(bookingDraft.note || '')
+  const [holding, setHolding] = useState(false)
 
   const emailTrimmed = email.trim()
   const emailOk = isValidEmail(emailTrimmed)
@@ -118,18 +119,35 @@ export default function CustomerBookingTimePage() {
 
   const canConfirm = Boolean(service && selectedTime && name.trim() && phoneOk && emailOk)
 
-  const confirmStep2 = () => {
+  const confirmStep2 = async () => {
     if (!canConfirm) return
-    setBookingDraft((prev) => ({
-      ...prev,
-      date: selectedDate,
-      time: selectedTime,
-      customerName: name.trim(),
-      customerPhone: phoneTrimmed,
-      customerEmail: emailTrimmed,
-      note
-    }))
-    navigate(`/${slug}/book/pay`)
+    setHolding(true)
+    try {
+      const payload = {
+        serviceId: bookingDraft.serviceId,
+        staffId: bookingDraft.staffId === 'random' ? null : bookingDraft.staffId,
+        date: selectedDate,
+        time: selectedTime
+      }
+      const res = await holdBookingSlot(slug, payload)
+      setBookingDraft((prev) => ({
+        ...prev,
+        date: selectedDate,
+        time: selectedTime,
+        customerName: name.trim(),
+        customerPhone: phoneTrimmed,
+        customerEmail: emailTrimmed,
+        note,
+        holdToken: res?.holdToken || '',
+        holdExpiresAt: res?.expiresAt || '',
+        staffId: res?.staffId || prev.staffId
+      }))
+      navigate(`/${slug}/book/pay`)
+    } catch (err) {
+      alert(err?.message || 'Không thể giữ chỗ tạm, vui lòng thử lại')
+    } finally {
+      setHolding(false)
+    }
   }
 
   if (!service) {
@@ -158,7 +176,7 @@ export default function CustomerBookingTimePage() {
         <div className="flex flex-col lg:flex-row gap-6">
           <aside className="w-full lg:w-80 p-6 bg-white/70 border border-primary/20 rounded-3xl h-fit sticky top-24">
             <div className="space-y-2">
-              {[
+                {[
                 { t: 'Dịch vụ', done: true },
                 { t: 'Nhân viên & thời gian', active: true },
                 { t: 'Xác nhận' },
@@ -237,7 +255,7 @@ export default function CustomerBookingTimePage() {
             </div>
 
             <div className="glass-card p-6 rounded-3xl bg-white/70">
-              <h3 className="font-h3 text-h3 text-primary flex items-center gap-2 mb-4">
+                  <h3 className="font-h3 text-h3 text-primary flex items-center gap-2 mb-4">
                 <span className="material-symbols-outlined">schedule</span>
                 Khung giờ còn trống
               </h3>
@@ -339,14 +357,14 @@ export default function CustomerBookingTimePage() {
               </div>
               <button
                 onClick={confirmStep2}
-                disabled={!canConfirm}
+                disabled={!canConfirm || holding}
                 className={`w-full py-5 rounded-2xl font-h3 flex items-center justify-center gap-3 transition-all ${
                   canConfirm
                     ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl hover:scale-[1.01]'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
-                Xác nhận đặt lịch <span className="material-symbols-outlined">arrow_forward</span>
+                {holding ? 'Đang giữ chỗ tạm...' : 'Xác nhận đặt lịch'} <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </div>
           </section>
@@ -355,3 +373,4 @@ export default function CustomerBookingTimePage() {
     </div>
   )
 }
+
