@@ -2,7 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 
 export function RequireRole({ allow, children }) {
-  const { isAuthenticated, role, shop } = useShop()
+  const { isAuthenticated, role, shop, loading } = useShop()
   const location = useLocation()
 
   if (!isAuthenticated) {
@@ -11,6 +11,9 @@ export function RequireRole({ allow, children }) {
 
 
   if (role === 'shop') {
+    // If shop data is still loading, don't decide yet — avoid premature redirect
+    if (loading) return null
+
     const isOnboardingDone = shop?.onboardingCompleted === true
     const isOnboardingRoute = location.pathname === '/shop/onboarding'
     if (!isOnboardingDone && !isOnboardingRoute) {
@@ -29,7 +32,7 @@ export function RequireRole({ allow, children }) {
 }
 
 export function GuestOnly({ children }) {
-  const { isAuthenticated, role, shop } = useShop()
+  const { isAuthenticated, role } = useShop()
   if (!isAuthenticated) return children
   if (role === 'admin') return <Navigate to="/admin/dashboard" replace />
   return <Navigate to="/shop/dashboard" replace />
