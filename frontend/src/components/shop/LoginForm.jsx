@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 
 export default function LoginForm() {
   const navigate = useNavigate()
-  const { loginUnified } = useShop()
+  const location = useLocation()
+  const { loginUnified, shop } = useShop()
   const [formData, setFormData] = useState({ identity: '', password: '', remember: false })
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -32,7 +33,12 @@ export default function LoginForm() {
       if (result.role === 'admin') {
         navigate('/admin/dashboard')
       } else {
-        navigate('/shop/dashboard')
+        const from = location.state?.from
+        let dest = from || '/shop/dashboard'
+        // If the saved redirect is onboarding but onboarding is already completed,
+        // send the user to dashboard instead.
+        if (dest === '/shop/onboarding' && shop?.onboardingCompleted === true) dest = '/shop/dashboard'
+        navigate(dest)
       }
     } catch (err) {
       console.error('Login error:', err)
