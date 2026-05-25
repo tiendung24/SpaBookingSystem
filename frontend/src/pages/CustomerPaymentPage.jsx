@@ -137,13 +137,22 @@ export default function CustomerPaymentPage() {
     return Number.isFinite(diff) ? Math.max(0, diff) : 15 * 60
   }
 
+  const getInitialBookingCode = () => {
+    try {
+      return localStorage.getItem('last_booking_code_' + slug) || null
+    } catch {
+      return null
+    }
+  }
+
   const [timeLeft, setTimeLeft] = useState(getInitialHoldSeconds)
   const [success, setSuccess] = useState(false)
-  const [createdBookingId, setCreatedBookingId] = useState(null)
+  const [createdBookingId, setCreatedBookingId] = useState(getInitialBookingCode)
   const [confetti, setConfetti] = useState(false)
 
   const [payosData, setPayosData] = useState(null)
   const [creating, setCreating] = useState(true)
+  const [restoreChecked, setRestoreChecked] = useState(false)
   const autoBookingCalledRef = useRef(false)
 
   useEffect(() => {
@@ -194,6 +203,8 @@ export default function CustomerPaymentPage() {
         }
       } catch {
         // ignore
+      } finally {
+        if (mounted) setRestoreChecked(true)
       }
     }
 
@@ -205,6 +216,9 @@ export default function CustomerPaymentPage() {
 
   // Auto-create booking when arriving at payment page.
   useEffect(() => {
+    const readyToEvaluate = restoreChecked || Boolean(service)
+    if (!readyToEvaluate) return
+
     const phoneNormalized = normalizePhone(bookingDraft.customerPhone)
     const phoneOk = isValidPhone(phoneNormalized)
 
@@ -216,7 +230,6 @@ export default function CustomerPaymentPage() {
       !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
 
     if (!hasHold || holdExpired) {
-      // If we already have a booking code (e.g. restored from cache), allow polling/QR.
       if (createdBookingId) return
       // Otherwise, go back to pick a slot.
       window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
@@ -276,6 +289,7 @@ export default function CustomerPaymentPage() {
     bookingDraft.holdExpiresAt,
     slug,
     createdBookingId,
+    restoreChecked,
     depositAmount,
     createBookingFromDraft,
     resetBookingDraft,
