@@ -51,7 +51,8 @@ function mapStaff(item) {
     status: item.status || 'active',
     rating: Number(item.rating || 0),
     bookingEnabled: item.status !== 'inactive',
-    services: item.serviceIds || []
+    services: item.serviceIds || [],
+    avatar: item.avatarUrl || item.imageUrl || ''
   }
 }
 
@@ -332,7 +333,8 @@ export function ShopProvider({ children }) {
       fullName: member.name || member.fullName,
       phone: member.phone,
       role: member.role || 'tech',
-      serviceIds: member.services || []
+      serviceIds: member.services || [],
+      avatarUrl: member.avatar || member.avatarUrl || ''
     }
     const res = await apiRequest('/api/shop/staffs', { method: 'POST', token, body: payload })
     const mapped = mapStaff(res.staff)
@@ -355,7 +357,8 @@ export function ShopProvider({ children }) {
       fullName: patch.name || patch.fullName,
       phone: patch.phone,
       role: patch.role,
-      serviceIds: patch.services || patch.serviceIds || []
+      serviceIds: patch.services || patch.serviceIds || [],
+      avatarUrl: patch.avatar || patch.avatarUrl || undefined
     }
     const res = await apiRequest(`/api/shop/staffs/${id}`, { method: 'PUT', token, body: payload })
     const mapped = mapStaff(res.staff)
