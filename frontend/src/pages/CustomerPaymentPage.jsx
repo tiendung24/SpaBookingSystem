@@ -147,6 +147,7 @@ export default function CustomerPaymentPage() {
 
   const [timeLeft, setTimeLeft] = useState(getInitialHoldSeconds)
   const [success, setSuccess] = useState(false)
+  const [expired, setExpired] = useState(false)
   const [createdBookingId, setCreatedBookingId] = useState(getInitialBookingCode)
   const [confetti, setConfetti] = useState(false)
 
@@ -173,7 +174,6 @@ export default function CustomerPaymentPage() {
   // Restore booking info on hard reload (bookingDraft may be empty)
   useEffect(() => {
     if (!slug) return
-    if (service) return
 
     let mounted = true
     const restore = async () => {
@@ -192,6 +192,10 @@ export default function CustomerPaymentPage() {
         if (!mounted) return
         if (res?.booking) {
           setCreatedBookingId(res.booking.bookingCode || res.booking._id)
+          const status = String(res.booking.status || '').toLowerCase()
+          if (status === 'cancelled' || status === 'canceled') {
+            setExpired(true)
+          }
         }
         if (res?.payment) {
           setPayosData(normalizePaymentPayload(res.payment))
@@ -212,10 +216,12 @@ export default function CustomerPaymentPage() {
     return () => {
       mounted = false
     }
-  }, [slug, service, checkBookingStatus])
+  }, [slug, checkBookingStatus])
 
   // Auto-create booking when arriving at payment page.
   useEffect(() => {
+    if (expired) return
+
     const readyToEvaluate = restoreChecked || Boolean(service)
     if (!readyToEvaluate) return
 
@@ -283,6 +289,7 @@ export default function CustomerPaymentPage() {
       mounted = false
     }
   }, [
+    expired,
     service,
     bookingDraft.customerPhone,
     bookingDraft.holdToken,
@@ -298,7 +305,7 @@ export default function CustomerPaymentPage() {
 
   // Countdown display
   useEffect(() => {
-    if (success) return
+    if (success || expired) return
 
     const timer = setInterval(() => {
       const expiresAt = bookingDraft?.holdExpiresAt
@@ -315,7 +322,7 @@ export default function CustomerPaymentPage() {
 
   // Time up -> expire unpaid booking immediately and clean local state.
   useEffect(() => {
-    if (success) return
+    if (success || expired) return
     if (timeLeft > 0) return
 
     let mounted = true
@@ -345,7 +352,7 @@ export default function CustomerPaymentPage() {
     return () => {
       mounted = false
     }
-  }, [timeLeft, createdBookingId, success, slug, navigate, expireUnpaidBooking])
+  }, [timeLeft, createdBookingId, success, expired, slug, navigate, expireUnpaidBooking])
 
   // Poll booking status while awaiting payment
   useEffect(() => {
@@ -356,6 +363,11 @@ export default function CustomerPaymentPage() {
       try {
         const res = await checkBookingStatus(createdBookingId)
         const booking = res?.booking || res?.data?.booking || null
+        const status = String(booking?.status || '').toLowerCase()
+        if ((status === 'cancelled' || status === 'canceled') && mounted) {
+          setExpired(true)
+          return
+        }
         const paid = booking?.status === 'confirmed'
 
         if (paid && mounted) {
@@ -374,6 +386,20 @@ export default function CustomerPaymentPage() {
       clearInterval(timer)
     }
   }, [createdBookingId, success, checkBookingStatus, resetBookingDraft])
+
+  useEffect(() => {
+    if (!expired) return
+    try {
+      localStorage.removeItem('last_booking_code_' + slug)
+      localStorage.removeItem('last_payment_data_' + slug)
+      localStorage.removeItem('hold_token_' + slug)
+      localStorage.removeItem('hold_expires_' + slug)
+    } catch {
+      // ignore
+    }
+    window.alert('Phiên thanh toán đặt cọc đã hết hạn. Vui lòng chọn lại khung giờ.')
+    navigate(`/${slug}/book/time`)
+  }, [expired, slug, navigate])
 
   const handleTransferred = async () => {
     if (!createdBookingId) return
