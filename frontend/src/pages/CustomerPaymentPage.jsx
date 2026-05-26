@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
@@ -172,19 +172,16 @@ export default function CustomerPaymentPage() {
     return Number.isFinite(diff) ? Math.max(0, diff) : 15 * 60
   }
 
-  // Try to read stored hold info from localStorage as a fallback when bookingDraft is missing
-  const readStoredHold = (function () {
-    // keep as stable function reference that reads localStorage at call time
-    return (s) => {
-      try {
-        const token = localStorage.getItem('hold_token_' + (s || slug)) || ''
-        const expires = localStorage.getItem('hold_expires_' + (s || slug)) || ''
-        return { token, expiresAt: expires }
-      } catch {
-        return { token: '', expiresAt: '' }
-      }
+  // Read stored hold info from localStorage as a fallback when bookingDraft is missing.
+  const readStoredHold = useCallback((s) => {
+    try {
+      const token = localStorage.getItem('hold_token_' + (s || slug)) || ''
+      const expires = localStorage.getItem('hold_expires_' + (s || slug)) || ''
+      return { token, expiresAt: expires }
+    } catch {
+      return { token: '', expiresAt: '' }
     }
-  })()
+  }, [slug])
 
   const getInitialBookingCode = () => {
     try {
@@ -353,10 +350,19 @@ export default function CustomerPaymentPage() {
     const holdExpired =
       !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
 
-    if (!service || !phoneOk || createdBookingId) return
+    const persistedBookingCode = (() => {
+      try {
+        return localStorage.getItem('last_booking_code_' + slug) || ''
+      } catch {
+        return ''
+      }
+    })()
+    const effectiveBookingCode = createdBookingId || persistedBookingCode
+
+    if (!service || !phoneOk || effectiveBookingCode) return
 
     if (!hasHold || holdExpired) {
-      if (createdBookingId) return
+      if (effectiveBookingCode) return
       // Otherwise, go back to pick a slot.
       window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
       navigate(`/${slug}/book/time`)
@@ -396,8 +402,11 @@ export default function CustomerPaymentPage() {
       } catch (err) {
         console.error(err)
         if (mounted) {
-          // Backend returns 409 for invalid/expired hold token. Force redirect.
-          const isExpiredHold = Number(err?.status || 0) === 409
+          // Only treat real hold-expiry conflicts as expired hold, not every 409 conflict.
+          const msg = String(err?.message || '').toLowerCase()
+          const isExpiredHold =
+            Number(err?.status || 0) === 409 &&
+            (msg.includes('hết hạn') || msg.includes('expired') || msg.includes('giữ chỗ'))
 
           if (isExpiredHold) {
             try {

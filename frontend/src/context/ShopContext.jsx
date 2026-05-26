@@ -363,8 +363,10 @@ export function ShopProvider({ children }) {
     } catch (err) {
         try { window.__lastBookingError = err } catch { /* ignore */ }
         console.error('[ShopContext] createBookingFromDraft error', err)
+      const errMsg = String(err?.message || '').toLowerCase()
       const isExpiredHold =
-        Number(err?.status || 0) === 409
+        Number(err?.status || 0) === 409 &&
+        (errMsg.includes('hết hạn') || errMsg.includes('expired') || errMsg.includes('giữ chỗ'))
 
       if (isExpiredHold) {
         try {
