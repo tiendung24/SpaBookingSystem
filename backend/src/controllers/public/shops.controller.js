@@ -102,7 +102,7 @@ export async function getStaffs(req, res) {
 }
 
 export async function getAvailableSlots(req, res) {
-  const { date, serviceId, staffId } = req.query
+  const { date, serviceId, staffId, holdToken } = req.query
   if (!date || !serviceId) throw httpError(400, 'Thiếu date hoặc serviceId')
 
   const shop = await findShopBySlug(req.params.slug)
@@ -115,6 +115,16 @@ export async function getAvailableSlots(req, res) {
   if (plan.isClosed) return res.json({ date, slots: [] })
 
   const bookings = await getBookingsInDate(shopId, date)
+  const now = new Date()
+  const activeLocksRaw = await BookingSlotLock.find({
+    shopId,
+    lockType: 'temp_hold',
+    expiresAt: { $gt: now }
+  }).lean()
+  const activeLocks = holdToken
+    ? activeLocksRaw.filter((lock) => String(lock.holdToken || '') !== String(holdToken))
+    : activeLocksRaw
+
   const activeStaffs = await ShopStaff.find({ shopId, status: 'active' }).lean()
   const candidateStaffs = Array.isArray(service.availableStaffIds) && service.availableStaffIds.length
     ? activeStaffs.filter((s) => service.availableStaffIds.includes(String(s._id)))
@@ -135,13 +145,26 @@ export async function getAvailableSlots(req, res) {
       return slotStart < bookingEnd && slotEnd > bookingStart
     })
 
+    const overlapLocks = activeLocks.filter((lock) => {
+      const lockStart = new Date(lock.startTime)
+      const lockEnd = lock.endTime ? new Date(lock.endTime) : new Date(lockStart.getTime() + 60 * 60 * 1000)
+      return slotStart < lockEnd && slotEnd > lockStart
+    })
+
     if (staffId) {
-      const isStaffBusy = overlapBookings.some((booking) => String(booking.staffId || '') === String(staffId))
+      const isStaffBusy =
+        overlapBookings.some((booking) => String(booking.staffId || '') === String(staffId)) ||
+        overlapLocks.some((lock) => String(lock.staffId || '') === String(staffId))
       if (!isStaffBusy) slots.push(formatHm(slotStart))
     } else {
-      const availableCount = candidateStaffs.filter((s) => !overlapBookings.some((b) => String(b.staffId || '') === String(s._id))).length
+      const availableCount = candidateStaffs.filter((s) => {
+        const busyByBooking = overlapBookings.some((b) => String(b.staffId || '') === String(s._id))
+        const busyByHold = overlapLocks.some((l) => String(l.staffId || '') === String(s._id))
+        return !busyByBooking && !busyByHold
+      }).length
       const capacity = Math.min(Number(plan.maxConcurrent || 1), Math.max(candidateStaffs.length, 1))
-      if (availableCount > 0 && overlapBookings.length < capacity) slots.push(formatHm(slotStart))
+      const occupiedCount = overlapBookings.length + overlapLocks.length
+      if (availableCount > 0 && occupiedCount < capacity) slots.push(formatHm(slotStart))
     }
     cursor = new Date(cursor.getTime() + plan.slotMinutes * 60 * 1000)
   }

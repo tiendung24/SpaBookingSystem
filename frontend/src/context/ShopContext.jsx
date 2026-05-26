@@ -326,11 +326,12 @@ export function ShopProvider({ children }) {
     setStaff((staffsRes.items || []).map(mapStaff))
   }, [])
 
-  const getAvailableSlots = async (slug, { serviceId, date, staffId } = {}) => {
+  const getAvailableSlots = async (slug, { serviceId, date, staffId, holdToken } = {}) => {
     if (!slug || !serviceId || !date) return []
     try {
       const query = new URLSearchParams({ serviceId, date })
       if (staffId) query.set('staffId', staffId)
+      if (holdToken) query.set('holdToken', holdToken)
       const res = await apiRequest(`/api/public/shops/${slug}/available-slots?${query.toString()}`)
       return res.slots || []
     } catch {

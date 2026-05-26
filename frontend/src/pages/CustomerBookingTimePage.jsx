@@ -71,6 +71,7 @@ export default function CustomerBookingTimePage() {
   const [selectedDate, setSelectedDate] = useState(bookingDraft.date || dateOnly(today))
   const [selectedTime, setSelectedTime] = useState(bookingDraft.time || '')
   const [availableSlots, setAvailableSlots] = useState([])
+  const [nowTick, setNowTick] = useState(() => Date.now())
 
   const storedHoldToken = (() => {
     try {
@@ -105,10 +106,11 @@ export default function CustomerBookingTimePage() {
     if (!slug || !bookingDraft.serviceId || !selectedDate) return
     let active = true
     const staffId = bookingDraft.staffId === 'random' ? null : bookingDraft.staffId
+    const holdToken = bookingDraft.holdToken || storedHoldToken || ''
 
     const run = async () => {
       try {
-        const slots = await getAvailableSlots(slug, { serviceId: bookingDraft.serviceId, date: selectedDate, staffId })
+        const slots = await getAvailableSlots(slug, { serviceId: bookingDraft.serviceId, date: selectedDate, staffId, holdToken })
         if (active) setAvailableSlots(Array.isArray(slots) ? slots : [])
       } catch {
         if (active) setAvailableSlots([])
@@ -118,12 +120,17 @@ export default function CustomerBookingTimePage() {
     run()
     const timer = setInterval(() => {
       run()
-    }, 5000)
+    }, 3000)
     return () => {
       active = false
       clearInterval(timer)
     }
-  }, [slug, bookingDraft.serviceId, bookingDraft.staffId, selectedDate, getAvailableSlots])
+  }, [slug, bookingDraft.serviceId, bookingDraft.staffId, bookingDraft.holdToken, selectedDate, getAvailableSlots, storedHoldToken])
+
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
 
 
   // Restore holdToken from localStorage if exists
@@ -163,7 +170,7 @@ export default function CustomerBookingTimePage() {
     const holdToken = bookingDraft.holdToken || storedHoldToken || ''
     const holdExpiresAt = bookingDraft.holdExpiresAt || storedHoldExpiresAt ? new Date(bookingDraft.holdExpiresAt || storedHoldExpiresAt) : null
     if (!holdToken || !selectedDate || !bookingDraft.time) return null
-    if (!holdExpiresAt || Number.isNaN(holdExpiresAt.getTime())) return null
+    if (!holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) || holdExpiresAt.getTime() <= nowTick) return null
     return {
       date: selectedDate,
       start: bookingDraft.time,
@@ -171,7 +178,7 @@ export default function CustomerBookingTimePage() {
       staffId: bookingDraft.staffId,
       holdToken
     }
-  }, [bookingDraft.holdToken, bookingDraft.holdExpiresAt, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate, storedHoldToken, storedHoldExpiresAt])
+  }, [bookingDraft.holdToken, bookingDraft.holdExpiresAt, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate, storedHoldToken, storedHoldExpiresAt, nowTick])
 
   const ownBookedSlot = useMemo(() => {
     if (!storedBookingCode || !bookingDraft.time || !selectedDate) return null
