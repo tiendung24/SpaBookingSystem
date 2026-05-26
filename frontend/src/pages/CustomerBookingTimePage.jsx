@@ -72,6 +72,22 @@ export default function CustomerBookingTimePage() {
   const [selectedTime, setSelectedTime] = useState(bookingDraft.time || '')
   const [availableSlots, setAvailableSlots] = useState([])
 
+  const storedHoldToken = (() => {
+    try {
+      return localStorage.getItem(`hold_token_${slug}`) || ''
+    } catch {
+      return ''
+    }
+  })()
+
+  const storedHoldExpiresAt = (() => {
+    try {
+      return localStorage.getItem(`hold_expires_${slug}`) || ''
+    } catch {
+      return ''
+    }
+  })()
+
   useEffect(() => {
     if (!slug) return
     loadPublicShop(slug).catch(() => {})
@@ -136,8 +152,8 @@ export default function CustomerBookingTimePage() {
   const emailOk = isValidEmail(emailTrimmed)
 
   const ownHoldSlot = useMemo(() => {
-    const holdToken = bookingDraft.holdToken || ''
-    const holdExpiresAt = bookingDraft.holdExpiresAt ? new Date(bookingDraft.holdExpiresAt) : null
+    const holdToken = bookingDraft.holdToken || storedHoldToken || ''
+    const holdExpiresAt = bookingDraft.holdExpiresAt || storedHoldExpiresAt ? new Date(bookingDraft.holdExpiresAt || storedHoldExpiresAt) : null
     if (!holdToken || !selectedDate || !bookingDraft.time) return null
     if (!holdExpiresAt || Number.isNaN(holdExpiresAt.getTime())) return null
     return {
@@ -147,7 +163,7 @@ export default function CustomerBookingTimePage() {
       staffId: bookingDraft.staffId,
       holdToken
     }
-  }, [bookingDraft.holdToken, bookingDraft.holdExpiresAt, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate])
+  }, [bookingDraft.holdToken, bookingDraft.holdExpiresAt, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate, storedHoldToken, storedHoldExpiresAt])
 
   const slots = useMemo(() => {
     if (!service) return []
@@ -193,7 +209,14 @@ export default function CustomerBookingTimePage() {
 
   const confirmStep2 = async () => {
     if (!canConfirm) return
-    if (availableSlots.length > 0 && !availableSlots.includes(selectedTime)) {
+    const isOwnHeldSlot = Boolean(
+      ownHoldSlot &&
+        ownHoldSlot.date === selectedDate &&
+        ownHoldSlot.start === selectedTime &&
+        ownHoldSlot.serviceId === bookingDraft.serviceId &&
+        String(ownHoldSlot.staffId || '') === String(bookingDraft.staffId || '')
+    )
+    if (availableSlots.length > 0 && !availableSlots.includes(selectedTime) && !isOwnHeldSlot) {
       alert('Khung giờ bạn chọn vừa kín. Vui lòng chọn giờ khác.')
       setSelectedTime('')
       return
@@ -207,12 +230,13 @@ export default function CustomerBookingTimePage() {
         time: selectedTime
       }
       // If already holding a slot, reuse the token
-      if (bookingDraft.holdToken) {
-        payload.holdToken = bookingDraft.holdToken
+      const currentHoldToken = bookingDraft.holdToken || storedHoldToken || ''
+      if (currentHoldToken) {
+        payload.holdToken = currentHoldToken
       }
       const res = await holdBookingSlot(slug, payload)
-      const newToken = res?.holdToken || bookingDraft.holdToken || ''
-      const newExpiresAt = res?.expiresAt || bookingDraft.holdExpiresAt || ''
+      const newToken = res?.holdToken || currentHoldToken || ''
+      const newExpiresAt = res?.expiresAt || bookingDraft.holdExpiresAt || storedHoldExpiresAt || ''
       
       // Save token to localStorage
       if (newToken) {
