@@ -130,6 +130,8 @@ export default function CustomerPaymentPage() {
     checkBookingStatus,
     expireUnpaidBooking
   } = useShop()
+  // allow restoring booking draft from localStorage when page reloaded
+  const { setBookingDraft } = useShop()
 
   const service = services.find((item) => item.id === bookingDraft.serviceId)
   const selectedStaff = bookingDraft.staffId === 'random' ? null : staff.find((item) => item.id === bookingDraft.staffId)
@@ -140,6 +142,20 @@ export default function CustomerPaymentPage() {
     const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
     return Number.isFinite(diff) ? Math.max(0, diff) : 15 * 60
   }
+
+  // Try to read stored hold info from localStorage as a fallback when bookingDraft is missing
+  const readStoredHold = (function () {
+    // keep as stable function reference that reads localStorage at call time
+    return (s) => {
+      try {
+        const token = localStorage.getItem('hold_token_' + (s || slug)) || ''
+        const expires = localStorage.getItem('hold_expires_' + (s || slug)) || ''
+        return { token, expiresAt: expires }
+      } catch {
+        return { token: '', expiresAt: '' }
+      }
+    }
+  })()
 
   const getInitialBookingCode = () => {
     try {
@@ -158,6 +174,7 @@ export default function CustomerPaymentPage() {
   const [payosData, setPayosData] = useState(null)
   const [creating, setCreating] = useState(false)
   const [restoreChecked, setRestoreChecked] = useState(false)
+  const [showRestoreHold, setShowRestoreHold] = useState(false)
   const autoBookingCalledRef = useRef(false)
 
   useEffect(() => {
@@ -178,7 +195,6 @@ export default function CustomerPaymentPage() {
   // Restore booking info on hard reload (bookingDraft may be empty)
   useEffect(() => {
     if (!slug) return
-
     let mounted = true
     const restore = async () => {
       try {
@@ -190,6 +206,24 @@ export default function CustomerPaymentPage() {
           } catch {
             // ignore bad cached payment data
           }
+        }
+        // If bookingDraft is empty but there is a stored hold token + stored draft, prompt user to restore
+        try {
+          const storedHold = readStoredHold()
+          const storedDraftRaw = localStorage.getItem('public_booking_draft')
+          if (!bookingDraft?.serviceId && storedHold?.token && storedDraftRaw) {
+            try {
+              const parsedDraft = JSON.parse(storedDraftRaw)
+              const expires = parsedDraft?.holdExpiresAt || storedHold?.expiresAt
+              if (expires && new Date(expires).getTime() > Date.now()) {
+                setShowRestoreHold(true)
+              }
+            } catch {
+              // ignore
+            }
+          }
+        } catch {
+          // ignore
         }
         if (!code) return
         const res = await checkBookingStatus(code)
@@ -228,7 +262,44 @@ export default function CustomerPaymentPage() {
     return () => {
       mounted = false
     }
-  }, [slug, checkBookingStatus])
+  }, [slug, checkBookingStatus, bookingDraft?.serviceId, readStoredHold])
+
+  const handleRestoreHold = () => {
+    try {
+      const storedDraftRaw = localStorage.getItem('public_booking_draft')
+      if (storedDraftRaw) {
+        const parsed = JSON.parse(storedDraftRaw)
+        try { setBookingDraft(parsed) } catch { /* ignore */ }
+
+        const paymentRaw = localStorage.getItem('last_payment_data_' + slug)
+        if (paymentRaw) {
+          try {
+            setPayosData(normalizePaymentPayload(JSON.parse(paymentRaw)))
+          } catch {
+            // ignore
+          }
+        }
+
+        const lastBooking = localStorage.getItem('last_booking_code_' + slug)
+        if (lastBooking) setCreatedBookingId(lastBooking)
+      }
+    } catch {
+      // ignore
+    }
+    setShowRestoreHold(false)
+  }
+
+  const handleCancelHold = () => {
+    try {
+      localStorage.removeItem('hold_token_' + slug)
+      localStorage.removeItem('hold_expires_' + slug)
+    } catch {
+      // ignore
+    }
+    setShowRestoreHold(false)
+    resetBookingDraft()
+    navigate(`/${slug}/book/time`)
+  }
 
   // Auto-create booking when arriving at payment page.
   useEffect(() => {
@@ -242,8 +313,14 @@ export default function CustomerPaymentPage() {
 
     // If the hold is missing or expired, don't try to create booking again.
     // This prevents repeated API calls when user reloads the page many times.
-    const holdExpiresAt = bookingDraft?.holdExpiresAt ? new Date(bookingDraft.holdExpiresAt) : null
-    const hasHold = Boolean(bookingDraft?.holdToken)
+    // If bookingDraft lacks hold info (e.g., after full page reload), check localStorage for hold token
+    const stored = readStoredHold()
+    const holdExpiresAt = bookingDraft?.holdExpiresAt
+      ? new Date(bookingDraft.holdExpiresAt)
+      : stored.expiresAt
+      ? new Date(stored.expiresAt)
+      : null
+    const hasHold = Boolean(bookingDraft?.holdToken) || Boolean(stored.token)
     const holdExpired =
       !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
 
@@ -330,6 +407,7 @@ export default function CustomerPaymentPage() {
     depositAmount,
     createBookingFromDraft,
     resetBookingDraft,
+    readStoredHold,
     navigate
   ])
 
@@ -434,7 +512,7 @@ export default function CustomerPaymentPage() {
       mounted = false
       clearInterval(timer)
     }
-  }, [createdBookingId, success, checkBookingStatus, resetBookingDraft])
+  }, [createdBookingId, success, checkBookingStatus, resetBookingDraft, payosData, slug])
 
   // If booking exists but QR data is missing, fetch once from booking status API.
   useEffect(() => {
@@ -538,6 +616,17 @@ export default function CustomerPaymentPage() {
 
       <main className="px-4 md:px-10 pb-12">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {showRestoreHold ? (
+            <div className="lg:col-span-12 mb-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex items-center justify-between">
+                <div className="text-sm text-main/80">Hệ thống phát hiện phiên giữ chỗ vẫn còn hiệu lực. Bạn có muốn khôi phục phiên giữ chỗ và tiếp tục thanh toán không?</div>
+                <div className="flex items-center gap-3">
+                  <button onClick={handleRestoreHold} className="px-4 py-2 rounded-2xl bg-primary text-white font-bold">Khôi phục và tiếp tục</button>
+                  <button onClick={handleCancelHold} className="px-4 py-2 rounded-2xl bg-white border border-primary text-primary font-bold">Hủy và chọn lại</button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           <section className="lg:col-span-7">
             <div className="bg-white/80 rounded-3xl p-6 border border-primary/10 shadow-xl">
               <div className="flex items-start justify-between gap-4">
