@@ -88,6 +88,14 @@ export default function CustomerBookingTimePage() {
     }
   })()
 
+  const storedBookingCode = (() => {
+    try {
+      return localStorage.getItem(`last_booking_code_${slug}`) || ''
+    } catch {
+      return ''
+    }
+  })()
+
   useEffect(() => {
     if (!slug) return
     loadPublicShop(slug).catch(() => {})
@@ -165,6 +173,17 @@ export default function CustomerBookingTimePage() {
     }
   }, [bookingDraft.holdToken, bookingDraft.holdExpiresAt, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate, storedHoldToken, storedHoldExpiresAt])
 
+  const ownBookedSlot = useMemo(() => {
+    if (!storedBookingCode || !bookingDraft.time || !selectedDate) return null
+    return {
+      date: selectedDate,
+      start: bookingDraft.time,
+      serviceId: bookingDraft.serviceId,
+      staffId: bookingDraft.staffId,
+      bookingCode: storedBookingCode
+    }
+  }, [storedBookingCode, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate])
+
   const slots = useMemo(() => {
     if (!service) return []
 
@@ -199,16 +218,30 @@ export default function CustomerBookingTimePage() {
           ownHoldSlot.serviceId === bookingDraft.serviceId &&
           String(ownHoldSlot.staffId || '') === String(bookingDraft.staffId || '')
       )
-      const available = !inLunch && (isOwnHold || (hasBackendSlots ? availableSet.has(slotStart) : occupied < limit))
-      list.push({ start: slotStart, occupied, limit, available, ownHold: isOwnHold })
+      const isOwnBooking = Boolean(
+        ownBookedSlot &&
+          ownBookedSlot.date === selectedDate &&
+          ownBookedSlot.start === slotStart &&
+          ownBookedSlot.serviceId === bookingDraft.serviceId &&
+          String(ownBookedSlot.staffId || '') === String(bookingDraft.staffId || '')
+      )
+      const available = !inLunch && (isOwnHold || isOwnBooking || (hasBackendSlots ? availableSet.has(slotStart) : occupied < limit))
+      list.push({ start: slotStart, occupied, limit, available, ownHold: isOwnHold || isOwnBooking })
     }
     return list
-  }, [service, availableSlots, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId, ownHoldSlot, bookingDraft.serviceId])
+  }, [service, availableSlots, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId, ownHoldSlot, ownBookedSlot, bookingDraft.serviceId])
 
   const canConfirm = Boolean(service && selectedTime && name.trim() && phoneOk && emailOk)
 
   const confirmStep2 = async () => {
     if (!canConfirm) return
+    const isOwnBookedSlot = Boolean(
+      ownBookedSlot &&
+        ownBookedSlot.date === selectedDate &&
+        ownBookedSlot.start === selectedTime &&
+        ownBookedSlot.serviceId === bookingDraft.serviceId &&
+        String(ownBookedSlot.staffId || '') === String(bookingDraft.staffId || '')
+    )
     const isOwnHeldSlot = Boolean(
       ownHoldSlot &&
         ownHoldSlot.date === selectedDate &&
@@ -216,11 +249,17 @@ export default function CustomerBookingTimePage() {
         ownHoldSlot.serviceId === bookingDraft.serviceId &&
         String(ownHoldSlot.staffId || '') === String(bookingDraft.staffId || '')
     )
-    if (availableSlots.length > 0 && !availableSlots.includes(selectedTime) && !isOwnHeldSlot) {
+    if (availableSlots.length > 0 && !availableSlots.includes(selectedTime) && !isOwnHeldSlot && !isOwnBookedSlot) {
       alert('Khung giờ bạn chọn vừa kín. Vui lòng chọn giờ khác.')
       setSelectedTime('')
       return
     }
+
+    if (isOwnBookedSlot) {
+      navigate(`/${slug}/book/pay`)
+      return
+    }
+
     setHolding(true)
     try {
       const payload = {
