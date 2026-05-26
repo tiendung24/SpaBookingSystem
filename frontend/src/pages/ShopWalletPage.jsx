@@ -274,7 +274,7 @@ export default function ShopWalletPage() {
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="font-h3 text-h3 text-primary">Nạp ví qua PayOS</h3>
-                <p className="text-sm text-main/70">Chọn số tiền, hệ thống sẽ “tạo QR” và cộng số dư khi bạn bấm xác nhận.</p>
+                <p className="text-sm text-main/70">Chọn số tiền, hệ thống sẽ tạo mã QR và cộng số dư khi bạn bấm xác nhận.</p>
               </div>
               <button type="button" className="text-main/60 hover:text-main" onClick={() => setQrVisible(false)}>✕</button>
             </div>
@@ -298,7 +298,7 @@ export default function ShopWalletPage() {
                   </div>
                   <button type="button" className="w-full mt-4 py-3 rounded-xl bg-primary text-white font-bold flex items-center justify-center gap-2" onClick={createPayosQr} disabled={loadingQr}>
                     {loadingQr ? <span className="material-symbols-outlined animate-spin">refresh</span> : null}
-                    {loadingQr ? 'Đang tạo link...' : 'Tạo link nạp tiền'}
+                    {loadingQr ? 'Đang tạo liên kết...' : 'Tạo liên kết nạp tiền'}
                   </button>
                 </>
               ) : (

@@ -18,7 +18,7 @@ adminRouter.use(requireAuth, requireRole(['admin', 'super_admin']))
  * @openapi
  * /api/admin/dashboard/overview:
  *   get:
- *     summary: Dashboard tá»•ng quan (admin)
+ *     summary: Dashboard tổng quan (admin)
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -34,7 +34,7 @@ adminRouter.get('/dashboard/locked-shops', asyncHandler(AdminDashboardController
  * @openapi
  * /api/admin/shops:
  *   get:
- *     summary: Danh sÃ¡ch shop (admin)
+ *     summary: Danh sách shop (admin)
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -46,7 +46,7 @@ adminRouter.get('/shops/:shopId', asyncHandler(AdminShopsController.getShopById)
  * @openapi
  * /api/admin/shops/{shopId}/lock:
  *   put:
- *     summary: KhÃ³a shop
+ *     summary: Khóa shop
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -56,7 +56,7 @@ adminRouter.put('/shops/:shopId/lock', asyncHandler(AdminShopsController.lockSho
  * @openapi
  * /api/admin/shops/{shopId}/unlock:
  *   put:
- *     summary: Má»Ÿ khÃ³a shop
+ *     summary: Mở khóa shop
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -66,7 +66,7 @@ adminRouter.put('/shops/:shopId/unlock', asyncHandler(AdminShopsController.unloc
  * @openapi
  * /api/admin/shops/{shopId}/status:
  *   put:
- *     summary: Äá»•i tráº¡ng thÃ¡i shop
+ *     summary: Đổi trạng thái shop
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
@@ -89,7 +89,7 @@ adminRouter.get('/shops/:shopId/statistics', asyncHandler(AdminShopsController.g
  * @openapi
  * /api/admin/bookings:
  *   get:
- *     summary: Booking toÃ n há»‡ thá»‘ng (admin)
+ *     summary: Booking toàn hệ thống (admin)
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -100,7 +100,7 @@ adminRouter.get('/bookings/:bookingId', asyncHandler(AdminBookingsController.get
  * @openapi
  * /api/admin/bookings/{bookingId}/status:
  *   put:
- *     summary: Cáº­p nháº­t tráº¡ng thÃ¡i booking
+ *     summary: Cập nhật trạng thái booking
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
@@ -121,7 +121,7 @@ adminRouter.get('/bookings/:bookingId/escrow', asyncHandler(AdminBookingsControl
  * @openapi
  * /api/admin/wallets:
  *   get:
- *     summary: Danh sÃ¡ch vÃ­ shop
+ *     summary: Danh sách ví shop
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -132,7 +132,7 @@ adminRouter.get('/wallets/:shopId', asyncHandler(AdminWalletsController.getWalle
  * @openapi
  * /api/admin/wallets/{shopId}/adjust:
  *   post:
- *     summary: Äiá»u chá»‰nh sá»‘ dÆ° vÃ­
+ *     summary: Điều chỉnh số dư ví
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
@@ -157,7 +157,7 @@ adminRouter.get('/platform-fees/statistics', asyncHandler(AdminWalletsController
  * @openapi
  * /api/admin/refunds:
  *   get:
- *     summary: Danh sÃ¡ch refund
+ *     summary: Danh sách refund
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -168,7 +168,7 @@ adminRouter.get('/refunds/:refundId', asyncHandler(AdminRefundsController.getRef
  * @openapi
  * /api/admin/refunds/{refundId}/processing:
  *   put:
- *     summary: Chuyá»ƒn refund sang processing
+ *     summary: Chuyển refund sang processing
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -178,7 +178,7 @@ adminRouter.put('/refunds/:refundId/processing', asyncHandler(AdminRefundsContro
  * @openapi
  * /api/admin/refunds/{refundId}/success:
  *   put:
- *     summary: ÄÃ¡nh dáº¥u refund thÃ nh cÃ´ng
+ *     summary: Đánh dấu refund thành công
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -188,7 +188,7 @@ adminRouter.put('/refunds/:refundId/success', asyncHandler(AdminRefundsControlle
  * @openapi
  * /api/admin/refunds/{refundId}/failed:
  *   put:
- *     summary: ÄÃ¡nh dáº¥u refund tháº¥t báº¡i
+ *     summary: Đánh dấu refund thất bại
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -200,7 +200,7 @@ adminRouter.get('/escrows/:bookingId', asyncHandler(AdminRefundsController.getEs
  * @openapi
  * /api/admin/escrows/{bookingId}/release-to-shop:
  *   put:
- *     summary: Chuyá»ƒn cá»c cho shop
+ *     summary: Chuyển cọc cho shop
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     responses:
@@ -215,7 +215,7 @@ adminRouter.put('/escrows/:bookingId/release-to-shop', asyncHandler(AdminRefunds
  * @openapi
  * /api/admin/escrows/{bookingId}/refund-to-customer:
  *   put:
- *     summary: HoÃ n cá»c cho khÃ¡ch
+ *     summary: Hoàn cọc cho khách
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     responses:
@@ -230,7 +230,7 @@ adminRouter.put('/escrows/:bookingId/refund-to-customer', asyncHandler(AdminRefu
  * @openapi
  * /api/admin/escrows/{bookingId}/split-no-show:
  *   put:
- *     summary: Chia tiá»n cá»c cho no-show
+ *     summary: Chia tiền cọc cho no-show
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     responses:
@@ -245,7 +245,7 @@ adminRouter.put('/escrows/:bookingId/split-no-show', asyncHandler(AdminRefundsCo
  * @openapi
  * /api/admin/fraud-reports:
  *   get:
- *     summary: Danh sÃ¡ch tá»‘ giÃ¡c gian láº­n
+ *     summary: Danh sách tố giác gian lận
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -256,7 +256,7 @@ adminRouter.get('/fraud-reports/:reportId', asyncHandler(AdminFraudController.ge
  * @openapi
  * /api/admin/fraud-reports/{reportId}/approve:
  *   put:
- *     summary: Duyá»‡t tá»‘ giÃ¡c gian láº­n
+ *     summary: Duyệt tố giác gian lận
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     responses:
@@ -271,7 +271,7 @@ adminRouter.put('/fraud-reports/:reportId/approve', asyncHandler(AdminFraudContr
  * @openapi
  * /api/admin/fraud-reports/{reportId}/reject:
  *   put:
- *     summary: Tá»« chá»‘i tá»‘ giÃ¡c gian láº­n
+ *     summary: Từ chối tố giác gian lận
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     responses:
@@ -286,7 +286,7 @@ adminRouter.put('/fraud-reports/:reportId/reject', asyncHandler(AdminFraudContro
  * @openapi
  * /api/admin/notifications:
  *   get:
- *     summary: ThÃ´ng bÃ¡o admin
+ *     summary: Thông báo admin
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -297,7 +297,7 @@ adminRouter.get('/notifications/:notificationId', asyncHandler(AdminNotification
  * @openapi
  * /api/admin/notifications/send:
  *   post:
- *     summary: Gá»­i thÃ´ng bÃ¡o há»‡ thá»‘ng
+ *     summary: Gửi thông báo hệ thống
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  */
@@ -307,11 +307,11 @@ adminRouter.post('/notifications/send', asyncHandler(AdminNotificationsControlle
  * @openapi
  * /api/admin/settings:
  *   get:
- *     summary: Xem settings há»‡ thá»‘ng
+ *     summary: Xem settings hệ thống
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *   put:
- *     summary: Cáº­p nháº­t settings há»‡ thá»‘ng
+ *     summary: Cập nhật settings hệ thống
  *     tags: [Admin]
  *     security: [{ bearerAuth: [] }]
  *     requestBody:

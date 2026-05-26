@@ -77,7 +77,7 @@ export default function AdminFinancePage() {
           <p className="text-3xl font-bold text-rose-600 mt-1">{formatVnd(Math.abs(totals.totalOut))}</p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-sm text-main/60">Net flow</p>
+          <p className="text-sm text-main/60">Dòng tiền ròng</p>
           <p className="text-3xl font-bold text-primary mt-1">{formatVnd(totals.net)}</p>
         </article>
       </section>

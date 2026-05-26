@@ -212,7 +212,7 @@ export default function ShopDepositConfigPage() {
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <p className="font-label-bold text-main">Hủy sát giờ / No-show</p>
+                  <p className="font-label-bold text-main">Hủy sát giờ / Không đến</p>
                   <p className="text-xs text-main/70 mt-3">Trong vòng {cancelHours} giờ trước lịch hẹn hoặc không đến.</p>
                   <div className="mt-4 rounded-xl bg-rose-50 border border-rose-100 p-4">
                     <p className="text-xs text-main/70 mb-1">Hoàn tiền</p>

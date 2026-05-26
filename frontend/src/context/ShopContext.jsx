@@ -188,7 +188,7 @@ export function ShopProvider({ children }) {
       }))
       setError('')
     } catch (err) {
-      setError(err?.message || 'Unable to restore sign-in session.')
+      setError(err?.message || 'Không thể khôi phục phiên đăng nhập.')
     } finally {
       setLoading(false)
       setMeLoaded(true)
@@ -244,7 +244,7 @@ export function ShopProvider({ children }) {
         currentPath.startsWith('/forgot-password') ||
         /^\/[^/]+(\/book(\/time|\/pay)?|\/appointments)?$/.test(currentPath)
       if (!isPublicPath) {
-        sessionStorage.setItem('lumix_flash_message', 'Session expired. Please sign in again.')
+        sessionStorage.setItem('lumix_flash_message', 'Phiên đã hết hạn. Vui lòng đăng nhập lại.')
         window.location.href = '/login'
       }
     }

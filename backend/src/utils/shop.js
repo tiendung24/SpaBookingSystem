@@ -15,13 +15,13 @@ import { httpError } from './httpError.js'
 
 export async function findShopBySlug(slug) {
   const shop = await Shop.findOne({ slug }).lean()
-  if (!shop) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y shop')
+  if (!shop) throw httpError(404, 'Không tìm thấy shop')
   return shop
 }
 
 export async function findShopById(shopId) {
   const shop = await Shop.findById(shopId).lean()
-  if (!shop) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y shop')
+  if (!shop) throw httpError(404, 'Không tìm thấy shop')
   return shop
 }
 

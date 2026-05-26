@@ -11,7 +11,7 @@ const statusMeta = {
   completed: { label: 'Hoàn thành', color: 'text-emerald-600' },
   canceled: { label: 'Đã hủy', color: 'text-red-600' },
   cancelled: { label: 'Đã hủy', color: 'text-red-600' },
-  no_show: { label: 'No-show', color: 'text-red-600' }
+  no_show: { label: 'Không đến', color: 'text-red-600' }
 }
 
 function fmtVnd(v) {
@@ -148,12 +148,12 @@ export default function ShopBookingDetailPage() {
             )}
             {booking.status === 'confirmed' && (
               <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90" onClick={checkIn} type="button">
-                Check-in
+                Đánh dấu đến
               </button>
             )}
             {booking.status === 'checked_in' && (
               <button className="px-5 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:opacity-90" onClick={checkOut} type="button">
-                Check-out (Hoàn thành)
+                Hoàn thành
               </button>
             )}
 
@@ -166,7 +166,7 @@ export default function ShopBookingDetailPage() {
                   Hủy muộn
                 </button>
                 <button className="px-5 py-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold" type="button" onClick={() => setCancelMode('no_show')}>
-                  No-show
+                  Không đến
                 </button>
               </>
             )}
@@ -176,7 +176,7 @@ export default function ShopBookingDetailPage() {
             <div className="mt-6 p-4 rounded-2xl border border-slate-200 bg-white">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-bold text-main">
-                  {cancelMode === 'valid' ? `Hủy hợp lệ (>= ${cancelPolicy.hours} giờ)` : cancelMode === 'late' ? 'Hủy muộn' : 'No-show'}
+                  {cancelMode === 'valid' ? `Hủy hợp lệ (>= ${cancelPolicy.hours} giờ)` : cancelMode === 'late' ? 'Hủy muộn' : 'Không đến'}
                 </p>
                 <button type="button" className="text-main/60 hover:text-main" onClick={() => setCancelMode(null)}>Đóng</button>
               </div>
@@ -222,7 +222,7 @@ export default function ShopBookingDetailPage() {
                   )}
                   {cancelMode === 'no_show' && (
                     <button type="button" className="px-5 py-3 rounded-xl bg-red-600 text-white font-bold" onClick={markNoShow}>
-                      Xác nhận no-show
+                      Xác nhận không đến
                     </button>
                   )}
                 </div>

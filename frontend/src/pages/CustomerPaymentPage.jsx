@@ -281,6 +281,7 @@ export default function CustomerPaymentPage() {
       } catch (err) {
         console.error(err)
         if (mounted) {
+          // Backend returns 409 for invalid/expired hold token. Force redirect.
           const isExpiredHold = Number(err?.status || 0) === 409
 
           if (isExpiredHold) {
@@ -338,7 +339,7 @@ export default function CustomerPaymentPage() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [success, bookingDraft?.holdExpiresAt])
+  }, [success, expired, bookingDraft?.holdExpiresAt])
 
   // Time up -> expire unpaid booking immediately and clean local state.
   useEffect(() => {
@@ -522,7 +523,7 @@ export default function CustomerPaymentPage() {
                       />
                     ) : (
                       <div className="text-main/60 text-center">
-                        {depositAmount > 0 ? 'Không lấy được QR. Vui lòng mở link PayOS.' : 'Không cần đặt cọc.'}
+                        {depositAmount > 0 ? 'Không lấy được mã QR. Vui lòng mở liên kết PayOS.' : 'Không cần đặt cọc.'}
                       </div>
                     )}
                   </div>
@@ -534,7 +535,7 @@ export default function CustomerPaymentPage() {
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Mở trang PayOS
+                      Mở cổng thanh toán PayOS
                     </a>
                   ) : null}
 
@@ -548,7 +549,7 @@ export default function CustomerPaymentPage() {
                 </div>
 
                 <div className="bg-white rounded-3xl p-5 border border-slate-200">
-                  <h3 className="font-bold mb-4">Thông tin đơn</h3>
+                  <h3 className="font-bold mb-4">Thông tin đặt lịch</h3>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between"><span className="text-main/60">Dịch vụ</span><span className="font-bold text-main">{service?.name || '—'}</span></div>
                     <div className="flex justify-between"><span className="text-main/60">Nhân viên</span><span className="font-bold text-main">{bookingDraft.staffId === 'random' ? 'Ngẫu nhiên' : selectedStaff?.name ?? '—'}</span></div>

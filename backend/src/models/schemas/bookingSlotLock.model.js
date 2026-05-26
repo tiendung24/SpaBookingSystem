@@ -10,7 +10,7 @@ const bookingSlotLockSchema = new mongoose.Schema(
     bookingId: { type: String, index: true },
     holdToken: { type: String, index: true },
     lockType: { type: String, index: true, default: 'booking' },
-    expiresAt: { type: Date, index: true },
+    expiresAt: { type: Date },
     createdAt: { type: Date, default: Date.now }
   },
   { versionKey: false }

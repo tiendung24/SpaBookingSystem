@@ -1,4 +1,5 @@
-﻿import React from 'react';
+﻿
+import heroFallback from '../../assets/lumix-logo.png';
 
 export default function HeroSection() {
   return (
@@ -32,7 +33,17 @@ export default function HeroSection() {
           </div>
         </div>
         <div className="relative">
-          <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuB19Yy0W4Tjl-wkR5NuQpA0y2oY4fv3c9_3mYlc4O0zgpzwSY0q_3gBqzUKHcjqfWHqIf4p0l8n0BW4wRcf4ea1q8Lw9uPrZxW2i6iMV0Qn8fPS4l0Y3yqNh3PkO9jVx66b4xJfWhV9WJqk2Dts7ubQ4B5g1S2jI_6xMOnWm8W7UZ5Xh66Z7nMRT3EfM8Yg_d5rX3skM9T8K2JXIQ" alt="Hero" className="w-full rounded-3xl shadow-2xl" />
+          {/* Use external image but fallback to local asset if it fails to load */}
+          <img
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuB19Yy0W4Tjl-wkR5NuQpA0y2oY4fv3c9_3mYlc4O0zgpzwSY0q_3gBqzUKHcjqfWHqIf4p0l8n0BW4wRcf4ea1q8Lw9uPrZxW2i6iMV0Qn8fPS4l0Y3yqNh3PkO9jVx66b4xJfWhV9WJqk2Dts7ubQ4B5g1S2jI_6xMOnWm8W7UZ5Xh66Z7nMRT3EfM8Yg_d5rX3skM9T8K2JXIQ"
+            alt="Hero"
+            className="w-full rounded-3xl shadow-2xl"
+            onError={(e) => {
+              // replace with local fallback image when external fails
+              e.currentTarget.onerror = null
+              e.currentTarget.src = heroFallback
+            }}
+          />
         </div>
       </div>
     </section>

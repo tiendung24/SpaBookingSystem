@@ -283,7 +283,7 @@ export function buildSwaggerSpec() {
             content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
           },
           NotFound: {
-            description: '404 Not Found',
+            description: '404 Không tìm thấy',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
           },
           Conflict: {

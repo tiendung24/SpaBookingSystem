@@ -27,7 +27,7 @@ publicShopsRouter.get('/:slug', asyncHandler(PublicShopsController.getShopBySlug
  * @openapi
  * /api/public/shops/{slug}/status:
  *   get:
- *     summary: Xem tráº¡ng thÃ¡i shop
+ *     summary: Xem trạng thái shop
  *     tags: [Public]
  *     responses:
  *       200:
@@ -40,7 +40,7 @@ publicShopsRouter.get('/:slug/status', asyncHandler(PublicShopsController.getSho
  * @openapi
  * /api/public/shops/{slug}/service-categories:
  *   get:
- *     summary: Xem danh má»¥c dá»‹ch vá»¥
+ *     summary: Xem danh mục dịch vụ
  *     tags: [Public]
  *     responses:
  *       200:
@@ -61,7 +61,7 @@ publicShopsRouter.get('/:slug/service-categories', asyncHandler(PublicShopsContr
  * @openapi
  * /api/public/shops/{slug}/services:
  *   get:
- *     summary: Xem danh sÃ¡ch dá»‹ch vá»¥
+ *     summary: Xem danh sách dịch vụ
  *     tags: [Public]
  *     responses:
  *       200:
@@ -81,7 +81,7 @@ publicShopsRouter.get('/:slug/services', asyncHandler(PublicShopsController.getS
  * @openapi
  * /api/public/shops/{slug}/services/{serviceId}:
  *   get:
- *     summary: Xem chi tiáº¿t dá»‹ch vá»¥
+ *     summary: Xem chi tiết dịch vụ
  *     tags: [Public]
  *     responses:
  *       200:
@@ -100,7 +100,7 @@ publicShopsRouter.get('/:slug/services/:serviceId', asyncHandler(PublicShopsCont
  * @openapi
  * /api/public/shops/{slug}/staffs:
  *   get:
- *     summary: Xem nhÃ¢n viÃªn
+ *     summary: Xem nhân viên
  *     tags: [Public]
  *     responses:
  *       200:
@@ -120,7 +120,7 @@ publicShopsRouter.get('/:slug/staffs', asyncHandler(PublicShopsController.getSta
  * @openapi
  * /api/public/shops/{slug}/available-slots:
  *   get:
- *     summary: Xem slot trá»‘ng
+ *     summary: Xem slot trống
  *     tags: [Public]
  *     responses:
  *       200:
@@ -133,7 +133,7 @@ publicShopsRouter.get('/:slug/available-slots', asyncHandler(PublicShopsControll
  * @openapi
  * /api/public/shops/{slug}/bookings:
  *   get:
- *     summary: Tra cá»©u booking theo sá»‘ Ä‘iá»‡n thoáº¡i
+ *     summary: Tra cứu booking theo số điện thoại
  *     tags: [Public]
  *     parameters:
  *       - in: query
@@ -149,7 +149,7 @@ publicShopsRouter.get('/:slug/available-slots', asyncHandler(PublicShopsControll
  *       400: { $ref: '#/components/responses/BadRequest' }
  *       404: { $ref: '#/components/responses/NotFound' }
  *   post:
- *     summary: Táº¡o booking (khÃ¡ch Ä‘áº·t lá»‹ch)
+ *     summary: Tạo booking (khách đặt lịch)
  *     tags: [Public]
  *     requestBody:
  *       required: true

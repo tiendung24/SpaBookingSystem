@@ -8,7 +8,7 @@ export const publicBookingsRouter = Router()
  * @openapi
  * /api/public/bookings/{bookingCode}:
  *   get:
- *     summary: Xem chi tiáº¿t booking theo mÃ£
+ *     summary: Xem chi tiết booking theo mã
  *     tags: [Public]
  *     responses:
  *       200:
@@ -27,7 +27,7 @@ publicBookingsRouter.get('/:bookingCode', asyncHandler(PublicBookingsController.
  * @openapi
  * /api/public/bookings/{bookingCode}/cancel:
  *   post:
- *     summary: KhÃ¡ch há»§y lá»‹ch
+ *     summary: Khách hủy lịch
  *     tags: [Public]
  *     requestBody:
  *       required: true
@@ -48,7 +48,7 @@ publicBookingsRouter.post('/:bookingCode/cancel', asyncHandler(PublicBookingsCon
  * @openapi
  * /api/public/bookings/{bookingCode}/refund-info:
  *   post:
- *     summary: Nháº­p thÃ´ng tin hoÃ n tiá»n
+ *     summary: Nhập thông tin hoàn tiền
  *     tags: [Public]
  *     responses:
  *       200:
@@ -67,7 +67,7 @@ publicBookingsRouter.post('/:bookingCode/refund-info', asyncHandler(PublicBookin
  * @openapi
  * /api/public/bookings/{bookingCode}/refund-status:
  *   get:
- *     summary: Xem tráº¡ng thÃ¡i hoÃ n tiá»n
+ *     summary: Xem trạng thái hoàn tiền
  *     tags: [Public]
  *     responses:
  *       200:
@@ -80,7 +80,7 @@ publicBookingsRouter.get('/:bookingCode/refund-status', asyncHandler(PublicBooki
  * @openapi
  * /api/public/bookings/{bookingCode}/report-shop-fraud:
  *   post:
- *     summary: Tá»‘ giÃ¡c shop gian láº­n
+ *     summary: Tố giác shop gian lận
  *     tags: [Public]
  *     responses:
  *       200:
@@ -93,7 +93,7 @@ publicBookingsRouter.post('/:bookingCode/report-shop-fraud', asyncHandler(Public
  * @openapi
  * /api/public/bookings/{bookingCode}/reviews:
  *   post:
- *     summary: ÄÃ¡nh giÃ¡ sau dá»‹ch vá»¥
+ *     summary: Đánh giá sau dịch vụ
  *     tags: [Public]
  *     responses:
  *       200: { description: "Review saved" }

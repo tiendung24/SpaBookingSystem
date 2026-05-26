@@ -15,7 +15,7 @@ function extractWebhookData(body = {}) {
 export async function payosWebhook(req, res) {
   const payos = new PayOSService()
   const verified = await payos.verifyWebhook(req.body)
-  if (!verified) return res.status(400).json({ ok: false, message: 'Invalid signature' })
+  if (!verified) return res.status(400).json({ ok: false, message: 'Chữ ký không hợp lệ' })
 
   const payload = extractWebhookData(req.body)
   const payment = await PayosPayment.findOne({ orderCode: payload.orderCode })
@@ -27,7 +27,7 @@ export async function payosWebhook(req, res) {
       entityId: '',
       meta: { orderCode: payload.orderCode }
     })
-    return res.json({ ok: true, ignored: true, message: 'Payment not found' })
+    return res.json({ ok: true, ignored: true, message: 'Không tìm thấy giao dịch' })
   }
 
   payment.status = payload.status || payment.status
