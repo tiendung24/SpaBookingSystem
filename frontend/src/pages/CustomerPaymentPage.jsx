@@ -238,14 +238,10 @@ export default function CustomerPaymentPage() {
     const holdExpired =
       !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
 
-    if (!service || !phoneOk || createdBookingId) {
-      setCreating(false)
-      return
-    }
+    if (!service || !phoneOk || createdBookingId) return
 
     if (!hasHold || holdExpired) {
       if (createdBookingId) return
-      setCreating(false)
       // Otherwise, go back to pick a slot.
       window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
       navigate(`/${slug}/book/time`)
