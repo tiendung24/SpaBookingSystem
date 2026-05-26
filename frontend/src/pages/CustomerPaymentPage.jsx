@@ -277,6 +277,23 @@ export default function CustomerPaymentPage() {
       } catch (err) {
         console.error(err)
         if (mounted) {
+          const isExpiredHold =
+            Number(err?.status || 0) === 409 && String(err?.message || '').toLowerCase().includes('hết hạn')
+
+          if (isExpiredHold) {
+            try {
+              localStorage.removeItem('last_booking_code_' + slug)
+              localStorage.removeItem('last_payment_data_' + slug)
+              localStorage.removeItem('hold_token_' + slug)
+              localStorage.removeItem('hold_expires_' + slug)
+            } catch {
+              // ignore
+            }
+            window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+            navigate(`/${slug}/book/time`)
+            return
+          }
+
           window.alert(`Không thể giữ chỗ: ${err?.message || 'Lỗi không xác định'}`)
         }
       } finally {

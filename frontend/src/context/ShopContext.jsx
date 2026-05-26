@@ -356,6 +356,22 @@ export function ShopProvider({ children }) {
     } catch (err) {
         try { window.__lastBookingError = err } catch { /* ignore */ }
         console.error('[ShopContext] createBookingFromDraft error', err)
+      const isExpiredHold =
+        Number(err?.status || 0) === 409 && String(err?.message || '').toLowerCase().includes('hết hạn')
+
+      if (isExpiredHold) {
+        try {
+          localStorage.removeItem(`hold_token_${slug}`)
+          localStorage.removeItem(`hold_expires_${slug}`)
+        } catch {
+          // ignore
+        }
+        setBookingDraft((prev) => ({
+          ...prev,
+          holdToken: '',
+          holdExpiresAt: ''
+        }))
+      }
       throw err
     }
 
