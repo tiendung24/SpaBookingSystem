@@ -410,6 +410,21 @@ export default function CustomerPaymentPage() {
           setTimeout(() => setConfetti(false), 2500)
           resetBookingDraft()
         }
+        // If a payment object appears later (e.g., checkoutUrl-only), capture it so QR/link shows.
+        try {
+          const payment = res?.payment || res?.data?.payment || null
+          if (payment && mounted && !payosData) {
+            const normalized = normalizePaymentPayload(payment)
+            setPayosData(normalized)
+            try {
+              localStorage.setItem('last_payment_data_' + slug, JSON.stringify(payment))
+            } catch {
+              // ignore
+            }
+          }
+        } catch {
+          // ignore payment parsing errors
+        }
       } catch {
         // ignore polling errors
       }
