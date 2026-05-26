@@ -281,8 +281,7 @@ export default function CustomerPaymentPage() {
       } catch (err) {
         console.error(err)
         if (mounted) {
-          const isExpiredHold =
-            Number(err?.status || 0) === 409 && String(err?.message || '').toLowerCase().includes('hết hạn')
+          const isExpiredHold = Number(err?.status || 0) === 409
 
           if (isExpiredHold) {
             try {
