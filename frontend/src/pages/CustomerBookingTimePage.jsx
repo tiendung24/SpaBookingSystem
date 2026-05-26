@@ -92,8 +92,12 @@ export default function CustomerBookingTimePage() {
     }
 
     run()
+    const timer = setInterval(() => {
+      run()
+    }, 5000)
     return () => {
       active = false
+      clearInterval(timer)
     }
   }, [slug, bookingDraft.serviceId, bookingDraft.staffId, selectedDate, getAvailableSlots])
 
@@ -131,6 +135,20 @@ export default function CustomerBookingTimePage() {
   const emailTrimmed = email.trim()
   const emailOk = isValidEmail(emailTrimmed)
 
+  const ownHoldSlot = useMemo(() => {
+    const holdToken = bookingDraft.holdToken || ''
+    const holdExpiresAt = bookingDraft.holdExpiresAt ? new Date(bookingDraft.holdExpiresAt) : null
+    if (!holdToken || !selectedDate || !bookingDraft.time) return null
+    if (!holdExpiresAt || Number.isNaN(holdExpiresAt.getTime())) return null
+    return {
+      date: selectedDate,
+      start: bookingDraft.time,
+      serviceId: bookingDraft.serviceId,
+      staffId: bookingDraft.staffId,
+      holdToken
+    }
+  }, [bookingDraft.holdToken, bookingDraft.holdExpiresAt, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate])
+
   const slots = useMemo(() => {
     if (!service) return []
 
@@ -158,11 +176,18 @@ export default function CustomerBookingTimePage() {
       }).length
 
       const limit = bookingDraft.staffId === 'random' ? shopCapacity : 1
-      const available = !inLunch && (hasBackendSlots ? availableSet.has(slotStart) : occupied < limit)
-      list.push({ start: slotStart, occupied, limit, available })
+      const isOwnHold = Boolean(
+        ownHoldSlot &&
+          ownHoldSlot.date === selectedDate &&
+          ownHoldSlot.start === slotStart &&
+          ownHoldSlot.serviceId === bookingDraft.serviceId &&
+          String(ownHoldSlot.staffId || '') === String(bookingDraft.staffId || '')
+      )
+      const available = !inLunch && (isOwnHold || (hasBackendSlots ? availableSet.has(slotStart) : occupied < limit))
+      list.push({ start: slotStart, occupied, limit, available, ownHold: isOwnHold })
     }
     return list
-  }, [service, availableSlots, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId])
+  }, [service, availableSlots, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId, ownHoldSlot, bookingDraft.serviceId])
 
   const canConfirm = Boolean(service && selectedTime && name.trim() && phoneOk && emailOk)
 

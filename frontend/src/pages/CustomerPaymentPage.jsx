@@ -64,6 +64,10 @@ function normalizePaymentPayload(payment) {
   }
 }
 
+function isSuccessfulPaymentStatus(status) {
+  return ['success', 'paid', 'completed'].includes(String(status || '').toLowerCase())
+}
+
 function normalizePhone(input) {
   return String(input || '')
     .trim()
@@ -556,24 +560,48 @@ export default function CustomerPaymentPage() {
   }, [expired, slug, navigate])
 
   const handleTransferred = async () => {
-    if (!createdBookingId) return
-
-    try {
-      const res = await checkBookingStatus(createdBookingId)
-      const booking = res?.booking || res?.data?.booking || null
-      const paid = booking?.status === 'confirmed'
-
-      if (paid) {
-        setSuccess(true)
-        setConfetti(true)
-        setTimeout(() => setConfetti(false), 2500)
-        resetBookingDraft()
-      } else {
-        window.alert('Hệ thống chưa ghi nhận thanh toán. Vui lòng thử lại sau ít phút.')
+    const bookingCode = createdBookingId || (() => {
+      try {
+        return localStorage.getItem('last_booking_code_' + slug) || ''
+      } catch {
+        return ''
       }
-    } catch {
-      window.alert('Không kiểm tra được trạng thái thanh toán. Vui lòng thử lại.')
+    })()
+
+    if (!bookingCode) {
+      window.alert('Không tìm thấy mã đặt lịch để kiểm tra thanh toán.')
+      return
     }
+
+    let lastError = null
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const res = await checkBookingStatus(bookingCode)
+        const booking = res?.booking || res?.data?.booking || null
+        const payment = res?.payment || res?.data?.payment || null
+        const paid = booking?.status === 'confirmed' || isSuccessfulPaymentStatus(payment?.status)
+
+        if (paid) {
+          setCreatedBookingId(booking?.bookingCode || bookingCode)
+          setSuccess(true)
+          setConfetti(true)
+          setTimeout(() => setConfetti(false), 2500)
+          resetBookingDraft()
+          return
+        }
+
+        lastError = null
+      } catch (err) {
+        lastError = err
+      }
+    }
+
+    if (lastError) {
+      window.alert('Hệ thống chưa kiểm tra được trạng thái thanh toán lúc này. Vui lòng đợi 10-15 giây rồi bấm lại.')
+      return
+    }
+
+    window.alert('Hệ thống chưa ghi nhận thanh toán. Vui lòng đợi thêm vài giây rồi thử lại.')
   }
 
   if (success) {
