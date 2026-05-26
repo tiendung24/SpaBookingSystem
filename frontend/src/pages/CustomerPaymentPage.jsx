@@ -152,7 +152,7 @@ export default function CustomerPaymentPage() {
   const [confetti, setConfetti] = useState(false)
 
   const [payosData, setPayosData] = useState(null)
-  const [creating, setCreating] = useState(true)
+  const [creating, setCreating] = useState(false)
   const [restoreChecked, setRestoreChecked] = useState(false)
   const autoBookingCalledRef = useRef(false)
 
@@ -208,7 +208,10 @@ export default function CustomerPaymentPage() {
       } catch {
         // ignore
       } finally {
-        if (mounted) setRestoreChecked(true)
+        if (mounted) {
+          setRestoreChecked(true)
+          setCreating(false)
+        }
       }
     }
 
@@ -235,15 +238,20 @@ export default function CustomerPaymentPage() {
     const holdExpired =
       !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
 
+    if (!service || !phoneOk || createdBookingId) {
+      setCreating(false)
+      return
+    }
+
     if (!hasHold || holdExpired) {
       if (createdBookingId) return
+      setCreating(false)
       // Otherwise, go back to pick a slot.
       window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
       navigate(`/${slug}/book/time`)
       return
     }
 
-    if (!service || !phoneOk || createdBookingId) return
     if (autoBookingCalledRef.current) return
 
     let mounted = true
@@ -403,6 +411,33 @@ export default function CustomerPaymentPage() {
       clearInterval(timer)
     }
   }, [createdBookingId, success, checkBookingStatus, resetBookingDraft])
+
+  // If booking exists but QR data is missing, fetch once from booking status API.
+  useEffect(() => {
+    if (!createdBookingId || payosData) return
+    let mounted = true
+    const run = async () => {
+      try {
+        const res = await checkBookingStatus(createdBookingId)
+        if (!mounted) return
+        if (res?.payment) {
+          const normalized = normalizePaymentPayload(res.payment)
+          setPayosData(normalized)
+          try {
+            localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
+          } catch {
+            // ignore
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    run()
+    return () => {
+      mounted = false
+    }
+  }, [createdBookingId, payosData, checkBookingStatus, slug])
 
   useEffect(() => {
     if (!expired) return
