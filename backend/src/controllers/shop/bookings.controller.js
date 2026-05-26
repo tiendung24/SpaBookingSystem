@@ -6,6 +6,7 @@ import {
   Deposit,
   PlatformFee,
   Service,
+  Shop,
   ShopStaff,
   SystemSetting,
   Wallet,
@@ -44,6 +45,24 @@ async function getNoShowPlatformCutRatio() {
 function ensureTransition(currentStatus, nextStatus, allowedCurrent) {
   if (!allowedCurrent.includes(currentStatus)) {
     throw httpError(409, `Không thể chuyển trạng thái từ ${currentStatus} sang ${nextStatus}`)
+  }
+}
+
+function getShopCancelThresholdHours(shop) {
+  const hours = Number(shop?.depositConfig?.cancelHours ?? 4)
+  return Number.isFinite(hours) && hours > 0 ? hours : 4
+}
+
+function classifyShopCancel(booking, shop, now = new Date()) {
+  const thresholdHours = getShopCancelThresholdHours(shop)
+  const startTime = new Date(booking.startTime)
+  const diffHours = (startTime.getTime() - now.getTime()) / (60 * 60 * 1000)
+  const valid = diffHours >= thresholdHours
+  return {
+    cancelType: valid ? 'valid' : 'late',
+    refundPercent: valid ? 100 : 0,
+    thresholdHours,
+    diffHours
   }
 }
 
@@ -195,16 +214,22 @@ export async function cancelBooking(req, res) {
   const existing = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
   if (!existing) throw httpError(404, 'Không tìm thấy booking')
   ensureTransition(existing.status, 'cancelled', ['pending', 'confirmed'])
+  const shop = await Shop.findById(shopId).lean()
+  const cancelMeta = classifyShopCancel(existing, shop)
   const booking = await Booking.findOneAndUpdate(
     { _id: req.params.bookingId, shopId },
-    { status: 'cancelled', cancelReason: req.body?.reason || '', updatedAt: new Date() },
+    {
+      status: 'cancelled',
+      cancelReason: req.body?.reason || '',
+      cancelReasonId: req.body?.cancelReasonId || '',
+      updatedAt: new Date()
+    },
     { new: true }
   ).lean()
 
   const deposit = await Deposit.findOne({ bookingId: String(booking._id) })
   if (deposit && ['pending', 'holding', 'refund_pending'].includes(deposit.status)) {
-    // Shop chủ động hủy: mặc định cần admin xử lý refund
-    deposit.status = 'refund_pending'
+    deposit.status = cancelMeta.cancelType === 'valid' ? 'refund_pending' : 'forfeited'
     deposit.updatedAt = new Date()
     await deposit.save()
   }
@@ -221,11 +246,17 @@ export async function cancelBooking(req, res) {
       shopName: '',
       bookingCode: booking.bookingCode,
       startTime: booking.startTime,
-      statusLabel: 'Đã hủy bởi shop'
+      statusLabel: cancelMeta.cancelType === 'valid' ? 'Đã hủy bởi shop (hợp lệ)' : 'Đã hủy bởi shop (muộn)'
     })
     await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
   }
-  res.json({ booking, depositStatus: deposit?.status || null })
+  res.json({
+    booking,
+    depositStatus: deposit?.status || null,
+    cancellationType: cancelMeta.cancelType,
+    refundPercent: cancelMeta.refundPercent,
+    cancelPolicyHours: cancelMeta.thresholdHours
+  })
 }
 
 export async function checkIn(req, res) {

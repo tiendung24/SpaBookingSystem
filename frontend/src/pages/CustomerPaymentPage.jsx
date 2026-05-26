@@ -34,27 +34,52 @@ function normalizePaymentPayload(payment) {
   const raw = payment.raw && typeof payment.raw === 'object' ? payment.raw : null
   const rawData = raw?.data && typeof raw.data === 'object' ? raw.data : null
   const directData = payment.data && typeof payment.data === 'object' ? payment.data : null
+  const rawMeta = payment.raw && typeof payment.raw === 'object' ? payment.raw : {}
 
   const qrCodeUrl =
     payment.qrCodeUrl ||
+    payment.qrCodeURL ||
+    payment.qr_url ||
     payment.qrCode ||
+    payment.qr ||
     directData?.qrCodeUrl ||
+    directData?.qrCodeURL ||
+    directData?.qr_url ||
     directData?.qrCode ||
+    directData?.qr ||
     raw?.qrCodeUrl ||
+    raw?.qrCodeURL ||
+    raw?.qr_url ||
     raw?.qrCode ||
+    raw?.qr ||
     rawData?.qrCodeUrl ||
+    rawData?.qrCodeURL ||
+    rawData?.qr_url ||
     rawData?.qrCode ||
+    rawData?.qr ||
     payment.checkoutUrl ||
+    payment.checkoutURL ||
     directData?.checkoutUrl ||
+    directData?.checkoutURL ||
     raw?.checkoutUrl ||
+    raw?.checkoutURL ||
     rawData?.checkoutUrl ||
+    rawData?.checkoutURL ||
+    rawMeta?.paymentLink ||
+    rawMeta?.paymentLinkUrl ||
     ''
 
   const checkoutUrl =
     payment.checkoutUrl ||
+    payment.checkoutURL ||
     directData?.checkoutUrl ||
+    directData?.checkoutURL ||
     raw?.checkoutUrl ||
+    raw?.checkoutURL ||
     rawData?.checkoutUrl ||
+    rawData?.checkoutURL ||
+    rawMeta?.paymentLink ||
+    rawMeta?.paymentLinkUrl ||
     ''
 
   return {

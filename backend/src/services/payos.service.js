@@ -65,8 +65,16 @@ export class PayOSService {
       orderCode: data?.orderCode ?? resp?.orderCode,
       amount: data?.amount ?? resp?.amount,
       description: data?.description ?? resp?.description,
-      qrCode: data?.qrCode ?? data?.qrCodeUrl ?? resp?.qrCode ?? resp?.qrCodeUrl,
-      checkoutUrl: data?.checkoutUrl ?? resp?.checkoutUrl,
+      qrCode:
+        data?.qrCode ??
+        data?.qrCodeUrl ??
+        data?.qrCodeURL ??
+        data?.qr_url ??
+        resp?.qrCode ??
+        resp?.qrCodeUrl ??
+        resp?.qrCodeURL ??
+        resp?.qr_url,
+      checkoutUrl: data?.checkoutUrl ?? data?.checkoutURL ?? resp?.checkoutUrl ?? resp?.checkoutURL,
       status: data?.status ?? resp?.status ?? 'pending',
       raw: resp
     }

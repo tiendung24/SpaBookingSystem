@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import { useShop } from '../context/ShopContext'
@@ -31,6 +31,7 @@ export default function ShopBookingDetailPage() {
   const [cancelMode, setCancelMode] = useState(null)
   const [cancelReason, setCancelReason] = useState('Có việc đột xuất')
   const [refund, setRefund] = useState({ bank: '', account: '', name: '' })
+  const [nowTick, setNowTick] = useState(() => Date.now())
 
   const isCancelable = booking && !['completed', 'canceled', 'cancelled', 'no_show'].includes(booking.status)
 
@@ -38,6 +39,18 @@ export default function ShopBookingDetailPage() {
     const hours = shop.deposit.cancelHours ?? 4
     return { hours }
   }, [shop.deposit.cancelHours])
+
+  const cancelDecision = (() => {
+    if (!booking?.startTime) return { type: 'late', refundPercent: 0, remainingHours: 0 }
+    const remainingHours = (new Date(booking.startTime).getTime() - nowTick) / (60 * 60 * 1000)
+    const isValid = remainingHours >= cancelPolicy.hours
+    return { type: isValid ? 'valid' : 'late', refundPercent: isValid ? 100 : 0, remainingHours }
+  })()
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 30000)
+    return () => clearInterval(timer)
+  }, [])
 
   if (!booking) {
     return (
@@ -56,22 +69,24 @@ export default function ShopBookingDetailPage() {
   const checkIn = () => setStatus('checked_in')
   const checkOut = () => setStatus('completed')
 
-  const cancelValid = () => {
-    if (!refund.bank || !refund.account || !refund.name) {
+  const cancelBookingNow = () => {
+    const isValid = cancelDecision.type === 'valid'
+    if (isValid && (!refund.bank || !refund.account || !refund.name)) {
       alert('Vui lòng nhập đủ thông tin hoàn tiền.')
       return
     }
-    updateBooking(booking.id, { status: 'canceled', cancellationType: 'valid', refundPercent: 100, cancelReason, refundInfo: refund })
-    setCancelMode(null)
-  }
-
-  const cancelLate = () => {
-    updateBooking(booking.id, { status: 'canceled', cancellationType: 'late', refundPercent: 0, cancelReason })
+    updateBooking(booking.id, {
+      status: 'canceled',
+      reason: cancelReason,
+      cancellationType: isValid ? 'valid' : 'late',
+      refundPercent: isValid ? 100 : 0,
+      refundInfo: isValid ? refund : undefined
+    })
     setCancelMode(null)
   }
 
   const markNoShow = () => {
-    updateBooking(booking.id, { status: 'no_show', cancellationType: 'no_show', refundPercent: 0, cancelReason })
+    updateBooking(booking.id, { status: 'no_show', cancellationType: 'no_show', refundPercent: 0, reason: cancelReason })
     setCancelMode(null)
   }
 
@@ -158,17 +173,15 @@ export default function ShopBookingDetailPage() {
             )}
 
             {isCancelable && (
-              <>
-                <button className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-white font-bold" type="button" onClick={() => setCancelMode('valid')}>
-                  Hủy hợp lệ (Hoàn 100%)
-                </button>
-                <button className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-white font-bold" type="button" onClick={() => setCancelMode('late')}>
-                  Hủy muộn
-                </button>
-                <button className="px-5 py-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold" type="button" onClick={() => setCancelMode('no_show')}>
-                  Không đến
-                </button>
-              </>
+              <button className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-white font-bold" type="button" onClick={() => setCancelMode('cancel')}>
+                Hủy lịch
+              </button>
+            )}
+
+            {isCancelable && (
+              <button className="px-5 py-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold" type="button" onClick={() => setCancelMode('no_show')}>
+                Không đến
+              </button>
             )}
           </div>
 
@@ -176,10 +189,26 @@ export default function ShopBookingDetailPage() {
             <div className="mt-6 p-4 rounded-2xl border border-slate-200 bg-white">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-bold text-main">
-                  {cancelMode === 'valid' ? `Hủy hợp lệ (>= ${cancelPolicy.hours} giờ)` : cancelMode === 'late' ? 'Hủy muộn' : 'Không đến'}
+                  {cancelMode === 'cancel'
+                    ? cancelDecision.type === 'valid'
+                      ? `Hủy hợp lệ (>= ${cancelPolicy.hours} giờ)`
+                      : `Hủy muộn (< ${cancelPolicy.hours} giờ)`
+                    : 'Không đến'}
                 </p>
                 <button type="button" className="text-main/60 hover:text-main" onClick={() => setCancelMode(null)}>Đóng</button>
               </div>
+
+              {cancelMode === 'cancel' ? (
+                <div className="mb-4 rounded-2xl p-4 border border-slate-200 bg-slate-50 text-sm text-main/80">
+                  <p>
+                    Dựa trên thời gian hiện tại, đây là trạng thái{' '}
+                    <b className={cancelDecision.type === 'valid' ? 'text-emerald-600' : 'text-amber-600'}>
+                      {cancelDecision.type === 'valid' ? 'hủy hợp lệ' : 'hủy muộn'}
+                    </b>{' '}
+                    và khách sẽ {cancelDecision.refundPercent > 0 ? 'được hoàn cọc theo chính sách shop.' : 'không được hoàn cọc theo chính sách shop.'}
+                  </p>
+                </div>
+              ) : null}
 
               <div className="space-y-4">
                 <div>
@@ -192,7 +221,7 @@ export default function ShopBookingDetailPage() {
                   </select>
                 </div>
 
-                {cancelMode === 'valid' && (
+                {cancelMode === 'cancel' && cancelDecision.type === 'valid' && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                       <label className="text-sm font-bold text-main/70">Ngân hàng</label>
@@ -210,14 +239,9 @@ export default function ShopBookingDetailPage() {
                 )}
 
                 <div className="flex gap-3">
-                  {cancelMode === 'valid' && (
-                    <button type="button" className="px-5 py-3 rounded-xl bg-primary text-white font-bold" onClick={cancelValid}>
-                      Xác nhận hủy & hoàn tiền
-                    </button>
-                  )}
-                  {cancelMode === 'late' && (
-                    <button type="button" className="px-5 py-3 rounded-xl bg-amber-600 text-white font-bold" onClick={cancelLate}>
-                      Xác nhận hủy muộn
+                  {cancelMode === 'cancel' && (
+                    <button type="button" className="px-5 py-3 rounded-xl bg-primary text-white font-bold" onClick={cancelBookingNow}>
+                      Xác nhận hủy
                     </button>
                   )}
                   {cancelMode === 'no_show' && (
