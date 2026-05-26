@@ -44,6 +44,10 @@ function normalizePaymentPayload(payment) {
     raw?.qrCode ||
     rawData?.qrCodeUrl ||
     rawData?.qrCode ||
+    payment.checkoutUrl ||
+    directData?.checkoutUrl ||
+    raw?.checkoutUrl ||
+    rawData?.checkoutUrl ||
     ''
 
   const checkoutUrl =
@@ -195,14 +199,19 @@ export default function CustomerPaymentPage() {
           const status = String(res.booking.status || '').toLowerCase()
           if (status === 'cancelled' || status === 'canceled') {
             setExpired(true)
+            setPayosData(null)
           }
         }
         if (res?.payment) {
+          if (String(res?.booking?.status || '').toLowerCase() === 'cancelled' || String(res?.booking?.status || '').toLowerCase() === 'canceled') {
+            setPayosData(null)
+          } else {
           setPayosData(normalizePaymentPayload(res.payment))
           try {
             localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
           } catch {
             // ignore
+          }
           }
         }
       } catch {
@@ -348,6 +357,10 @@ export default function CustomerPaymentPage() {
 
     let mounted = true
     const run = async () => {
+      if (mounted) {
+        setExpired(true)
+        setPayosData(null)
+      }
       try {
         if (createdBookingId) {
           await expireUnpaidBooking(createdBookingId, true)
@@ -484,6 +497,20 @@ export default function CustomerPaymentPage() {
     )
   }
 
+  if (expired) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-white to-primary/10 text-main p-6">
+        <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center max-w-md w-full shadow-xl">
+          <h1 className="text-2xl font-bold text-primary">Phiên thanh toán đã hết hạn</h1>
+          <p className="text-main/70 mt-2">Bạn vui lòng chọn lại khung giờ để tạo mã thanh toán mới.</p>
+          <Link to={`/${slug || ''}/book/time`} className="inline-block mt-5 px-6 py-3 rounded-2xl bg-primary text-white font-bold">
+            Chọn lại khung giờ
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 text-main">
       <ConfettiLayer active={confetti} />
@@ -515,11 +542,11 @@ export default function CustomerPaymentPage() {
                   <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 min-h-[320px]">
                     {creating ? (
                       <div className="text-main/60">Đang tạo đơn thanh toán...</div>
-                    ) : (payosData?.qrCodeUrl || payosData?.qrCode) ? (
+                    ) : (payosData?.qrCodeUrl || payosData?.qrCode || payosData?.checkoutUrl) ? (
                       <img
                         className="w-[300px] h-[300px] rounded-2xl"
                         alt="PayOS QR"
-                        src={buildQrImageSrc(payosData.qrCodeUrl || payosData.qrCode)}
+                        src={buildQrImageSrc(payosData.qrCodeUrl || payosData.qrCode || payosData.checkoutUrl)}
                       />
                     ) : (
                       <div className="text-main/60 text-center">
