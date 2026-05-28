@@ -386,6 +386,28 @@ export default function CustomerPaymentPage() {
     return res
   }, [checkBookingStatus, slug])
 
+  // Try to fetch payment info a few times when backend needs a moment to persist
+  const fetchPaymentWithRetries = useCallback(async (bookingCode, attempts = 6, delayMs = 1000) => {
+    if (!bookingCode) return null
+    for (let i = 0; i < attempts; i += 1) {
+      try {
+        const r = await checkBookingStatus(bookingCode)
+        const payment = r?.payment || r?.data?.payment || null
+        if (payment) {
+          const normalized = normalizePaymentPayload(payment)
+          setPayosData(normalized)
+          return normalized
+        }
+      } catch {
+        // ignore transient errors
+      }
+      // wait before next try
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((res) => setTimeout(res, delayMs))
+    }
+    return null
+  }, [checkBookingStatus])
+
   // Restore booking info on hard reload (bookingDraft may be empty)
   useEffect(() => {
     if (!slug) return
@@ -592,6 +614,11 @@ export default function CustomerPaymentPage() {
               void syncBookingState(res.booking?.bookingCode || res.booking?._id)
             }
           } else if (res?.booking) {
+            // Booking was created but payment object may not be persisted yet in prod.
+            // Try to hydrate payment info for a few seconds to avoid forcing user reload.
+            if (!res?.payment && res?.booking?.bookingCode) {
+              void fetchPaymentWithRetries(res.booking.bookingCode, 6, 1000)
+            }
             // Booking exists but no immediate payment payload; sync authoritative state from server.
             void syncBookingState(res.booking.bookingCode || res.booking._id)
 
