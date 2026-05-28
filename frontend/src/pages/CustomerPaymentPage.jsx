@@ -303,7 +303,7 @@ export default function CustomerPaymentPage() {
       timeLeft,
       updatedAt: Date.now()
     })
-  }, [slug, createdBookingId, bookingExpiresAt, payosData, attemptAmounts, timeLeft])
+  }, [slug, createdBookingId, bookingExpiresAt, payosData, attemptAmounts, timeLeft, bookingDraft])
 
   useEffect(() => {
     if (!slug) return
@@ -447,6 +447,8 @@ export default function CustomerPaymentPage() {
     let mounted = true
     const restore = async () => {
       try {
+        let restoredFromAttempt = false
+        let attemptError = null
         // hydrate from server using client attempt id if available
         try {
           const attemptKey = `client_attempt_${slug}`
@@ -454,6 +456,7 @@ export default function CustomerPaymentPage() {
           if (attemptId) {
             const attemptRes = await apiRequest(`/api/public/shops/${slug}/booking-attempts/${attemptId}`)
             if (attemptRes?.booking) {
+              restoredFromAttempt = true
               const hydratedDraft = buildDraftFromAttempt(attemptRes.booking)
               if (hydratedDraft) {
                 setBookingDraft((prev) => ({
@@ -476,25 +479,26 @@ export default function CustomerPaymentPage() {
             if (attemptRes?.payment) {
               setPayosData(normalizePaymentPayload(attemptRes.payment))
             }
-            // if there is a temp hold payload, consider prompting restore UI (kept minimal here)
-          } else if (paymentSnapshot?.draft?.serviceId || paymentSnapshot?.serviceId) {
-            const snapshotDraft = paymentSnapshot?.draft || paymentSnapshot || {}
-            setBookingDraft((prev) => ({
-              ...prev,
-              serviceId: prev.serviceId || snapshotDraft.serviceId || null,
-              staffId: prev.staffId || snapshotDraft.staffId || 'random',
-              date: prev.date || snapshotDraft.date || '',
-              time: prev.time || snapshotDraft.time || '',
-              customerName: prev.customerName || snapshotDraft.customerName || '',
-              customerPhone: prev.customerPhone || snapshotDraft.customerPhone || '',
-              customerEmail: prev.customerEmail || snapshotDraft.customerEmail || '',
-              note: prev.note || snapshotDraft.note || '',
-              holdToken: prev.holdToken || snapshotDraft.holdToken || '',
-              holdExpiresAt: prev.holdExpiresAt || snapshotDraft.holdExpiresAt || ''
-            }))
           }
         } catch (err) {
-          // ignore
+          attemptError = err
+        }
+
+        if (!restoredFromAttempt && (attemptError || paymentSnapshot?.draft?.serviceId || paymentSnapshot?.serviceId)) {
+          const snapshotDraft = paymentSnapshot?.draft || paymentSnapshot || {}
+          setBookingDraft((prev) => ({
+            ...prev,
+            serviceId: prev.serviceId || snapshotDraft.serviceId || null,
+            staffId: prev.staffId || snapshotDraft.staffId || 'random',
+            date: prev.date || snapshotDraft.date || '',
+            time: prev.time || snapshotDraft.time || '',
+            customerName: prev.customerName || snapshotDraft.customerName || '',
+            customerPhone: prev.customerPhone || snapshotDraft.customerPhone || '',
+            customerEmail: prev.customerEmail || snapshotDraft.customerEmail || '',
+            note: prev.note || snapshotDraft.note || '',
+            holdToken: prev.holdToken || snapshotDraft.holdToken || '',
+            holdExpiresAt: prev.holdExpiresAt || snapshotDraft.holdExpiresAt || ''
+          }))
         }
       } catch {
         // ignore
