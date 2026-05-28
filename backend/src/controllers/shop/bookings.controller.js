@@ -16,6 +16,7 @@ import { httpError } from '../../utils/httpError.js'
 import { getSettingNumber } from '../../utils/settings.js'
 import { buildTimeOnDate, ensureCustomer, getWorkingPlan } from '../../utils/shop.js'
 import { buildBookingStatusEmailForCustomer, sendEmailBestEffort } from '../../utils/emailNotifications.js'
+import { derivePaymentStatus } from '../../utils/paymentStatus.js'
 
 function normalizeDateRange(date) {
   const start = new Date(`${date}T00:00:00`)
@@ -64,6 +65,10 @@ function classifyShopCancel(booking, shop, now = new Date()) {
     thresholdHours,
     diffHours
   }
+}
+
+function decorateBooking(booking) {
+  return booking ? { ...booking, paymentStatus: derivePaymentStatus(booking) } : booking
 }
 
 // Shop tạo booking thủ công (không qua public flow, không tạo deposit)
@@ -163,7 +168,7 @@ export async function createBooking(req, res) {
     })
     await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
   }
-  res.status(201).json({ booking })
+  res.status(201).json({ booking: decorateBooking(booking) })
 }
 
 export async function getBookings(req, res) {
@@ -184,7 +189,7 @@ export async function getBookings(req, res) {
     query.startTime = { $gte: start, $lte: end }
   }
 
-  const items = await Booking.find(query).sort({ startTime: 1, createdAt: -1 }).lean()
+  const items = (await Booking.find(query).sort({ startTime: 1, createdAt: -1 }).lean()).map(decorateBooking)
   res.json({ items })
 }
 
@@ -192,7 +197,7 @@ export async function getBookingById(req, res) {
   const shopId = req.auth.shopId
   const booking = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
   if (!booking) throw httpError(404, 'Không tìm thấy booking')
-  res.json({ booking })
+  res.json({ booking: decorateBooking(booking) })
 }
 
 export async function confirmBooking(req, res) {

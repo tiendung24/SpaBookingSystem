@@ -24,6 +24,7 @@ import AdminApprovalDetailPage from './pages/AdminApprovalDetailPage'
 import AdminTicketDetailPage from './pages/AdminTicketDetailPage'
 import AdminIncidentDetailPage from './pages/AdminIncidentDetailPage'
 import AdminBookingsPage from './pages/AdminBookingsPage'
+import AdminBookingDetailPage from './pages/AdminBookingDetailPage'
 import { ShopProvider } from './context/ShopContext'
 import ShopOnboardingPage from './pages/ShopOnboardingPage'
 import ShopBookingDetailPage from './pages/ShopBookingDetailPage'
@@ -60,6 +61,7 @@ function App() {
             <Route path="/shop/statistics" element={<RequireRole allow={['shop']}><ShopStatisticsPage /></RequireRole>} />
             <Route path="/admin/dashboard" element={<RequireRole allow={['admin']}><AdminDashboardPage /></RequireRole>} />
             <Route path="/admin/bookings" element={<RequireRole allow={['admin']}><AdminBookingsPage /></RequireRole>} />
+            <Route path="/admin/bookings/:id" element={<RequireRole allow={['admin']}><AdminBookingDetailPage /></RequireRole>} />
             <Route path="/admin/partners" element={<RequireRole allow={['admin']}><AdminPartnersPage /></RequireRole>} />
             <Route path="/admin/partners/:id" element={<RequireRole allow={['admin']}><AdminPartnerDetailPage /></RequireRole>} />
             <Route path="/admin/approvals" element={<RequireRole allow={['admin']}><AdminApprovalsPage /></RequireRole>} />

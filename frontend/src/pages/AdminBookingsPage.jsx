@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import AdminHeaderNav from '../components/admin/AdminHeaderNav'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useToast } from '../components/ui/ToastProvider'
@@ -15,22 +16,19 @@ function formatDateTime(value) {
   return date.toLocaleString('vi-VN')
 }
 
-function statusLabel(status) {
-  if (status === 'pending') return 'Chờ xác nhận'
-  if (status === 'confirmed') return 'Đã xác nhận'
-  if (status === 'checked_in') return 'Đang phục vụ'
-  if (status === 'checked_out' || status === 'completed') return 'Hoàn thành'
-  if (status === 'canceled') return 'Đã hủy'
-  if (status === 'no_show') return 'Không đến'
-  return status || '—'
-}
+function paymentStatusInfo(booking) {
+  if (booking?.paymentStatus?.key) {
+    const backendStatus = String(booking.paymentStatus.key)
+    if (backendStatus === 'service_paid') {
+      return { key: backendStatus, label: booking.paymentStatus.label || 'Đã nhận thanh toán dịch vụ', className: 'bg-emerald-100 text-emerald-700' }
+    }
+    if (backendStatus === 'deposit_received') {
+      return { key: backendStatus, label: booking.paymentStatus.label || 'Đã nhận cọc', className: 'bg-primary/10 text-primary' }
+    }
+    return { key: backendStatus, label: booking.paymentStatus.label || 'Chưa nhận', className: 'bg-amber-100 text-amber-700' }
+  }
 
-function statusClass(status) {
-  if (status === 'pending') return 'bg-amber-100 text-amber-700'
-  if (status === 'confirmed') return 'bg-primary/10 text-primary'
-  if (status === 'checked_in') return 'bg-cyan-100 text-cyan-700'
-  if (status === 'checked_out' || status === 'completed') return 'bg-emerald-100 text-emerald-700'
-  return 'bg-rose-100 text-rose-700'
+  return { key: 'not_received', label: 'Chưa nhận', className: 'bg-amber-100 text-amber-700' }
 }
 
 function formatBookingDate(value) {
@@ -192,8 +190,8 @@ export default function AdminBookingsPage() {
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase()
     return items.filter((item) => {
-      const status = String(item.status || '').toLowerCase()
-      const matchesStatus = statusFilter === 'all' || status === statusFilter
+      const paymentStatus = paymentStatusInfo(item).key
+      const matchesStatus = statusFilter === 'all' || paymentStatus === statusFilter
       const matchesQuery = !query || [item.bookingCode, item.customerName, item.customerPhone, item.shopId]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(query))
@@ -212,7 +210,9 @@ export default function AdminBookingsPage() {
     })
   }, [items, search, statusFilter, dateFilter])
 
-  const pendingCount = useMemo(() => items.filter((item) => String(item.status || '').toLowerCase() === 'pending').length, [items])
+  const notReceivedCount = useMemo(() => items.filter((item) => paymentStatusInfo(item).key === 'not_received').length, [items])
+  const depositReceivedCount = useMemo(() => items.filter((item) => paymentStatusInfo(item).key === 'deposit_received').length, [items])
+  const servicePaidCount = useMemo(() => items.filter((item) => paymentStatusInfo(item).key === 'service_paid').length, [items])
 
   return (
     <AdminLayout>
@@ -228,12 +228,16 @@ export default function AdminBookingsPage() {
           <p className="text-3xl font-bold text-primary mt-1">{items.length}</p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-sm text-main/60">Chờ xử lý</p>
-          <p className="text-3xl font-bold text-amber-700 mt-1">{pendingCount}</p>
+          <p className="text-sm text-main/60">Chưa nhận</p>
+          <p className="text-3xl font-bold text-amber-700 mt-1">{notReceivedCount}</p>
         </article>
         <article className="glass-card bg-white rounded-3xl p-6">
-          <p className="text-sm text-main/60">Đã xác nhận</p>
-          <p className="text-3xl font-bold text-emerald-600 mt-1">{items.filter((item) => item.status === 'confirmed').length}</p>
+          <p className="text-sm text-main/60">Đã nhận cọc</p>
+          <p className="text-3xl font-bold text-primary mt-1">{depositReceivedCount}</p>
+        </article>
+        <article className="glass-card bg-white rounded-3xl p-6">
+          <p className="text-sm text-main/60">Đã nhận thanh toán dịch vụ</p>
+          <p className="text-3xl font-bold text-emerald-600 mt-1">{servicePaidCount}</p>
         </article>
       </section>
 
@@ -249,19 +253,16 @@ export default function AdminBookingsPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-main/60 uppercase">Trạng thái</label>
+            <label className="text-xs font-bold text-main/60 uppercase">Trạng thái thanh toán</label>
             <select
               className="mt-1 w-full px-4 py-3 rounded-xl border border-slate-200"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="all">Tất cả</option>
-              <option value="pending">Chờ xác nhận</option>
-              <option value="confirmed">Đã xác nhận</option>
-              <option value="checked_in">Đang phục vụ</option>
-              <option value="completed">Hoàn thành</option>
-              <option value="canceled">Đã hủy</option>
-              <option value="no_show">Không đến</option>
+              <option value="not_received">Chưa nhận</option>
+              <option value="deposit_received">Đã nhận cọc</option>
+              <option value="service_paid">Đã nhận thanh toán dịch vụ</option>
             </select>
           </div>
           <div>
@@ -303,15 +304,19 @@ export default function AdminBookingsPage() {
                 <th className="px-4 py-3 text-xs uppercase text-main/60">Thời gian đặt</th>
                 <th className="px-4 py-3 text-xs uppercase text-main/60">Cọc</th>
                 <th className="px-4 py-3 text-xs uppercase text-main/60">Tổng tiền</th>
-                <th className="px-4 py-3 text-xs uppercase text-main/60">Trạng thái</th>
+                <th className="px-4 py-3 text-xs uppercase text-main/60">Trạng thái thanh toán</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {filteredItems.map((booking) => {
-                const currentStatus = String(booking.status || '').toLowerCase()
+                const paymentStatus = paymentStatusInfo(booking)
                 return (
                   <tr key={booking._id} className="hover:bg-slate-50 align-top">
-                    <td className="px-4 py-4 font-semibold text-primary">{booking.bookingCode || booking._id}</td>
+                    <td className="px-4 py-4 font-semibold text-primary">
+                      <Link className="hover:underline" to={`/admin/bookings/${booking._id}`}>
+                        {booking.bookingCode || booking._id}
+                      </Link>
+                    </td>
                     <td className="px-4 py-4 text-sm">
                       <div className="font-semibold text-main">{booking.customerName || '—'}</div>
                       <div className="text-main/60">{booking.customerPhone || '—'}</div>
@@ -322,8 +327,8 @@ export default function AdminBookingsPage() {
                     <td className="px-4 py-4 text-sm font-semibold text-primary">{formatVnd(booking.depositAmount || 0)}</td>
                     <td className="px-4 py-4 text-sm font-semibold text-main">{formatVnd(booking.totalAmount || 0)}</td>
                     <td className="px-4 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusClass(currentStatus)}`}>
-                        {statusLabel(currentStatus)}
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${paymentStatus.className}`}>
+                        {paymentStatus.label}
                       </span>
                     </td>
                   </tr>

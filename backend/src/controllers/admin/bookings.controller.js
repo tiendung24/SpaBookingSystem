@@ -4,19 +4,24 @@ import { requireString } from '../../utils/validation.js'
 import { Wallet, WalletTransaction, Notification } from '../../models/index.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { broadcastToShop } from '../../utils/realtime.js'
+import { derivePaymentStatus } from '../../utils/paymentStatus.js'
+
+function decorateBooking(booking) {
+  return booking ? { ...booking, paymentStatus: derivePaymentStatus(booking) } : booking
+}
 
 export async function getBookings(req, res) {
   const query = {}
   if (req.query.status) query.status = req.query.status
   if (req.query.shopId) query.shopId = req.query.shopId
-  const items = await Booking.find(query).sort({ createdAt: -1 }).lean()
+  const items = (await Booking.find(query).sort({ createdAt: -1 }).lean()).map(decorateBooking)
   res.json({ items })
 }
 
 export async function getBookingById(req, res) {
   const booking = await Booking.findById(req.params.bookingId).lean()
   if (!booking) throw httpError(404, 'Không tìm thấy booking')
-  res.json({ booking })
+  res.json({ booking: decorateBooking(booking) })
 }
 
 export async function updateStatus(req, res) {

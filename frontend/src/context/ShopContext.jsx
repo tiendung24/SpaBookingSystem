@@ -88,6 +88,7 @@ function mapBooking(item) {
     startTime: item.startTime,
     endTime: item.endTime,
     createdAt: item.createdAt,
+    paymentStatus: item.paymentStatus || null,
     deposit: Number(item.depositAmount || 0),
     total: Number(item.totalAmount || 0),
     status: item.status || 'pending',

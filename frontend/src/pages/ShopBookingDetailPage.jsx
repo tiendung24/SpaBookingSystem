@@ -47,6 +47,12 @@ function fmtCreatedAt(value) {
   return d.toLocaleString('vi-VN')
 }
 
+function paymentStatusMeta(paymentStatus, booking) {
+  if (paymentStatus?.key === 'service_paid') return { key: 'service_paid', label: paymentStatus.label || 'Đã nhận thanh toán dịch vụ', color: 'text-emerald-600', badge: 'bg-emerald-100 text-emerald-700' }
+  if (paymentStatus?.key === 'deposit_received') return { key: 'deposit_received', label: paymentStatus.label || 'Đã nhận cọc', color: 'text-primary', badge: 'bg-primary/10 text-primary' }
+  return { key: 'not_received', label: paymentStatus?.label || 'Chưa nhận', color: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' }
+}
+
 export default function ShopBookingDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -56,6 +62,7 @@ export default function ShopBookingDetailPage() {
   const service = services.find((s) => s.id === booking?.serviceId)
   const employee = staff.find((s) => s.id === booking?.staffId)
   const meta = statusMeta[booking?.status] ?? { label: 'Không rõ', color: 'text-main' }
+  const paymentMeta = paymentStatusMeta(booking?.paymentStatus, booking)
 
   const [cancelMode, setCancelMode] = useState(null)
   const [cancelReason, setCancelReason] = useState('Có việc đột xuất')
@@ -128,6 +135,7 @@ export default function ShopBookingDetailPage() {
             <Link className="text-primary hover:underline" to="/shop/bookings">← Danh sách lịch hẹn</Link>
             <h1 className="font-h2 text-h2 text-primary mt-2">{`Booking #${booking.bookingCode || booking.id}`}</h1>
             <p className={`font-bold ${meta.color}`}>{meta.label}</p>
+            <p className={`mt-1 inline-flex px-3 py-1 rounded-full text-xs font-bold ${paymentMeta.badge}`}>{paymentMeta.label}</p>
             {booking.status === 'pending' && Number(booking.deposit || 0) > 0 ? (
               <div className="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold">
                 <span className="material-symbols-outlined text-[18px]">warning</span>
