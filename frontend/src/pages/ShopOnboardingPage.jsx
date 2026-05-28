@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShopSidebar from '../components/shop/ShopSidebar';
 import { useShop } from '../context/ShopContext';
+import { apiRequest } from '../lib/api'
 
 function slugifyVietnamese(input) {
   if (!input) return '';
@@ -34,7 +35,7 @@ function toMinutes(timeHHmm) {
 
 export default function ShopOnboardingPage() {
   const navigate = useNavigate();
-  const { shop, setShop, services, addService, staff, addStaff } = useShop();
+  const { shop, setShop, services, addService, staff, addStaff, token } = useShop();
   const [step, setStep] = useState(1);
 
   const [newService, setNewService] = useState({ name: '', priceVnd: 150000, durationMinutes: 45, category: 'spa', visible: true });
@@ -68,8 +69,17 @@ export default function ShopOnboardingPage() {
 
   const finish = () => {
     if (!hoursValid) return;
-    setShop((prev) => ({ ...prev, hours, onboardingCompleted: true }));
-    navigate('/shop/dashboard');
+    const patch = { hours, onboardingCompleted: true }
+    // persist onboardingCompleted and hours to server
+    (async () => {
+      try {
+        await apiRequest('/api/shops/me', { method: 'PUT', token, body: patch })
+      } catch {
+        // ignore failures; still update client to avoid blocking UX
+      }
+      setShop((prev) => ({ ...prev, hours, onboardingCompleted: true }));
+      navigate('/shop/dashboard');
+    })()
   };
 
   return (
