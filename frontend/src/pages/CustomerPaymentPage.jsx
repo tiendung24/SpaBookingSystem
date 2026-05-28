@@ -166,6 +166,21 @@ function clearPaymentSnapshot(slug) {
   }
 }
 
+function snapshotDraftFromBookingDraft(draft) {
+  return {
+    serviceId: draft?.serviceId || null,
+    staffId: draft?.staffId || 'random',
+    date: draft?.date || '',
+    time: draft?.time || '',
+    customerName: draft?.customerName || '',
+    customerPhone: draft?.customerPhone || '',
+    customerEmail: draft?.customerEmail || '',
+    note: draft?.note || '',
+    holdToken: draft?.holdToken || '',
+    holdExpiresAt: draft?.holdExpiresAt || ''
+  }
+}
+
 function ConfettiLayer({ active }) {
   const pseudo = (seed) => {
     const x = Math.sin(seed * 12.9898) * 43758.5453
@@ -226,8 +241,25 @@ export default function CustomerPaymentPage() {
   // allow restoring booking draft from localStorage when page reloaded
   const { setBookingDraft } = useShop()
 
-  const service = services.find((item) => item.id === bookingDraft.serviceId)
-  const selectedStaff = bookingDraft.staffId === 'random' ? null : staff.find((item) => item.id === bookingDraft.staffId)
+  const effectiveBookingDraft = useMemo(() => {
+    const fallback = paymentSnapshot?.draft || paymentSnapshot?.bookingDraft || paymentSnapshot || {}
+    return {
+      ...bookingDraft,
+      serviceId: bookingDraft?.serviceId || fallback.serviceId || null,
+      staffId: bookingDraft?.staffId || fallback.staffId || 'random',
+      date: bookingDraft?.date || fallback.date || '',
+      time: bookingDraft?.time || fallback.time || '',
+      customerName: bookingDraft?.customerName || fallback.customerName || '',
+      customerPhone: bookingDraft?.customerPhone || fallback.customerPhone || '',
+      customerEmail: bookingDraft?.customerEmail || fallback.customerEmail || '',
+      note: bookingDraft?.note || fallback.note || '',
+      holdToken: bookingDraft?.holdToken || fallback.holdToken || '',
+      holdExpiresAt: bookingDraft?.holdExpiresAt || fallback.holdExpiresAt || ''
+    }
+  }, [bookingDraft, paymentSnapshot])
+
+  const service = services.find((item) => item.id === effectiveBookingDraft.serviceId)
+  const selectedStaff = effectiveBookingDraft.staffId === 'random' ? null : staff.find((item) => item.id === effectiveBookingDraft.staffId)
 
   // Do not rely on localStorage fallbacks for hold/payment; bookingDraft and server attempt are authoritative
   const getInitialHoldSeconds = () => {
@@ -267,6 +299,7 @@ export default function CustomerPaymentPage() {
       bookingExpiresAt,
       payosData,
       attemptAmounts,
+      draft: snapshotDraftFromBookingDraft(bookingDraft),
       timeLeft,
       updatedAt: Date.now()
     })
@@ -444,6 +477,21 @@ export default function CustomerPaymentPage() {
               setPayosData(normalizePaymentPayload(attemptRes.payment))
             }
             // if there is a temp hold payload, consider prompting restore UI (kept minimal here)
+          } else if (paymentSnapshot?.draft?.serviceId || paymentSnapshot?.serviceId) {
+            const snapshotDraft = paymentSnapshot?.draft || paymentSnapshot || {}
+            setBookingDraft((prev) => ({
+              ...prev,
+              serviceId: prev.serviceId || snapshotDraft.serviceId || null,
+              staffId: prev.staffId || snapshotDraft.staffId || 'random',
+              date: prev.date || snapshotDraft.date || '',
+              time: prev.time || snapshotDraft.time || '',
+              customerName: prev.customerName || snapshotDraft.customerName || '',
+              customerPhone: prev.customerPhone || snapshotDraft.customerPhone || '',
+              customerEmail: prev.customerEmail || snapshotDraft.customerEmail || '',
+              note: prev.note || snapshotDraft.note || '',
+              holdToken: prev.holdToken || snapshotDraft.holdToken || '',
+              holdExpiresAt: prev.holdExpiresAt || snapshotDraft.holdExpiresAt || ''
+            }))
           }
         } catch (err) {
           // ignore
