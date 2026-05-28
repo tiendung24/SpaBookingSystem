@@ -4,6 +4,7 @@ import {
   BookingSlotLock,
   BookingStatusLog,
   Deposit,
+  PayosPayment,
   PlatformFee,
   Service,
   Shop,
@@ -67,8 +68,11 @@ function classifyShopCancel(booking, shop, now = new Date()) {
   }
 }
 
-function decorateBooking(booking) {
-  return booking ? { ...booking, paymentStatus: derivePaymentStatus(booking) } : booking
+async function decorateBooking(booking) {
+  if (!booking) return booking
+  const payment = await PayosPayment.findOne({ bookingId: String(booking._id) }).sort({ createdAt: -1 }).lean()
+  const deposit = await Deposit.findOne({ bookingId: String(booking._id) }).sort({ createdAt: -1 }).lean()
+  return { ...booking, paymentStatus: derivePaymentStatus({ booking, payment, deposit }) }
 }
 
 // Shop tạo booking thủ công (không qua public flow, không tạo deposit)
@@ -189,7 +193,8 @@ export async function getBookings(req, res) {
     query.startTime = { $gte: start, $lte: end }
   }
 
-  const items = (await Booking.find(query).sort({ startTime: 1, createdAt: -1 }).lean()).map(decorateBooking)
+  const raw = await Booking.find(query).sort({ startTime: 1, createdAt: -1 }).lean()
+  const items = await Promise.all(raw.map(decorateBooking))
   res.json({ items })
 }
 
@@ -197,7 +202,7 @@ export async function getBookingById(req, res) {
   const shopId = req.auth.shopId
   const booking = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
   if (!booking) throw httpError(404, 'Không tìm thấy booking')
-  res.json({ booking: decorateBooking(booking) })
+  res.json({ booking: await decorateBooking(booking) })
 }
 
 export async function confirmBooking(req, res) {
