@@ -85,6 +85,7 @@ function mapBooking(item) {
     serviceId: item.serviceId,
     staffId: item.staffId || null,
     time: item.startTime,
+    startTime: item.startTime,
     endTime: item.endTime,
     createdAt: item.createdAt,
     deposit: Number(item.depositAmount || 0),
