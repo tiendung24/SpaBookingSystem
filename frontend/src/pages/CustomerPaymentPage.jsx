@@ -592,13 +592,27 @@ export default function CustomerPaymentPage() {
               void syncBookingState(res.booking?.bookingCode || res.booking?._id)
             }
           } else if (res?.booking) {
+            // Booking exists but no immediate payment payload; sync authoritative state from server.
             void syncBookingState(res.booking.bookingCode || res.booking._id)
-          } else if (depositAmount <= 0) {
-            // Không yêu cầu đặt cọc -> coi như hoàn tất bước thanh toán
-            setSuccess(true)
-            setConfetti(true)
-            setTimeout(() => setConfetti(false), 2500)
-            resetBookingDraft()
+
+            // If the shop does not require a deposit, consider this step complete for the customer
+            // UX-wise even if the payment system hasn't separately recorded a payment object yet.
+            // The backend may already mark the booking as confirmed; if not, the UI treats it as
+            // completed because no deposit is required.
+            try {
+              if (!shop?.deposit?.enabled) {
+                setCreatedBookingId(res.booking.bookingCode || res.booking._id)
+                setSuccess(true)
+                setConfetti(true)
+                setTimeout(() => setConfetti(false), 2500)
+                resetBookingDraft()
+              }
+            } catch {
+              // ignore
+            }
+          } else {
+            // No payment and no booking payload returned yet. Do NOT assume success based on client-side
+            // deposit heuristics. Rely on server-side booking.status/payment webhook to mark booking as confirmed.
           }
         } catch (err) {
           console.error(err)
@@ -822,6 +836,20 @@ export default function CustomerPaymentPage() {
       } catch (err) {
         lastError = err
       }
+    }
+
+    // If the shop does not require deposit, allow marking as completed even if server hasn't
+    // yet recorded an external payment object. This keeps UX consistent for no-deposit flows.
+    try {
+      if (!shop?.deposit?.enabled) {
+        setSuccess(true)
+        setConfetti(true)
+        setTimeout(() => setConfetti(false), 2500)
+        resetBookingDraft()
+        return
+      }
+    } catch {
+      // ignore
     }
 
     if (lastError) {

@@ -147,7 +147,7 @@ export async function expireUnpaidBooking(req, res) {
   const booking = await Booking.findOne({ bookingCode: req.params.bookingCode })
   if (!booking) throw httpError(404, 'Không tìm thấy booking')
 
-  if (booking.status !== 'awaiting_deposit') {
+  if (booking.status !== 'pending' || Number(booking.depositAmount || 0) <= 0 || !booking.depositExpiresAt) {
     return res.json({ bookingCode: booking.bookingCode, expired: false, status: booking.status })
   }
 

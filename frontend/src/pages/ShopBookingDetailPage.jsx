@@ -4,7 +4,6 @@ import ShopSidebar from '../components/shop/ShopSidebar'
 import { useShop } from '../context/ShopContext'
 
 const statusMeta = {
-  awaiting_deposit: { label: 'Chờ thanh toán cọc', color: 'text-amber-700' },
   pending: { label: 'Chờ xác nhận', color: 'text-amber-700' },
   confirmed: { label: 'Đã xác nhận', color: 'text-primary' },
   checked_in: { label: 'Đang phục vụ', color: 'text-primary' },
@@ -99,7 +98,7 @@ export default function ShopBookingDetailPage() {
             <Link className="text-primary hover:underline" to="/shop/bookings">← Danh sách lịch hẹn</Link>
             <h1 className="font-h2 text-h2 text-primary mt-2">{`Booking #${booking.bookingCode || booking.id}`}</h1>
             <p className={`font-bold ${meta.color}`}>{meta.label}</p>
-            {booking.status === 'awaiting_deposit' ? (
+            {booking.status === 'pending' && Number(booking.deposit || 0) > 0 ? (
               <div className="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm font-bold">
                 <span className="material-symbols-outlined text-[18px]">warning</span>
                 <span>Khách chưa thanh toán cọc. Không nên xác nhận trước khi hệ thống ghi nhận PayOS.</span>
@@ -151,7 +150,7 @@ export default function ShopBookingDetailPage() {
         <section className="glass-card bg-white/70 rounded-3xl p-6">
           <h2 className="font-h3 text-h3 text-primary mb-4">Thao tác trạng thái</h2>
           <div className="flex flex-wrap gap-3">
-            {booking.status === 'awaiting_deposit' && (
+            {booking.status === 'pending' && Number(booking.deposit || 0) > 0 && (
               <button className="px-5 py-3 rounded-xl bg-slate-200 text-slate-500 font-bold cursor-not-allowed" type="button" disabled title="Chờ hệ thống ghi nhận thanh toán cọc PayOS">
                 Chờ khách thanh toán cọc
               </button>

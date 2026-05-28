@@ -23,7 +23,8 @@ async function cleanupExpiredAwaitingDeposits(shopId) {
   const now = new Date()
   const expiredBookings = await Booking.find({
     shopId: String(shopId),
-    status: 'awaiting_deposit',
+    status: 'pending',
+    depositAmount: { $gt: 0 },
     depositExpiresAt: { $lte: now }
   }).lean()
 
@@ -214,7 +215,7 @@ export async function holdSlot(req, res) {
 
   const overlapping = await Booking.find({
     shopId: String(shop._id),
-    status: { $in: ['awaiting_deposit', 'pending', 'confirmed', 'checked_in'] },
+    status: { $in: ['pending', 'confirmed', 'checked_in'] },
     startTime: { $lt: endTime },
     endTime: { $gt: startTime }
   }).lean()
@@ -314,7 +315,7 @@ export async function createBooking(req, res) {
 
   const overlapping = await Booking.find({
     shopId: String(shop._id),
-    status: { $in: ['awaiting_deposit', 'pending', 'confirmed', 'checked_in'] },
+    status: { $in: ['pending', 'confirmed', 'checked_in'] },
     startTime: { $lt: endTime },
     endTime: { $gt: startTime }
   }).lean()
@@ -376,7 +377,7 @@ export async function createBooking(req, res) {
             startTime,
             endTime,
             note: note || '',
-            status: needsDeposit ? 'awaiting_deposit' : 'pending',
+            status: 'pending',
             depositExpiresAt: needsDeposit ? new Date(Date.now() + getHoldMinutes() * 60 * 1000) : null,
             depositAmount: Number(depositAmount || 0),
             totalAmount: Number(service.price || 0),

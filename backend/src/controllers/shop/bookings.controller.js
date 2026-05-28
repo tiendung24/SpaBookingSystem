@@ -174,7 +174,7 @@ export async function getBookings(req, res) {
   // This avoids showing expired/unpaid or cancelled bookings as if they are still active.
   const includeHistory = String(req.query.includeHistory || '').trim() === '1'
   if (!includeHistory && !req.query.status) {
-    query.status = { $in: ['awaiting_deposit', 'pending', 'confirmed', 'checked_in'] }
+    query.status = { $in: ['pending', 'confirmed', 'checked_in'] }
   }
 
   if (req.query.status) query.status = req.query.status

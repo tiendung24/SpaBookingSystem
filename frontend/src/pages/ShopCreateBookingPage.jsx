@@ -22,6 +22,7 @@ export default function ShopCreateBookingPage() {
   const [form, setForm] = useState({
     customerName: '',
     customerPhone: '',
+    customerEmail: '',
     serviceId: services[0]?.id || '',
     staffId: availableStaff[0]?.id || 'random',
     date: new Date().toISOString().slice(0, 10),
@@ -32,6 +33,7 @@ export default function ShopCreateBookingPage() {
   const handleCreate = async () => {
     const customerName = String(form.customerName || '').trim()
     const customerPhone = normalizePhone(form.customerPhone)
+    const customerEmail = String(form.customerEmail || '').trim()
 
     if (!customerName) {
       setFormError('Vui lòng nhập họ tên khách hàng.')
@@ -39,6 +41,14 @@ export default function ShopCreateBookingPage() {
     }
     if (!isValidPhone(customerPhone)) {
       setFormError('Số điện thoại không hợp lệ (0 hoặc +84, 10-11 số).')
+      return
+    }
+    if (!customerEmail) {
+      setFormError('Vui lòng nhập email khách hàng.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+      setFormError('Email không hợp lệ.')
       return
     }
     if (!form.serviceId) {
@@ -58,6 +68,7 @@ export default function ShopCreateBookingPage() {
       time: form.time,
       customerName,
       customerPhone,
+      customerEmail,
       note: form.note
     })
 
@@ -89,8 +100,25 @@ export default function ShopCreateBookingPage() {
 
         <section className="glass-card bg-white rounded-3xl p-6 space-y-5 max-w-4xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input className="px-4 py-3 rounded-xl border border-slate-200" placeholder="Họ tên khách hàng" value={form.customerName} onChange={(e) => setForm((prev) => ({ ...prev, customerName: e.target.value }))} />
-            <input className="px-4 py-3 rounded-xl border border-slate-200" placeholder="Số điện thoại" value={form.customerPhone} onChange={(e) => setForm((prev) => ({ ...prev, customerPhone: e.target.value }))} />
+            <div>
+              <input className="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Họ tên khách hàng" value={form.customerName} onChange={(e) => setForm((prev) => ({ ...prev, customerName: e.target.value }))} />
+            </div>
+            <div>
+              <input className="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Số điện thoại" value={form.customerPhone} onChange={(e) => setForm((prev) => ({ ...prev, customerPhone: e.target.value }))} />
+              {(!normalizePhone(form.customerPhone)) ? (
+                <p className="text-xs text-red-600 mt-2">Vui lòng nhập số điện thoại.</p>
+              ) : (!isValidPhone(normalizePhone(form.customerPhone)) ? (
+                <p className="text-xs text-red-600 mt-2">Số điện thoại không hợp lệ (bắt đầu bằng 0 hoặc +84, 10-11 chữ số).</p>
+              ) : null)}
+            </div>
+            <div>
+              <input className="w-full px-4 py-3 rounded-xl border border-slate-200" placeholder="Email khách hàng" value={form.customerEmail} onChange={(e) => setForm((prev) => ({ ...prev, customerEmail: e.target.value }))} />
+              {(!String(form.customerEmail || '').trim()) ? (
+                <p className="text-xs text-red-600 mt-2">Vui lòng nhập email khách hàng.</p>
+              ) : (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(form.customerEmail || '').trim()) ? (
+                <p className="text-xs text-red-600 mt-2">Email không hợp lệ.</p>
+              ) : null)}
+            </div>
             <select className="px-4 py-3 rounded-xl border border-slate-200" value={form.serviceId} onChange={(e) => setForm((prev) => ({ ...prev, serviceId: e.target.value }))}>
               {services.map((service) => (
                 <option key={service.id} value={service.id}>{service.name}</option>

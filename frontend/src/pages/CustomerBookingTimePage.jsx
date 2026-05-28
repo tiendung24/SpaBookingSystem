@@ -26,7 +26,7 @@ function sameDate(a, b) {
 }
 
 function isValidEmail(email) {
-  if (!email) return true
+  if (!email) return false
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
@@ -141,7 +141,7 @@ export default function CustomerBookingTimePage() {
   const [name, setName] = useState(bookingDraft.customerName || '')
   const [phone, setPhone] = useState(bookingDraft.customerPhone || '')
   const phoneTrimmed = normalizePhone(phone)
-  const phoneOk = isValidPhone(phoneTrimmed)
+  const phoneOk = phoneTrimmed ? isValidPhone(phoneTrimmed) : false
   const [email, setEmail] = useState(bookingDraft.customerEmail || '')
   const [note, setNote] = useState(bookingDraft.note || '')
   const [holding, setHolding] = useState(false)
@@ -217,7 +217,7 @@ export default function CustomerBookingTimePage() {
     return list
   }, [service, availableSlots, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId, ownHoldSlot, ownBookedSlot, bookingDraft.serviceId])
 
-  const canConfirm = Boolean(service && selectedTime && name.trim() && phoneOk && emailOk)
+  const canConfirm = Boolean(service && selectedTime && name.trim() && phoneOk && emailOk && emailTrimmed)
 
   const confirmStep2 = async () => {
     if (!canConfirm) return
@@ -493,11 +493,16 @@ export default function CustomerBookingTimePage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                     />
+                    {!phoneTrimmed ? (
+                      <p className="text-xs text-red-600 mt-2">Vui lòng nhập số điện thoại.</p>
+                    ) : !phoneOk ? (
+                      <p className="text-xs text-red-600 mt-2">Số điện thoại không hợp lệ (bắt đầu bằng 0 hoặc +84, 10-11 chữ số).</p>
+                    ) : null}
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-main/70">EMAIL (TÙY CHỌN)</label>
+                  <label className="text-sm font-bold text-main/70">EMAIL (BẮT BUỘC)</label>
                   <input
                     type="email"
                     className="w-full p-4 mt-1 bg-slate-100 rounded-xl border border-primary/10 outline-none"
@@ -505,8 +510,12 @@ export default function CustomerBookingTimePage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
-                  {!emailOk ? <p className="text-xs text-red-600 mt-2">Email chưa đúng định dạng.</p> : null}
-                  <p className="text-xs text-main/60 mt-2">Nhập email để nhận thông báo xác nhận lịch hẹn.</p>
+                  {!emailTrimmed ? (
+                    <p className="text-xs text-red-600 mt-2">Vui lòng nhập email.</p>
+                  ) : !emailOk ? (
+                    <p className="text-xs text-red-600 mt-2">Email chưa đúng định dạng.</p>
+                  ) : null}
+                  <p className="text-xs text-main/60 mt-2">Email dùng để gửi xác nhận lịch hẹn.</p>
                 </div>
 
                 <div>

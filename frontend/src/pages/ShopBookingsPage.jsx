@@ -6,7 +6,6 @@ import { useShop } from '../context/ShopContext'
 const statuses = ['Tất cả', 'Chờ xác nhận', 'Đã xác nhận', 'Đang phục vụ', 'Hoàn thành', 'Đã hủy']
 
 const mapStatus = {
-  awaiting_deposit: 'Chờ thanh toán cọc',
   pending: 'Chờ xác nhận',
   confirmed: 'Đã xác nhận',
   checked_in: 'Đang phục vụ',
@@ -18,7 +17,7 @@ const mapStatus = {
 
 function statusClass(label) {
   if (label === 'Hoàn thành') return 'text-emerald-600'
-  if (label === 'Chờ xác nhận' || label === 'Chờ thanh toán cọc') return 'text-amber-700'
+  if (label === 'Chờ xác nhận') return 'text-amber-700'
   if (label === 'Đã xác nhận' || label === 'Đang phục vụ') return 'text-primary'
   return 'text-red-600'
 }
@@ -44,9 +43,6 @@ export default function ShopBookingsPage() {
 
   const filtered = rows.filter((row) => {
     if (selectedStatus === 'Tất cả') return true
-    if (selectedStatus === 'Chờ xác nhận') {
-      return row.statusLabel === 'Chờ xác nhận' || row.statusLabel === 'Chờ thanh toán cọc'
-    }
     return row.statusLabel === selectedStatus
   })
 

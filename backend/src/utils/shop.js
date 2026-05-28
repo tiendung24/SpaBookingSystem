@@ -155,8 +155,8 @@ export async function getBookingWithRelations(bookingQuery) {
 
 async function expireAwaitingDepositIfNeeded(booking) {
   if (!booking) return booking
-  if (booking.status !== 'awaiting_deposit') return booking
-  if (!booking.depositExpiresAt) return booking
+  if (booking.status !== 'pending') return booking
+  if (!booking.depositExpiresAt || Number(booking.depositAmount || 0) <= 0) return booking
 
   const now = new Date()
   const expiresAt = new Date(booking.depositExpiresAt)
