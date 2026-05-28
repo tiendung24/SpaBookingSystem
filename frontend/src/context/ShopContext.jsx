@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../lib/api'
 import { AUTH_EXPIRED_EVENT, clearStoredAuth, getStoredRole, getStoredToken, setStoredAuth, emitAuthExpired } from '../lib/auth'
 
@@ -86,10 +86,33 @@ function mapBooking(item) {
     staffId: item.staffId || null,
     time: item.startTime,
     endTime: item.endTime,
+    createdAt: item.createdAt,
     deposit: Number(item.depositAmount || 0),
     total: Number(item.totalAmount || 0),
     status: item.status || 'pending',
     notes: item.note || ''
+  }
+}
+
+function getApiBaseUrl() {
+  return import.meta.env.VITE_API_BASE_URL || ''
+}
+
+function getWsUrl(token) {
+  const baseUrl = getApiBaseUrl()
+  const fallbackOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+  const source = baseUrl || fallbackOrigin
+  if (!source) return ''
+
+  try {
+    const url = new URL(source)
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    url.pathname = '/ws'
+    url.search = `token=${encodeURIComponent(token || '')}`
+    return url.toString()
+  } catch {
+    const normalized = source.replace(/^http(s?):\/\//i, (_, isHttps) => (isHttps ? 'wss://' : 'ws://'))
+    return `${normalized.replace(/\/$/, '')}/ws?token=${encodeURIComponent(token || '')}`
   }
 }
 
@@ -127,7 +150,11 @@ export function ShopProvider({ children }) {
   const [staff, setStaff] = useState([])
   const [bookings, setBookings] = useState([])
   const [walletTransactions, setWalletTransactions] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
   const [bookingDraft, setBookingDraft] = useState(loadStoredBookingDraft)
+  const realtimeSocketRef = useRef(null)
+  const realtimeReconnectRef = useRef(null)
 
   const resetBookingDraft = useCallback(() => {
     setBookingDraft(emptyDraft)
@@ -206,6 +233,101 @@ export function ShopProvider({ children }) {
     }
   }, [token])
 
+  const loadShopNotifications = useCallback(async (accessToken = token) => {
+    if (!accessToken || role !== 'shop') return
+    try {
+      const res = await apiRequest('/api/shop/notifications', { token: accessToken })
+      const items = Array.isArray(res?.items) ? res.items : []
+      setNotifications(items)
+      setUnreadNotificationCount(items.filter((item) => !item.readAt).length)
+    } catch (err) {
+      console.error('[ShopContext] loadShopNotifications error', err)
+    }
+  }, [token, role])
+
+  const connectShopRealtime = useCallback((accessToken = token) => {
+    if (!accessToken || role !== 'shop') return
+    if (typeof window === 'undefined' || typeof WebSocket === 'undefined') return
+
+    const wsUrl = getWsUrl(accessToken)
+    if (!wsUrl) return
+
+    try {
+      if (realtimeSocketRef.current) {
+        realtimeSocketRef.current.__disposed = true
+        if (realtimeSocketRef.current.readyState === WebSocket.OPEN) {
+          realtimeSocketRef.current.close()
+        }
+        realtimeSocketRef.current = null
+      }
+      if (realtimeReconnectRef.current) {
+        clearTimeout(realtimeReconnectRef.current)
+        realtimeReconnectRef.current = null
+      }
+
+      const socket = new WebSocket(wsUrl)
+      realtimeSocketRef.current = socket
+      socket.__disposed = false
+
+      socket.onopen = () => {
+        if (socket.__disposed) {
+          try {
+            socket.close()
+          } catch {
+            // ignore
+          }
+          return
+        }
+        try {
+          socket.send(JSON.stringify({ type: 'shop.subscribe', token: accessToken }))
+        } catch {
+          // ignore
+        }
+      }
+
+      socket.onmessage = (event) => {
+        let data = null
+        try {
+          data = JSON.parse(event.data)
+        } catch {
+          data = null
+        }
+
+        if (!data?.type) return
+
+        if (data.type === 'notification.created' || data.type === 'booking.updated' || data.type === 'realtime.ready') {
+          void loadShopNotifications(accessToken)
+        }
+
+        if (data.type === 'booking.updated') {
+          void loadMeAndShop(accessToken)
+        }
+      }
+
+      socket.onclose = () => {
+        if (socket.__disposed) return
+        if (realtimeSocketRef.current === socket) {
+          realtimeSocketRef.current = null
+        }
+        if (role === 'shop' && accessToken) {
+          realtimeReconnectRef.current = setTimeout(() => {
+            connectShopRealtime(accessToken)
+          }, 3000)
+        }
+      }
+
+      socket.onerror = () => {
+        try {
+          socket.close()
+        } catch {
+          // ignore
+        }
+      }
+    } catch (err) {
+      console.error('[ShopContext] connectShopRealtime error', err)
+    }
+  }, [token, role, loadShopNotifications, loadMeAndShop])
+
   useEffect(() => {
     if (!token || role === 'admin') return
     // load current user/shop immediately
@@ -240,6 +362,52 @@ export function ShopProvider({ children }) {
       if (expiryTimer) clearTimeout(expiryTimer)
     }
   }, [token, role, loadMeAndShop])
+
+  useEffect(() => {
+    if (!token || role !== 'shop') return
+
+    let mounted = true
+    const refresh = async () => {
+      if (!mounted) return
+      await loadShopNotifications(token)
+    }
+
+    void refresh()
+    const timer = setInterval(() => {
+      void refresh()
+    }, 30000)
+
+    const onFocus = () => { void refresh() }
+    window.addEventListener('focus', onFocus)
+    return () => {
+      mounted = false
+      clearInterval(timer)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [token, role, loadShopNotifications])
+
+  useEffect(() => {
+    if (!token || role !== 'shop') return
+    connectShopRealtime(token)
+
+    return () => {
+      if (realtimeReconnectRef.current) {
+        clearTimeout(realtimeReconnectRef.current)
+        realtimeReconnectRef.current = null
+      }
+      if (realtimeSocketRef.current) {
+        try {
+          realtimeSocketRef.current.__disposed = true
+          if (realtimeSocketRef.current.readyState === WebSocket.OPEN) {
+            realtimeSocketRef.current.close()
+          }
+        } catch {
+          // ignore
+        }
+        realtimeSocketRef.current = null
+      }
+    }
+  }, [token, role, connectShopRealtime])
 
   useEffect(() => {
     const onExpired = () => {
@@ -674,11 +842,14 @@ export function ShopProvider({ children }) {
     setStaff,
     bookings,
     setBookings,
+    notifications,
+    unreadNotificationCount,
     walletTransactions,
     bookingDraft,
     setBookingDraft,
     resetBookingDraft,
     createBookingFromDraft,
+    loadShopNotifications,
     holdBookingSlot,
     getAvailableSlots,
     addService,

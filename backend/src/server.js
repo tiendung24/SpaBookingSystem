@@ -4,14 +4,17 @@ import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import path from 'path'
+import http from 'http'
 
 import { buildSwaggerSpec, swaggerUi, swaggerUiSetup, swaggerJsonHandler } from './swagger/index.js'
 import { notFoundHandler, errorHandler } from './middlewares/errorHandlers.js'
 import { apiRouter } from './routes/index.js'
 import { connectDb } from './config/db.js'
 import { startJobs } from './jobs/index.js'
+import { initRealtimeServer } from './utils/realtime.js'
 
 const app = express()
+const server = http.createServer(app)
 
 app.use(helmet())
 app.use(
@@ -48,7 +51,8 @@ const port = Number(process.env.PORT || 4000)
 connectDb()
   .then(() => {
     startJobs()
-    app.listen(port, () => {
+    initRealtimeServer(server)
+    server.listen(port, () => {
       console.log(`[backend] listening on http://localhost:${port}`)
     })
   })

@@ -2,6 +2,7 @@
 
 const items = [
   { to: '/admin/dashboard', label: 'Tổng quan' },
+  { to: '/admin/bookings', label: 'Booking & thanh toán' },
   { to: '/admin/partners', label: 'Đối tác' },
   { to: '/admin/approvals', label: 'Duyệt shop' },
   { to: '/admin/finance', label: 'Tài chính' },

@@ -22,6 +22,37 @@ function statusClass(label) {
   return 'text-red-600'
 }
 
+function formatBookingDate(value) {
+  return new Date(value).toLocaleDateString('vi-VN')
+}
+
+function formatBookingTime(value) {
+  return new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatAppointment(start, end) {
+  if (!start) return '—'
+  try {
+    const dStart = new Date(start)
+    const date = dStart.toLocaleDateString('vi-VN')
+    const timeStart = dStart.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    if (end) {
+      const dEnd = new Date(end)
+      const timeEnd = dEnd.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      return `${date}, ${timeStart} - ${timeEnd}`
+    }
+    return `${date}, ${timeStart}`
+  } catch {
+    return '—'
+  }
+}
+
+function formatCreatedAt(value) {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString('vi-VN')
+}
+
 export default function ShopBookingsPage() {
   const { bookings, services, staff } = useShop()
   const [selectedStatus, setSelectedStatus] = useState('Tất cả')
@@ -36,6 +67,8 @@ export default function ShopBookingsPage() {
         statusLabel: status,
         serviceName: service?.name ?? 'Dịch vụ',
         staffName: employee?.name ?? 'Chưa phân công',
+        dateLabel: formatBookingDate(booking.time),
+        timeLabelOnly: formatBookingTime(booking.time),
         timeLabel: `${new Date(booking.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${new Date(booking.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
       }
     })
@@ -75,7 +108,7 @@ export default function ShopBookingsPage() {
             <table className="w-full min-w-[980px]">
               <thead className="bg-primary/5 border-b border-primary/10">
                 <tr>
-                  {['Mã', 'Khách hàng', 'Dịch vụ', 'Nhân viên', 'Thời gian', 'Tiền cọc', 'Trạng thái', 'Chi tiết'].map((h) => (
+                  {['Mã', 'Khách hàng', 'Dịch vụ', 'Nhân viên', 'Thời gian hẹn', 'Thời gian đặt', 'Tiền cọc', 'Trạng thái', 'Chi tiết'].map((h) => (
                     <th key={h} className="p-4 text-left font-label-bold text-label-bold text-primary">{h}</th>
                   ))}
                 </tr>
@@ -90,7 +123,8 @@ export default function ShopBookingsPage() {
                     </td>
                     <td className="p-4">{booking.serviceName}</td>
                     <td className="p-4">{booking.staffName}</td>
-                    <td className="p-4 text-sm">{booking.timeLabel}</td>
+                    <td className="p-4 text-sm">{formatAppointment(booking.startTime || booking.time, booking.endTime) || booking.dateLabel}</td>
+                    <td className="p-4 text-sm">{formatCreatedAt(booking.createdAt)}</td>
                     <td className="p-4">{Number(booking.deposit || 0).toLocaleString('vi-VN')}đ</td>
                     <td className={`p-4 font-bold ${statusClass(booking.statusLabel)}`}>{booking.statusLabel}</td>
                     <td className="p-4">

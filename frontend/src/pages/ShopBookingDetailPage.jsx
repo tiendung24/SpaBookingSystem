@@ -17,6 +17,36 @@ function fmtVnd(v) {
   return `${Number(v || 0).toLocaleString('vi-VN')}đ`
 }
 
+function fmtDate(value) {
+  return new Date(value).toLocaleDateString('vi-VN')
+}
+
+function fmtTime(value) {
+  return new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+}
+
+function fmtDateTime(value, end) {
+  if (!value) return '—'
+  try {
+    const dStart = new Date(value)
+    const date = dStart.toLocaleDateString('vi-VN')
+    const timeStart = dStart.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    if (end) {
+      const timeEnd = new Date(end).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      return `${date}, ${timeStart} - ${timeEnd}`
+    }
+    return `${date}, ${timeStart}`
+  } catch {
+    return '—'
+  }
+}
+
+function fmtCreatedAt(value) {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleString('vi-VN')
+}
+
 export default function ShopBookingDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -125,6 +155,11 @@ export default function ShopBookingDetailPage() {
             <p className="text-xs text-main/60 uppercase font-bold">Nhân viên</p>
             <p className="font-bold text-lg">{employee?.name ?? 'Chưa phân công'}</p>
             <p className="text-main/70">{employee?.phone ?? ''}</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs text-main/60 uppercase font-bold">Thời gian hẹn</p>
+            <p className="font-bold text-lg">{fmtDateTime(booking.startTime, booking.endTime)}</p>
+            <p className="text-main/70">Thời gian đặt: {fmtCreatedAt(booking.createdAt)}</p>
           </div>
         </section>
 

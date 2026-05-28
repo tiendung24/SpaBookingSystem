@@ -55,7 +55,7 @@ function getStatusClass(status) {
 
 export default function ShopDashboardPage() {
   const navigate = useNavigate()
-  const { shop, bookings, services, staff } = useShop()
+  const { shop, bookings, services, staff, unreadNotificationCount } = useShop()
   const [copied, setCopied] = useState(false)
   const [dateFilter, setDateFilter] = useState('today')
   const [customDate, setCustomDate] = useState(new Date().toISOString().slice(0, 10))
@@ -200,6 +200,13 @@ export default function ShopDashboardPage() {
               <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
                 {copied ? 'Đã sao chép' : 'Online'}
               </span>
+            </div>
+            <div className="flex items-center justify-between rounded-2xl bg-rose-50 border border-rose-100 px-4 py-3">
+              <div>
+                <p className="text-sm text-main/60">Thông báo chưa đọc</p>
+                <p className="text-lg font-bold text-rose-600">{unreadNotificationCount}</p>
+              </div>
+              <span className="material-symbols-outlined text-rose-500">notifications</span>
             </div>
             <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
               <p className="text-sm text-main/60 mb-1">Liên kết shop</p>

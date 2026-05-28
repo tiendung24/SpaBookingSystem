@@ -13,7 +13,7 @@ const menus = [
 export default function ShopSidebar({ onNewBooking }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { logout } = useShop()
+  const { logout, unreadNotificationCount } = useShop()
   const configActive = location.pathname.startsWith('/shop/config')
 
   return (
@@ -48,6 +48,11 @@ export default function ShopSidebar({ onNewBooking }) {
             >
               <span className="material-symbols-outlined">{menu.icon}</span>
               <span className="font-label-bold text-label-bold">{menu.label}</span>
+                {menu.to === '/shop/bookings' && unreadNotificationCount > 0 ? (
+                  <span className="ml-auto min-w-6 h-6 px-2 rounded-full bg-rose-500 text-white text-xs font-bold flex items-center justify-center">
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </span>
+                ) : null}
             </Link>
           )
         })}

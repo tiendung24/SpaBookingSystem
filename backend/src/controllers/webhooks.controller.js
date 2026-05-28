@@ -1,6 +1,7 @@
-import { Booking, Deposit, PayosPayment, Wallet, WalletTransaction } from '../models/index.js'
+import { Booking, Deposit, Notification, PayosPayment, Wallet, WalletTransaction } from '../models/index.js'
 import { PayOSService } from '../services/payos.service.js'
 import { writeAuditLog } from '../utils/audit.js'
+import { broadcastToAdmins, broadcastToShop } from '../utils/realtime.js'
 
 function extractWebhookData(body = {}) {
   const data = body.data || body.payload || body
@@ -30,6 +31,7 @@ export async function payosWebhook(req, res) {
     return res.json({ ok: true, ignored: true, message: 'Không tìm thấy giao dịch' })
   }
 
+  const previousStatus = String(payment.status || '').toLowerCase()
   payment.status = payload.status || payment.status
   payment.raw = payload.raw
   payment.updatedAt = new Date()
@@ -75,6 +77,7 @@ export async function payosWebhook(req, res) {
   } else {
     const booking = await Booking.findById(payment.bookingId)
     if (booking) {
+      const wasPending = booking.status === 'pending'
       if (booking.status === 'pending') {
         booking.status = 'confirmed'
         booking.updatedAt = new Date()
@@ -114,6 +117,44 @@ export async function payosWebhook(req, res) {
           refId: String(payment._id),
           status: 'success',
           createdAt: new Date()
+        })
+      }
+
+      const shouldNotifyShop = wasPending || previousStatus !== payment.status
+      if (shouldNotifyShop) {
+        try {
+          await Notification.create({
+            shopId: String(payment.shopId),
+            type: 'payment_received',
+            title: 'Thanh toán đã được ghi nhận',
+            content: `Đã xác nhận thanh toán cho booking ${booking.bookingCode || booking._id}`,
+            createdAt: new Date()
+          })
+        } catch {
+          // ignore notification create failures
+        }
+
+        broadcastToShop(String(payment.shopId), {
+          type: 'notification.created',
+          shopId: String(payment.shopId),
+          bookingId: String(booking._id),
+          bookingCode: String(booking.bookingCode || booking._id),
+          unreadHint: true
+        })
+
+        broadcastToShop(String(payment.shopId), {
+          type: 'booking.updated',
+          shopId: String(payment.shopId),
+          bookingId: String(booking._id),
+          status: booking.status
+        })
+
+        broadcastToAdmins({
+          type: 'booking.updated',
+          shopId: String(payment.shopId),
+          bookingId: String(booking._id),
+          status: booking.status,
+          bookingCode: String(booking.bookingCode || booking._id)
         })
       }
     }

@@ -116,6 +116,7 @@ adminRouter.get('/bookings/:bookingId', asyncHandler(AdminBookingsController.get
 adminRouter.put('/bookings/:bookingId/status', asyncHandler(AdminBookingsController.updateStatus))
 adminRouter.get('/bookings/:bookingId/payments', asyncHandler(AdminBookingsController.getPayments))
 adminRouter.get('/bookings/:bookingId/escrow', asyncHandler(AdminBookingsController.getEscrow))
+adminRouter.post('/bookings/:bookingId/record-payment', asyncHandler(AdminBookingsController.recordPayment))
 
 /**
  * @openapi
