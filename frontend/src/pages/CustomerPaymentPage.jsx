@@ -127,6 +127,45 @@ function buildDraftFromAttempt(bookingOrHold) {
   }
 }
 
+function clearHoldFromDraft(prev) {
+  return {
+    ...prev,
+    holdToken: '',
+    holdExpiresAt: ''
+  }
+}
+
+function readPaymentSnapshot(slug) {
+  if (!slug) return null
+  try {
+    const raw = sessionStorage.getItem(`lumix_payment_snapshot_${slug}`)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writePaymentSnapshot(slug, snapshot) {
+  if (!slug) return
+  try {
+    sessionStorage.setItem(`lumix_payment_snapshot_${slug}`, JSON.stringify(snapshot || {}))
+  } catch {
+    // ignore
+  }
+}
+
+function clearPaymentSnapshot(slug) {
+  if (!slug) return
+  try {
+    sessionStorage.removeItem(`lumix_payment_snapshot_${slug}`)
+  } catch {
+    // ignore
+  }
+}
+
 function ConfettiLayer({ active }) {
   const pseudo = (seed) => {
     const x = Math.sin(seed * 12.9898) * 43758.5453
@@ -172,6 +211,7 @@ function ConfettiLayer({ active }) {
 export default function CustomerPaymentPage() {
   const navigate = useNavigate()
   const { slug } = useParams()
+  const paymentSnapshot = readPaymentSnapshot(slug)
   const {
     shop,
     services,
@@ -197,20 +237,40 @@ export default function CustomerPaymentPage() {
     return Number.isFinite(diff) ? Math.max(0, diff) : 3 * 60
   }
 
-  const [timeLeft, setTimeLeft] = useState(getInitialHoldSeconds)
-  const [bookingExpiresAt, setBookingExpiresAt] = useState(bookingDraft?.holdExpiresAt || '')
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const snapshotExpiresAt = paymentSnapshot?.bookingExpiresAt || paymentSnapshot?.depositExpiresAt || ''
+    const expiresAt = bookingDraft?.holdExpiresAt || snapshotExpiresAt || ''
+    if (!expiresAt) return 3 * 60
+    const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
+    return Number.isFinite(diff) ? Math.max(0, diff) : 3 * 60
+  })
+  const [bookingExpiresAt, setBookingExpiresAt] = useState(bookingDraft?.holdExpiresAt || paymentSnapshot?.bookingExpiresAt || paymentSnapshot?.depositExpiresAt || '')
   const [success, setSuccess] = useState(false)
   const [expired, setExpired] = useState(false)
-  const [createdBookingId, setCreatedBookingId] = useState(null)
+  const [createdBookingId, setCreatedBookingId] = useState(paymentSnapshot?.createdBookingId || null)
   const [confetti, setConfetti] = useState(false)
 
-  const [payosData, setPayosData] = useState(null)
+  const [payosData, setPayosData] = useState(paymentSnapshot?.payosData ? normalizePaymentPayload(paymentSnapshot.payosData) : null)
   const [creating, setCreating] = useState(false)
   const [restoreChecked, setRestoreChecked] = useState(false)
   const [showRestoreHold, setShowRestoreHold] = useState(false)
-  const [attemptAmounts, setAttemptAmounts] = useState({ depositAmount: 0, totalAmount: 0 })
+  const [attemptAmounts, setAttemptAmounts] = useState(paymentSnapshot?.attemptAmounts || { depositAmount: 0, totalAmount: 0 })
   const autoBookingCalledRef = useRef(false)
   const skipExitCleanupRef = useRef(false)
+  const paymentPageUrlRef = useRef(`${window.location.pathname}${window.location.search}${window.location.hash}`)
+  const shouldBlockExit = Boolean(createdBookingId && !success && !expired)
+
+  useEffect(() => {
+    if (!slug) return
+    writePaymentSnapshot(slug, {
+      createdBookingId,
+      bookingExpiresAt,
+      payosData,
+      attemptAmounts,
+      timeLeft,
+      updatedAt: Date.now()
+    })
+  }, [slug, createdBookingId, bookingExpiresAt, payosData, attemptAmounts, timeLeft])
 
   useEffect(() => {
     if (!slug) return
@@ -235,6 +295,33 @@ export default function CustomerPaymentPage() {
 
   useEffect(() => {
     if (!slug) return
+
+    const onPopState = () => {
+      if (!shouldBlockExit || skipExitCleanupRef.current) return
+
+      try {
+        window.history.pushState(window.history.state, '', paymentPageUrlRef.current)
+      } catch {
+        // ignore
+      }
+
+      const ok = window.confirm('Bạn có chắc muốn hủy phiên thanh toán và trả lại khung giờ? Nếu thoát, phiên giữ chỗ sẽ bị hủy.')
+      if (ok) {
+        skipExitCleanupRef.current = true
+        void expireUnpaidBooking(createdBookingId, true).catch(() => {})
+        try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+        clearPaymentSnapshot(slug)
+        resetBookingDraft()
+        navigate(`/${slug}/book`, { replace: true })
+      }
+    }
+
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [slug, shouldBlockExit, createdBookingId, expireUnpaidBooking, resetBookingDraft, navigate])
+
+  useEffect(() => {
+    if (!slug) return
     return () => {
       let isReloading = false
       try {
@@ -244,7 +331,11 @@ export default function CustomerPaymentPage() {
       }
 
       if (!isReloading && !skipExitCleanupRef.current) {
+        if (createdBookingId && !success && !expired) {
+          void expireUnpaidBooking(createdBookingId, true).catch(() => {})
+        }
         try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+        clearPaymentSnapshot(slug)
         resetBookingDraft()
       }
 
@@ -254,7 +345,7 @@ export default function CustomerPaymentPage() {
         // ignore
       }
     }
-  }, [slug, resetBookingDraft])
+  }, [slug, resetBookingDraft, createdBookingId, success, expired, expireUnpaidBooking])
 
   const depositAmount = useMemo(() => {
     const fallbackDeposit = Number(attemptAmounts.depositAmount || 0)
@@ -269,6 +360,15 @@ export default function CustomerPaymentPage() {
     }
     return computed > 0 ? computed : fallbackDeposit
   }, [service, shop.deposit, attemptAmounts.depositAmount])
+
+  const isPaymentLoading = Boolean(
+    !success &&
+    !expired &&
+    (
+      creating ||
+      (shop.deposit?.enabled && !payosData && (depositAmount > 0 || !service))
+    )
+  )
 
   const syncBookingState = useCallback(async (bookingCode) => {
     if (!bookingCode) return null
@@ -308,6 +408,7 @@ export default function CustomerPaymentPage() {
                   holdExpiresAt: prev.holdExpiresAt || hydratedDraft.holdExpiresAt
                 }))
               }
+              setBookingDraft((prev) => clearHoldFromDraft(prev))
               setAttemptAmounts({
                 depositAmount: Number(attemptRes.booking.depositAmount || 0),
                 totalAmount: Number(attemptRes.booking.totalAmount || 0)
@@ -396,6 +497,9 @@ export default function CustomerPaymentPage() {
   }
 
   const handleCancelHold = () => {
+    if (createdBookingId && !success && !expired) {
+      void expireUnpaidBooking(createdBookingId, true).catch(() => {})
+    }
     try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
     setShowRestoreHold(false)
     resetBookingDraft()
@@ -444,7 +548,7 @@ export default function CustomerPaymentPage() {
       if (!hasHold || holdExpired) {
         if (effectiveBookingCode) return
         window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
-        navigate(`/${slug}/book/time`)
+        navigate(`/${slug}/book`, { replace: true })
         return
       }
 
@@ -469,6 +573,7 @@ export default function CustomerPaymentPage() {
                 holdExpiresAt: prev.holdExpiresAt || hydratedDraft.holdExpiresAt
               }))
             }
+            setBookingDraft((prev) => clearHoldFromDraft(prev))
             setAttemptAmounts({
               depositAmount: Number(res.booking.depositAmount || 0),
               totalAmount: Number(res.booking.totalAmount || 0)
@@ -509,16 +614,18 @@ export default function CustomerPaymentPage() {
 
             if (isExpiredHold) {
               try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+              clearPaymentSnapshot(slug)
               window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
-              navigate(`/${slug}/book/time`)
+              navigate(`/${slug}/book`, { replace: true })
               return
             }
 
             if (isSlotConflict) {
               try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+              clearPaymentSnapshot(slug)
               resetBookingDraft()
               window.alert('Khung giờ vừa bị đặt. Vui lòng chọn lại khung giờ khác.')
-              navigate(`/${slug}/book/time`)
+              navigate(`/${slug}/book`, { replace: true })
               return
             }
 
@@ -591,8 +698,9 @@ export default function CustomerPaymentPage() {
 
       if (!mounted) return
       try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+      clearPaymentSnapshot(slug)
       window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
-      navigate(`/${slug}/book/time`)
+      navigate(`/${slug}/book`, { replace: true })
     }
 
     run()
@@ -669,8 +777,9 @@ export default function CustomerPaymentPage() {
   useEffect(() => {
     if (!expired) return
     try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+    clearPaymentSnapshot(slug)
     window.alert('Phiên thanh toán đặt cọc đã hết hạn. Vui lòng chọn lại khung giờ.')
-    navigate(`/${slug}/book/time`)
+    navigate(`/${slug}/book`, { replace: true })
   }, [expired, slug, navigate])
 
   const handleTransferred = async () => {
@@ -791,8 +900,8 @@ export default function CustomerPaymentPage() {
                 <div className="bg-white rounded-3xl p-5 border border-slate-200">
                   <h3 className="font-bold mb-3">Quét QR để thanh toán</h3>
                   <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 min-h-[320px]">
-                    {creating ? (
-                      <div className="text-main/60">Đang tạo đơn thanh toán...</div>
+                      {isPaymentLoading ? (
+                        <div className="text-main/60">Đang lấy mã thanh toán cọc...</div>
                     ) : (payosData?.qrCodeUrl || payosData?.qrCode || payosData?.checkoutUrl) ? (
                       <img
                         className="w-[300px] h-[300px] rounded-2xl"
@@ -800,9 +909,9 @@ export default function CustomerPaymentPage() {
                         src={buildQrImageSrc(payosData.qrCodeUrl || payosData.qrCode || payosData.checkoutUrl)}
                       />
                     ) : (
-                      <div className="text-main/60 text-center">
-                        {depositAmount > 0 ? 'Không lấy được mã QR. Vui lòng mở liên kết PayOS.' : 'Không cần đặt cọc.'}
-                      </div>
+                        <div className="text-main/60 text-center">
+                          {depositAmount > 0 ? 'Không lấy được mã QR. Vui lòng mở liên kết PayOS.' : 'Không cần đặt cọc.'}
+                        </div>
                     )}
                   </div>
 

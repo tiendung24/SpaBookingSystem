@@ -55,6 +55,11 @@ export default function CustomerBookingTimePage() {
   const service = services.find((s) => s.id === bookingDraft.serviceId)
   const selectedStaff = staff.find((s) => s.id === bookingDraft.staffId)
 
+  useEffect(() => {
+    if (!slug || service) return
+    navigate(`/${slug}/book`, { replace: true })
+  }, [slug, service, navigate])
+
   const today = new Date()
   const dateOptions = useMemo(
     () => {
@@ -71,6 +76,8 @@ export default function CustomerBookingTimePage() {
   const [selectedDate, setSelectedDate] = useState(bookingDraft.date || dateOnly(today))
   const [selectedTime, setSelectedTime] = useState(bookingDraft.time || '')
   const [availableSlots, setAvailableSlots] = useState(null)
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [slotsError, setSlotsError] = useState('')
   const [nowTick, setNowTick] = useState(() => Date.now())
   const slotsRequestSeqRef = useRef(0)
 
@@ -87,18 +94,24 @@ export default function CustomerBookingTimePage() {
     const abortController = new AbortController()
     const staffId = bookingDraft.staffId === 'random' ? null : bookingDraft.staffId
     const holdToken = bookingDraft.holdToken || ''
+    setSlotsLoading(true)
+    setSlotsError('')
+    setAvailableSlots(null)
 
     const run = async () => {
       try {
         const slots = await getAvailableSlots(slug, { serviceId: bookingDraft.serviceId, date: selectedDate, staffId, holdToken })
         if (!abortController.signal.aborted && requestSeq === slotsRequestSeqRef.current) {
           setAvailableSlots(Array.isArray(slots) ? slots : [])
+          setSlotsLoading(false)
         }
       } catch (err) {
-        // network/server error: mark as null so UI uses client-side fallback and shows an explicit error if needed
+        // Keep UI server-authoritative: on error, disable all slots instead of local fallback.
         if (!abortController.signal.aborted && requestSeq === slotsRequestSeqRef.current) {
           console.error('[CustomerBookingTimePage] getAvailableSlots failed', err)
-          setAvailableSlots(null)
+          setSlotsError('Không tải được khung giờ, vui lòng thử lại.')
+          setAvailableSlots([])
+          setSlotsLoading(false)
         }
       }
     }
@@ -155,6 +168,22 @@ export default function CustomerBookingTimePage() {
     return null
   }, [bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate])
 
+  useEffect(() => {
+    if (!selectedTime) return
+    if (!Array.isArray(availableSlots)) return
+    const stillAvailable = availableSlots.includes(selectedTime)
+    const ownHold = Boolean(
+      ownHoldSlot &&
+      ownHoldSlot.date === selectedDate &&
+      ownHoldSlot.start === selectedTime &&
+      ownHoldSlot.serviceId === bookingDraft.serviceId &&
+      String(ownHoldSlot.staffId || '') === String(bookingDraft.staffId || '')
+    )
+    if (!stillAvailable && !ownHold) {
+      setSelectedTime('')
+    }
+  }, [selectedTime, availableSlots, ownHoldSlot, selectedDate, bookingDraft.serviceId, bookingDraft.staffId])
+
   const slots = useMemo(() => {
     if (!service) return []
 
@@ -182,22 +211,8 @@ export default function CustomerBookingTimePage() {
       }).length
 
       const limit = bookingDraft.staffId === 'random' ? shopCapacity : 1
-      const isOwnHold = Boolean(
-        ownHoldSlot &&
-          ownHoldSlot.date === selectedDate &&
-          ownHoldSlot.start === slotStart &&
-          ownHoldSlot.serviceId === bookingDraft.serviceId &&
-          String(ownHoldSlot.staffId || '') === String(bookingDraft.staffId || '')
-      )
-      const isOwnBooking = Boolean(
-        ownBookedSlot &&
-          ownBookedSlot.date === selectedDate &&
-          ownBookedSlot.start === slotStart &&
-          ownBookedSlot.serviceId === bookingDraft.serviceId &&
-          String(ownBookedSlot.staffId || '') === String(bookingDraft.staffId || '')
-      )
-      const available = !inLunch && (isOwnHold || isOwnBooking || (hasBackendSlots ? availableSet.has(slotStart) : occupied < limit))
-      list.push({ start: slotStart, occupied, limit, available, ownHold: isOwnHold || isOwnBooking })
+      const available = !inLunch && hasBackendSlots && availableSet.has(slotStart)
+      list.push({ start: slotStart, occupied, limit, available, ownHold: false })
     }
     return list
   }, [service, availableSlots, openTime, closeTime, slotDuration, lunchBreakStart, lunchBreakEnd, shopCapacity, bookings, selectedDate, bookingDraft.staffId, ownHoldSlot, ownBookedSlot, bookingDraft.serviceId])
@@ -231,6 +246,11 @@ export default function CustomerBookingTimePage() {
     if (Array.isArray(availableSlots) && !availableSlots.includes(selectedTime) && !isOwnHeldSlot && !isOwnBookedSlot) {
       alert('Khung giờ bạn chọn vừa kín. Vui lòng chọn giờ khác.')
       setSelectedTime('')
+      return
+    }
+
+    if (!Array.isArray(availableSlots) || slotsLoading) {
+      alert('Đang cập nhật khung giờ mới nhất, vui lòng đợi một chút.')
       return
     }
 
@@ -284,7 +304,7 @@ export default function CustomerBookingTimePage() {
       }
       const res = await holdBookingSlot(slug, payload)
       const newToken = res?.holdToken || currentHoldToken || ''
-      const newExpiresAt = res?.expiresAt || bookingDraft.holdExpiresAt || storedHoldExpiresAt || ''
+      const newExpiresAt = res?.expiresAt || bookingDraft.holdExpiresAt || ''
 
       clearPreviousPaymentSession()
       
@@ -313,16 +333,7 @@ export default function CustomerBookingTimePage() {
     }
   }
 
-  if (!service) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-10">
-        <p className="text-main">Bạn chưa chọn dịch vụ.</p>
-        <Link className="text-primary underline" to={`/${slug || shop.slug}/book`}>
-          Quay lại bước 1
-        </Link>
-      </div>
-    )
-  }
+  if (!service) return null
 
   return (
     <div className="bg-slate-50 min-h-screen text-main">
@@ -422,6 +433,12 @@ export default function CustomerBookingTimePage() {
                 <span className="material-symbols-outlined">schedule</span>
                 Khung giờ còn trống
               </h3>
+              {slotsLoading ? (
+                <p className="text-sm text-main/60 mb-3">Đang cập nhật khung giờ...</p>
+              ) : null}
+              {!slotsLoading && slotsError ? (
+                <p className="text-sm text-red-600 mb-3">{slotsError}</p>
+              ) : null}
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                 {slots.map((slot) => {
                   const selected = selectedTime === slot.start && slot.available
