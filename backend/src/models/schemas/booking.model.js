@@ -2,6 +2,7 @@ import { createModel } from '../base.js'
 
 export const Booking = createModel('Booking', 'bookings', {
   bookingCode: { type: String, index: true, unique: true },
+  clientAttemptId: { type: String, index: true },
   shopId: { type: String, index: true },
   customerId: { type: String, index: true },
   customerName: String,

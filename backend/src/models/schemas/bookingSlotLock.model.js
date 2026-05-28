@@ -4,6 +4,7 @@ const bookingSlotLockSchema = new mongoose.Schema(
   {
     shopId: { type: String, index: true, required: true },
     staffId: { type: String, index: true, required: true },
+    clientAttemptId: { type: String, index: true },
     serviceId: { type: String, index: true },
     startTime: { type: Date, index: true, required: true },
     endTime: { type: Date, required: true },

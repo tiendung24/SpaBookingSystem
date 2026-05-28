@@ -61,7 +61,15 @@ export default function ShopCreateBookingPage() {
       note: form.note
     })
 
-    const created = await createBookingFromDraft(shop.slug)
+    let created = null
+    try {
+      created = await createBookingFromDraft(shop.slug)
+    } catch (err) {
+      // Surface friendly message to admin and stop
+      window.alert(err?.message || 'Không thể tạo lịch hẹn: Lỗi không xác định')
+      return
+    }
+
     const booking = created?.booking
     if (!booking) {
       alert('Vui lòng nhập đầy đủ thông tin để tạo lịch hẹn.')

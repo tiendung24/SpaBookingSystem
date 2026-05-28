@@ -33,7 +33,11 @@ export async function apiRequest(path, { method = 'GET', token, body, headers } 
 
   const res = await fetch(buildUrl(path), {
     method,
-    headers: mergedHeaders,
+    headers: {
+      'Cache-Control': 'no-cache',
+      ...mergedHeaders
+    },
+    cache: 'no-store',
     body: body ? (isFormData ? body : JSON.stringify(body)) : undefined
   })
 
@@ -41,6 +45,11 @@ export async function apiRequest(path, { method = 'GET', token, body, headers } 
   const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => null)
 
   if (!res.ok) {
+    try {
+      console.debug('[apiRequest] non-ok response', { path, status: res.status, data })
+    } catch {
+      // ignore logging failures
+    }
     const message = data?.message || data?.error || res.statusText
     if (res.status === 401) {
       emitAuthExpired({ path, method, message })

@@ -173,15 +173,15 @@ export async function getAvailableSlots(req, res) {
 }
 
 export async function holdSlot(req, res) {
-  const { serviceId, staffId: requestedStaffId, date, time, holdToken: clientHoldToken } = req.body || {}
+  const { serviceId, staffId: requestedStaffId, date, time, holdToken: clientHoldToken, clientAttemptId } = req.body || {}
   if (!serviceId || !date || !time) throw httpError(400, 'Thiếu serviceId/date/time')
 
   const shop = await findShopBySlug(req.params.slug)
   await cleanupExpiredAwaitingDeposits(String(shop._id))
   if (!isShopBookable(shop)) throw httpError(409, 'Shop hiện không nhận lịch')
 
-  const service = await Service.findById(serviceId).lean()
-  if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
+    const service = await Service.findById(serviceId).lean()
+    if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
 
   const durationMinutes = Number(service.durationMinutes || 60)
   const startTime = buildTimeOnDate(date, time)
@@ -234,16 +234,16 @@ export async function holdSlot(req, res) {
   let staffId = requestedStaffId || null
   if (staffId) {
     const staffExists = candidateStaffs.some((s) => String(s._id) === String(staffId))
-    if (!staffExists) throw httpError(409, 'Nhân viên không khả dụng cho dịch vụ hoặc đang tạm nghỉ')
+      if (!staffExists) throw httpError(409, 'Nhân viên không khả dụng cho dịch vụ hoặc đang tạm nghỉ')
     const staffBusy = overlapping.some((b) => String(b.staffId || '') === String(staffId)) || activeLocks.some((l) => String(l.staffId || '') === String(staffId))
-    if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
+      if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
   } else {
     const availableStaff = candidateStaffs.find((s) => {
       const busyByBooking = overlapping.some((b) => String(b.staffId || '') === String(s._id))
       const busyByHold = activeLocks.some((l) => String(l.staffId || '') === String(s._id))
       return !busyByBooking && !busyByHold
     })
-    if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
+      if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
     staffId = String(availableStaff._id)
   }
 
@@ -259,6 +259,7 @@ export async function holdSlot(req, res) {
       endTime,
       bookingId: '',
       holdToken,
+      clientAttemptId: clientAttemptId || undefined,
       lockType: 'temp_hold',
       expiresAt,
       createdAt: new Date()
@@ -271,15 +272,15 @@ export async function holdSlot(req, res) {
   res.status(201).json({ holdToken, staffId: String(staffId), expiresAt })
 }
 export async function createBooking(req, res) {
-  const { serviceId, staffId: requestedStaffId, customerName, phone, email, date, time, note, holdToken } = req.body || {}
+  const { serviceId, staffId: requestedStaffId, customerName, phone, email, date, time, note, holdToken, clientBookingAttemptId } = req.body || {}
   if (!serviceId || !customerName || !phone || !date || !time) throw httpError(400, 'Thiếu thông tin đặt lịch')
 
   const shop = await findShopBySlug(req.params.slug)
   await cleanupExpiredAwaitingDeposits(String(shop._id))
   if (!isShopBookable(shop)) throw httpError(409, 'Shop hiện không nhận lịch')
 
-  const service = await Service.findById(serviceId).lean()
-  if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
+    const service = await Service.findById(serviceId).lean()
+    if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
 
   const customer = await ensureCustomer({ name: customerName, phone })
   const durationMinutes = Number(service.durationMinutes || 60)
@@ -290,6 +291,14 @@ export async function createBooking(req, res) {
   if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
 
   const now = new Date()
+  // Idempotency: if client sent an attempt id and booking already exists, return it
+  if (clientBookingAttemptId) {
+    const existingBooking = await Booking.findOne({ shopId: String(shop._id), clientAttemptId: String(clientBookingAttemptId) }).lean()
+    if (existingBooking) {
+      const paymentRow = await PayosPayment.findOne({ bookingId: String(existingBooking._id) }).lean()
+      return res.status(200).json({ booking: existingBooking, payment: paymentRow || null })
+    }
+  }
   const holdLock = holdToken
     ? await BookingSlotLock.findOne({
         holdToken,
@@ -328,15 +337,16 @@ export async function createBooking(req, res) {
 
   if (staffId) {
     const staffExists = candidateStaffsForBooking.some((s) => String(s._id) === String(staffId))
-    if (!staffExists) throw httpError(409, 'Nhân viên không khả dụng cho dịch vụ hoặc đang tạm nghỉ')
+      if (!staffExists) throw httpError(409, 'Nhân viên không khả dụng cho dịch vụ hoặc đang tạm nghỉ')
     const staffBusy = overlapping.some((booking) => String(booking.staffId || '') === String(staffId))
-    if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
+      if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
   } else {
     const availableStaff = candidateStaffsForBooking.find((staff) => {
       const busy = overlapping.some((booking) => String(booking.staffId || '') === String(staff._id))
       return !busy
     })
     if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
+      if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
     staffId = String(availableStaff._id)
   }
 
@@ -347,15 +357,19 @@ export async function createBooking(req, res) {
   const session = await mongoose.startSession()
   let booking
   try {
-    await session.withTransaction(async () => {
-      booking = await Booking.create(
+    const runOps = async (useSession) => {
+      const createOpts = useSession ? { session } : undefined
+      const updateOpts = useSession ? { session } : undefined
+
+      const created = await Booking.create(
         [
           {
             bookingCode,
+            clientAttemptId: clientBookingAttemptId || undefined,
             shopId: String(shop._id),
             customerId: String(customer._id),
             customerName,
-            customerPhone: String(phone).replace(/\s+/g, ''),
+            customerPhone: String(phone).replace(/\\s+/g, ''),
             customerEmail: email ? String(email).toLowerCase() : undefined,
             serviceId,
             staffId: staffId || null,
@@ -370,9 +384,9 @@ export async function createBooking(req, res) {
             updatedAt: new Date()
           }
         ],
-        { session }
+        createOpts
       )
-      booking = booking[0]
+      booking = created[0]
 
       if (holdLock) {
         await BookingSlotLock.updateOne(
@@ -385,7 +399,7 @@ export async function createBooking(req, res) {
               expiresAt: null
             }
           },
-          { session }
+          updateOpts
         )
       } else {
         await BookingSlotLock.create(
@@ -401,10 +415,19 @@ export async function createBooking(req, res) {
               createdAt: new Date()
             }
           ],
-          { session }
+          createOpts
         )
       }
-    })
+    }
+
+    try {
+      await session.withTransaction(async () => runOps(true))
+    } catch (error) {
+      const msg = String(error?.message || '')
+      const illegalTxn = error?.code === 20 || msg.includes('Transaction numbers are only allowed')
+      if (!illegalTxn) throw error
+      await runOps(false)
+    }
   } catch (error) {
     await session.endSession()
     if (error?.code === 11000) throw httpError(409, 'Slot đã được người khác vừa đặt, vui lòng chọn giờ khác')
@@ -510,6 +533,26 @@ export async function getBookingsByPhone(req, res) {
     .lean()
 
   res.json({ items })
+}
+
+export async function getBookingAttempt(req, res) {
+  const attemptId = String(req.params.attemptId || '').trim()
+  if (!attemptId) throw httpError(400, 'Thiếu attemptId')
+
+  const shop = await findShopBySlug(req.params.slug)
+  const shopId = String(shop._id)
+
+  const booking = await Booking.findOne({ shopId, clientAttemptId: attemptId }).lean()
+  if (booking) {
+    const payment = await PayosPayment.findOne({ bookingId: String(booking._id) }).lean()
+    return res.json({ booking, payment: payment || null })
+  }
+
+  const now = new Date()
+  const hold = await BookingSlotLock.findOne({ shopId, clientAttemptId: attemptId, lockType: 'temp_hold', expiresAt: { $gt: now } }).lean()
+  if (hold) return res.json({ hold })
+
+  throw httpError(404, 'Không tìm thấy booking/hold cho attemptId này')
 }
 
 

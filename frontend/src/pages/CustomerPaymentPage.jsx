@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
+import { apiRequest } from '../lib/api'
 
 function formatVnd(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')}đ`
@@ -103,6 +104,29 @@ function isValidPhone(input) {
   return /^(?:\+84|0)\d{9,10}$/.test(input)
 }
 
+function buildDraftFromAttempt(bookingOrHold) {
+  if (!bookingOrHold) return null
+  const startSource = bookingOrHold.startTime || bookingOrHold.date || ''
+  const startDate = startSource ? new Date(startSource) : null
+  const date = startDate && !Number.isNaN(startDate.getTime()) ? startDate.toISOString().slice(0, 10) : (bookingOrHold.date || '')
+  const time = startDate && !Number.isNaN(startDate.getTime()) ? startDate.toTimeString().slice(0, 5) : (bookingOrHold.time || '')
+
+  return {
+    serviceId: bookingOrHold.serviceId || null,
+    staffId: bookingOrHold.staffId || 'random',
+    date,
+    time,
+    customerName: bookingOrHold.customerName || '',
+    customerPhone: bookingOrHold.customerPhone || '',
+    customerEmail: bookingOrHold.customerEmail || '',
+    note: bookingOrHold.note || '',
+    holdToken: bookingOrHold.holdToken || '',
+    holdExpiresAt: bookingOrHold.expiresAt || bookingOrHold.depositExpiresAt || '',
+    depositAmount: Number(bookingOrHold.depositAmount || 0),
+    totalAmount: Number(bookingOrHold.totalAmount || 0)
+  }
+}
+
 function ConfettiLayer({ active }) {
   const pseudo = (seed) => {
     const x = Math.sin(seed * 12.9898) * 43758.5453
@@ -165,58 +189,102 @@ export default function CustomerPaymentPage() {
   const service = services.find((item) => item.id === bookingDraft.serviceId)
   const selectedStaff = bookingDraft.staffId === 'random' ? null : staff.find((item) => item.id === bookingDraft.staffId)
 
+  // Do not rely on localStorage fallbacks for hold/payment; bookingDraft and server attempt are authoritative
   const getInitialHoldSeconds = () => {
-    const expiresAt = bookingDraft?.holdExpiresAt
-    if (!expiresAt) return 15 * 60
+    const expiresAt = bookingDraft?.holdExpiresAt || ''
+    if (!expiresAt) return 3 * 60
     const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
-    return Number.isFinite(diff) ? Math.max(0, diff) : 15 * 60
-  }
-
-  // Read stored hold info from localStorage as a fallback when bookingDraft is missing.
-  const readStoredHold = useCallback((s) => {
-    try {
-      const token = localStorage.getItem('hold_token_' + (s || slug)) || ''
-      const expires = localStorage.getItem('hold_expires_' + (s || slug)) || ''
-      return { token, expiresAt: expires }
-    } catch {
-      return { token: '', expiresAt: '' }
-    }
-  }, [slug])
-
-  const getInitialBookingCode = () => {
-    try {
-      return localStorage.getItem('last_booking_code_' + slug) || null
-    } catch {
-      return null
-    }
+    return Number.isFinite(diff) ? Math.max(0, diff) : 3 * 60
   }
 
   const [timeLeft, setTimeLeft] = useState(getInitialHoldSeconds)
+  const [bookingExpiresAt, setBookingExpiresAt] = useState(bookingDraft?.holdExpiresAt || '')
   const [success, setSuccess] = useState(false)
   const [expired, setExpired] = useState(false)
-  const [createdBookingId, setCreatedBookingId] = useState(getInitialBookingCode)
+  const [createdBookingId, setCreatedBookingId] = useState(null)
   const [confetti, setConfetti] = useState(false)
 
   const [payosData, setPayosData] = useState(null)
   const [creating, setCreating] = useState(false)
   const [restoreChecked, setRestoreChecked] = useState(false)
   const [showRestoreHold, setShowRestoreHold] = useState(false)
+  const [attemptAmounts, setAttemptAmounts] = useState({ depositAmount: 0, totalAmount: 0 })
   const autoBookingCalledRef = useRef(false)
+  const skipExitCleanupRef = useRef(false)
 
   useEffect(() => {
     if (!slug) return
     loadPublicShop(slug).catch(() => {})
   }, [slug, loadPublicShop])
 
-  const depositAmount = useMemo(() => {
-    if (!service) return 0
-    const deposit = shop.deposit || { enabled: false, type: 'fixed', value: 0 }
-    if (!deposit.enabled) return 0
-    if (deposit.type === 'percent') {
-      return Math.round((service.priceVnd * Number(deposit.value || 0)) / 100)
+  useEffect(() => {
+    if (!slug) return
+
+    const onBeforeUnload = () => {
+      skipExitCleanupRef.current = true
+      try {
+        sessionStorage.setItem(`lumix_payment_reloading_${slug}`, '1')
+      } catch {
+        // ignore
+      }
     }
-    return Number(deposit.value || 0)
-  }, [service, shop.deposit])
+
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [slug])
+
+  useEffect(() => {
+    if (!slug) return
+    return () => {
+      let isReloading = false
+      try {
+        isReloading = sessionStorage.getItem(`lumix_payment_reloading_${slug}`) === '1'
+      } catch {
+        isReloading = false
+      }
+
+      if (!isReloading && !skipExitCleanupRef.current) {
+        try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+        resetBookingDraft()
+      }
+
+      try {
+        sessionStorage.removeItem(`lumix_payment_reloading_${slug}`)
+      } catch {
+        // ignore
+      }
+    }
+  }, [slug, resetBookingDraft])
+
+  const depositAmount = useMemo(() => {
+    const fallbackDeposit = Number(attemptAmounts.depositAmount || 0)
+    if (!service) return fallbackDeposit
+    const deposit = shop.deposit || { enabled: false, type: 'fixed', value: 0 }
+    if (!deposit.enabled) return fallbackDeposit
+    let computed = 0
+    if (deposit.type === 'percent') {
+      computed = Math.round((service.priceVnd * Number(deposit.value || 0)) / 100)
+    } else {
+      computed = Number(deposit.value || 0)
+    }
+    return computed > 0 ? computed : fallbackDeposit
+  }, [service, shop.deposit, attemptAmounts.depositAmount])
+
+  const syncBookingState = useCallback(async (bookingCode) => {
+    if (!bookingCode) return null
+    const res = await checkBookingStatus(bookingCode)
+    if (res?.booking) {
+      setCreatedBookingId(res.booking.bookingCode || res.booking._id)
+      if (res.booking.depositExpiresAt) {
+        setBookingExpiresAt(res.booking.depositExpiresAt)
+      }
+    }
+    if (res?.payment) {
+      const normalized = normalizePaymentPayload(res.payment)
+      setPayosData(normalized)
+    }
+    return res
+  }, [checkBookingStatus, slug])
 
   // Restore booking info on hard reload (bookingDraft may be empty)
   useEffect(() => {
@@ -224,55 +292,38 @@ export default function CustomerPaymentPage() {
     let mounted = true
     const restore = async () => {
       try {
-        const code = localStorage.getItem('last_booking_code_' + slug)
-        const paymentRaw = localStorage.getItem('last_payment_data_' + slug)
-        if (paymentRaw) {
-          try {
-            setPayosData(normalizePaymentPayload(JSON.parse(paymentRaw)))
-          } catch {
-            // ignore bad cached payment data
-          }
-        }
-        // If bookingDraft is empty but there is a stored hold token + stored draft, prompt user to restore
+        // hydrate from server using client attempt id if available
         try {
-          const storedHold = readStoredHold()
-          const storedDraftRaw = localStorage.getItem('public_booking_draft')
-          if (!bookingDraft?.serviceId && storedHold?.token && storedDraftRaw) {
-            try {
-              const parsedDraft = JSON.parse(storedDraftRaw)
-              const expires = parsedDraft?.holdExpiresAt || storedHold?.expiresAt
-              if (expires && new Date(expires).getTime() > Date.now()) {
-                setShowRestoreHold(true)
+          const attemptKey = `client_attempt_${slug}`
+          const attemptId = sessionStorage.getItem(attemptKey)
+          if (attemptId) {
+            const attemptRes = await apiRequest(`/api/public/shops/${slug}/booking-attempts/${attemptId}`)
+            if (attemptRes?.booking) {
+              const hydratedDraft = buildDraftFromAttempt(attemptRes.booking)
+              if (hydratedDraft) {
+                setBookingDraft((prev) => ({
+                  ...prev,
+                  ...hydratedDraft,
+                  holdToken: prev.holdToken || hydratedDraft.holdToken,
+                  holdExpiresAt: prev.holdExpiresAt || hydratedDraft.holdExpiresAt
+                }))
               }
-            } catch {
-              // ignore
+              setAttemptAmounts({
+                depositAmount: Number(attemptRes.booking.depositAmount || 0),
+                totalAmount: Number(attemptRes.booking.totalAmount || 0)
+              })
+              setCreatedBookingId(attemptRes.booking.bookingCode || attemptRes.booking._id)
+              if (attemptRes.booking.depositExpiresAt) {
+                setBookingExpiresAt(attemptRes.booking.depositExpiresAt)
+              }
             }
+            if (attemptRes?.payment) {
+              setPayosData(normalizePaymentPayload(attemptRes.payment))
+            }
+            // if there is a temp hold payload, consider prompting restore UI (kept minimal here)
           }
-        } catch {
+        } catch (err) {
           // ignore
-        }
-        if (!code) return
-        const res = await checkBookingStatus(code)
-        if (!mounted) return
-        if (res?.booking) {
-          setCreatedBookingId(res.booking.bookingCode || res.booking._id)
-          const status = String(res.booking.status || '').toLowerCase()
-          if (status === 'cancelled' || status === 'canceled') {
-            setExpired(true)
-            setPayosData(null)
-          }
-        }
-        if (res?.payment) {
-          if (String(res?.booking?.status || '').toLowerCase() === 'cancelled' || String(res?.booking?.status || '').toLowerCase() === 'canceled') {
-            setPayosData(null)
-          } else {
-          setPayosData(normalizePaymentPayload(res.payment))
-          try {
-            localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
-          } catch {
-            // ignore
-          }
-          }
         }
       } catch {
         // ignore
@@ -288,40 +339,64 @@ export default function CustomerPaymentPage() {
     return () => {
       mounted = false
     }
-  }, [slug, checkBookingStatus, bookingDraft?.serviceId, readStoredHold])
+  }, [slug, checkBookingStatus, bookingDraft?.serviceId])
 
   const handleRestoreHold = () => {
-    try {
-      const storedDraftRaw = localStorage.getItem('public_booking_draft')
-      if (storedDraftRaw) {
-        const parsed = JSON.parse(storedDraftRaw)
-        try { setBookingDraft(parsed) } catch { /* ignore */ }
-
-        const paymentRaw = localStorage.getItem('last_payment_data_' + slug)
-        if (paymentRaw) {
+    (async () => {
+      try {
+        const attemptKey = `client_attempt_${slug}`
+        const attemptId = sessionStorage.getItem(attemptKey)
+        if (attemptId) {
           try {
-            setPayosData(normalizePaymentPayload(JSON.parse(paymentRaw)))
+            const attemptRes = await apiRequest(`/api/public/shops/${slug}/booking-attempts/${attemptId}`)
+            if (attemptRes?.hold) {
+              const h = attemptRes.hold
+              const dt = new Date(h.startTime)
+              const date = dt.toISOString().slice(0, 10)
+              const time = dt.toTimeString().slice(0, 5)
+              try {
+                setBookingDraft((prev) => ({
+                  ...prev,
+                  serviceId: h.serviceId || prev.serviceId,
+                  staffId: h.staffId || prev.staffId || 'random',
+                  date,
+                  time,
+                  holdToken: h.holdToken || '',
+                  holdExpiresAt: h.expiresAt || ''
+                }))
+              } catch {
+                // ignore
+              }
+            }
+            if (attemptRes?.booking) {
+              const hydratedDraft = buildDraftFromAttempt(attemptRes.booking)
+              if (hydratedDraft) {
+                setBookingDraft((prev) => ({
+                  ...prev,
+                  ...hydratedDraft,
+                  holdToken: prev.holdToken || hydratedDraft.holdToken,
+                  holdExpiresAt: prev.holdExpiresAt || hydratedDraft.holdExpiresAt
+                }))
+              }
+              setAttemptAmounts({
+                depositAmount: Number(attemptRes.booking.depositAmount || 0),
+                totalAmount: Number(attemptRes.booking.totalAmount || 0)
+              })
+              setCreatedBookingId(attemptRes.booking.bookingCode || attemptRes.booking._id)
+            }
+            if (attemptRes?.payment) setPayosData(normalizePaymentPayload(attemptRes.payment))
           } catch {
             // ignore
           }
         }
-
-        const lastBooking = localStorage.getItem('last_booking_code_' + slug)
-        if (lastBooking) setCreatedBookingId(lastBooking)
+      } finally {
+        setShowRestoreHold(false)
       }
-    } catch {
-      // ignore
-    }
-    setShowRestoreHold(false)
+    })()
   }
 
   const handleCancelHold = () => {
-    try {
-      localStorage.removeItem('hold_token_' + slug)
-      localStorage.removeItem('hold_expires_' + slug)
-    } catch {
-      // ignore
-    }
+    try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
     setShowRestoreHold(false)
     resetBookingDraft()
     navigate(`/${slug}/book/time`)
@@ -334,105 +409,133 @@ export default function CustomerPaymentPage() {
     const readyToEvaluate = restoreChecked || Boolean(service)
     if (!readyToEvaluate) return
 
-    const phoneNormalized = normalizePhone(bookingDraft.customerPhone)
-    const phoneOk = isValidPhone(phoneNormalized)
+    const evalAndMaybeAutoCreate = async () => {
+      const phoneNormalized = normalizePhone(bookingDraft.customerPhone)
+      const phoneOk = isValidPhone(phoneNormalized)
 
-    // If the hold is missing or expired, don't try to create booking again.
-    // This prevents repeated API calls when user reloads the page many times.
-    // If bookingDraft lacks hold info (e.g., after full page reload), check localStorage for hold token
-    const stored = readStoredHold()
-    const holdExpiresAt = bookingDraft?.holdExpiresAt
-      ? new Date(bookingDraft.holdExpiresAt)
-      : stored.expiresAt
-      ? new Date(stored.expiresAt)
-      : null
-    const hasHold = Boolean(bookingDraft?.holdToken) || Boolean(stored.token)
-    const holdExpired =
-      !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
-
-    const persistedBookingCode = (() => {
+      // If the hold is missing or expired, don't try to create booking again.
+      // This prevents repeated API calls when user reloads the page many times.
+      const attemptKey = `client_attempt_${slug}`
+      let attemptRes = null
       try {
-        return localStorage.getItem('last_booking_code_' + slug) || ''
+        const attemptId = sessionStorage.getItem(attemptKey)
+        if (attemptId) {
+          attemptRes = await apiRequest(`/api/public/shops/${slug}/booking-attempts/${attemptId}`)
+        }
       } catch {
-        return ''
+        attemptRes = null
       }
-    })()
-    const effectiveBookingCode = createdBookingId || persistedBookingCode
 
-    if (!service || !phoneOk || effectiveBookingCode) return
+      const attemptHold = attemptRes?.hold || null
+      const holdExpiresAt = bookingDraft?.holdExpiresAt
+        ? new Date(bookingDraft.holdExpiresAt)
+        : bookingExpiresAt
+        ? new Date(bookingExpiresAt)
+        : attemptHold?.expiresAt
+        ? new Date(attemptHold.expiresAt)
+        : null
+      const hasHold = Boolean(bookingDraft?.holdToken) || Boolean(attemptHold)
+      const holdExpired = !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
 
-    if (!hasHold || holdExpired) {
-      if (effectiveBookingCode) return
-      // Otherwise, go back to pick a slot.
-      window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
-      navigate(`/${slug}/book/time`)
-      return
-    }
+      const effectiveBookingCode = createdBookingId || attemptRes?.booking?.bookingCode || null
 
-    if (autoBookingCalledRef.current) return
+      if (!service || !phoneOk || effectiveBookingCode) return
 
-    let mounted = true
-    autoBookingCalledRef.current = true
+      if (!hasHold || holdExpired) {
+        if (effectiveBookingCode) return
+        window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+        navigate(`/${slug}/book/time`)
+        return
+      }
 
-    const run = async () => {
-      if (mounted) setCreating(true)
-      try {
-        const res = await createBookingFromDraft(slug)
-        if (!mounted) return
+      if (autoBookingCalledRef.current) return
 
-        if (res?.booking) {
-          setCreatedBookingId(res.booking.bookingCode || res.booking._id)
-        }
+      let mounted = true
+      autoBookingCalledRef.current = true
 
-        if (res?.payment) {
-          setPayosData(normalizePaymentPayload(res.payment))
-          try {
-            window.__payosData = res.payment
-            localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
-          } catch {
-            // ignore
-          }
-        } else if (depositAmount <= 0) {
-          // Không yêu cầu đặt cọc -> coi như hoàn tất bước thanh toán
-          setSuccess(true)
-          setConfetti(true)
-          setTimeout(() => setConfetti(false), 2500)
-          resetBookingDraft()
-        }
-      } catch (err) {
-        console.error(err)
-        if (mounted) {
-          // Only treat real hold-expiry conflicts as expired hold, not every 409 conflict.
-          const msg = String(err?.message || '').toLowerCase()
-          const isExpiredHold =
-            Number(err?.status || 0) === 409 &&
-            (msg.includes('hết hạn') || msg.includes('expired') || msg.includes('giữ chỗ'))
+      const run = async () => {
+        if (mounted) setCreating(true)
+        try {
+          const res = await createBookingFromDraft(slug)
+          if (!mounted) return
 
-          if (isExpiredHold) {
-            try {
-              localStorage.removeItem('last_booking_code_' + slug)
-              localStorage.removeItem('last_payment_data_' + slug)
-              localStorage.removeItem('hold_token_' + slug)
-              localStorage.removeItem('hold_expires_' + slug)
-            } catch {
-              // ignore
+          if (res?.booking) {
+            const hydratedDraft = buildDraftFromAttempt(res.booking)
+            if (hydratedDraft) {
+              setBookingDraft((prev) => ({
+                ...prev,
+                ...hydratedDraft,
+                holdToken: prev.holdToken || hydratedDraft.holdToken,
+                holdExpiresAt: prev.holdExpiresAt || hydratedDraft.holdExpiresAt
+              }))
             }
-            window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
-            navigate(`/${slug}/book/time`)
-            return
+            setAttemptAmounts({
+              depositAmount: Number(res.booking.depositAmount || 0),
+              totalAmount: Number(res.booking.totalAmount || 0)
+            })
+            setCreatedBookingId(res.booking.bookingCode || res.booking._id)
+            if (res.booking.depositExpiresAt) {
+              setBookingExpiresAt(res.booking.depositExpiresAt)
+            }
           }
 
-          window.alert(`Không thể giữ chỗ: ${err?.message || 'Lỗi không xác định'}`)
+          if (res?.payment) {
+            const normalized = normalizePaymentPayload(res.payment)
+            setPayosData(normalized)
+            try { window.__payosData = res.payment } catch {}
+            if (!normalized?.checkoutUrl && !normalized?.qrCodeUrl && !normalized?.qrCode) {
+              void syncBookingState(res.booking?.bookingCode || res.booking?._id)
+            }
+          } else if (res?.booking) {
+            void syncBookingState(res.booking.bookingCode || res.booking._id)
+          } else if (depositAmount <= 0) {
+            // Không yêu cầu đặt cọc -> coi như hoàn tất bước thanh toán
+            setSuccess(true)
+            setConfetti(true)
+            setTimeout(() => setConfetti(false), 2500)
+            resetBookingDraft()
+          }
+        } catch (err) {
+          console.error(err)
+          if (mounted) {
+            // Only treat real hold-expiry conflicts as expired hold, not every 409 conflict.
+            const msg = String(err?.message || '').toLowerCase()
+            const isExpiredHold =
+              Number(err?.status || 0) === 409 &&
+              (msg.includes('hết hạn') || msg.includes('expired') || msg.includes('giữ chỗ'))
+            const isSlotConflict =
+              Number(err?.status || 0) === 409 &&
+              (msg.includes('khung giờ') || msg.includes('slot') || msg.includes('vừa bị đặt') || msg.includes('đã được đặt') || msg.includes('taken') || msg.includes('booked'))
+
+            if (isExpiredHold) {
+              try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+              window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+              navigate(`/${slug}/book/time`)
+              return
+            }
+
+            if (isSlotConflict) {
+              try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+              resetBookingDraft()
+              window.alert('Khung giờ vừa bị đặt. Vui lòng chọn lại khung giờ khác.')
+              navigate(`/${slug}/book/time`)
+              return
+            }
+
+            window.alert(`Không thể giữ chỗ: ${err?.message || 'Lỗi không xác định'}`)
+          }
+        } finally {
+          if (mounted) setCreating(false)
         }
-      } finally {
-        if (mounted) setCreating(false)
+      }
+
+      run()
+      return () => {
+        mounted = false
       }
     }
 
-    run()
-    return () => {
-      mounted = false
-    }
+    void evalAndMaybeAutoCreate()
   }, [
     expired,
     service,
@@ -445,8 +548,9 @@ export default function CustomerPaymentPage() {
     depositAmount,
     createBookingFromDraft,
     resetBookingDraft,
-    readStoredHold,
-    navigate
+    
+    navigate,
+    bookingExpiresAt
   ])
 
   // Countdown display
@@ -454,7 +558,7 @@ export default function CustomerPaymentPage() {
     if (success || expired) return
 
     const timer = setInterval(() => {
-      const expiresAt = bookingDraft?.holdExpiresAt
+      const expiresAt = bookingDraft?.holdExpiresAt || bookingExpiresAt || ''
       if (expiresAt) {
         const diff = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
         setTimeLeft(Number.isFinite(diff) ? Math.max(0, diff) : 0)
@@ -464,7 +568,7 @@ export default function CustomerPaymentPage() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [success, expired, bookingDraft?.holdExpiresAt])
+  }, [success, expired, bookingDraft?.holdExpiresAt, bookingExpiresAt])
 
   // Time up -> expire unpaid booking immediately and clean local state.
   useEffect(() => {
@@ -486,14 +590,7 @@ export default function CustomerPaymentPage() {
       }
 
       if (!mounted) return
-      try {
-        localStorage.removeItem('last_booking_code_' + slug)
-        localStorage.removeItem('last_payment_data_' + slug)
-        localStorage.removeItem('hold_token_' + slug)
-        localStorage.removeItem('hold_expires_' + slug)
-      } catch {
-        // ignore localStorage cleanup errors
-      }
+      try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
       window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
       navigate(`/${slug}/book/time`)
     }
@@ -529,14 +626,9 @@ export default function CustomerPaymentPage() {
         // If a payment object appears later (e.g., checkoutUrl-only), capture it so QR/link shows.
         try {
           const payment = res?.payment || res?.data?.payment || null
-          if (payment && mounted && !payosData) {
+            if (payment && mounted && !payosData) {
             const normalized = normalizePaymentPayload(payment)
             setPayosData(normalized)
-            try {
-              localStorage.setItem('last_payment_data_' + slug, JSON.stringify(payment))
-            } catch {
-              // ignore
-            }
           }
         } catch {
           // ignore payment parsing errors
@@ -563,11 +655,6 @@ export default function CustomerPaymentPage() {
         if (res?.payment) {
           const normalized = normalizePaymentPayload(res.payment)
           setPayosData(normalized)
-          try {
-            localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
-          } catch {
-            // ignore
-          }
         }
       } catch {
         // ignore
@@ -581,26 +668,24 @@ export default function CustomerPaymentPage() {
 
   useEffect(() => {
     if (!expired) return
-    try {
-      localStorage.removeItem('last_booking_code_' + slug)
-      localStorage.removeItem('last_payment_data_' + slug)
-      localStorage.removeItem('hold_token_' + slug)
-      localStorage.removeItem('hold_expires_' + slug)
-    } catch {
-      // ignore
-    }
+    try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
     window.alert('Phiên thanh toán đặt cọc đã hết hạn. Vui lòng chọn lại khung giờ.')
     navigate(`/${slug}/book/time`)
   }, [expired, slug, navigate])
 
   const handleTransferred = async () => {
-    const bookingCode = createdBookingId || (() => {
+    let bookingCode = createdBookingId || null
+    if (!bookingCode) {
       try {
-        return localStorage.getItem('last_booking_code_' + slug) || ''
+        const attemptId = sessionStorage.getItem(`client_attempt_${slug}`)
+        if (attemptId) {
+          const attemptRes = await apiRequest(`/api/public/shops/${slug}/booking-attempts/${attemptId}`)
+          if (attemptRes?.booking) bookingCode = attemptRes.booking.bookingCode || attemptRes.booking._id
+        }
       } catch {
-        return ''
+        // ignore
       }
-    })()
+    }
 
     if (!bookingCode) {
       window.alert('Không tìm thấy mã đặt lịch để kiểm tra thanh toán.')
@@ -747,7 +832,7 @@ export default function CustomerPaymentPage() {
                     <div className="flex justify-between"><span className="text-main/60">Dịch vụ</span><span className="font-bold text-main">{service?.name || '—'}</span></div>
                     <div className="flex justify-between"><span className="text-main/60">Nhân viên</span><span className="font-bold text-main">{bookingDraft.staffId === 'random' ? 'Ngẫu nhiên' : selectedStaff?.name ?? '—'}</span></div>
                     <div className="flex justify-between"><span className="text-main/60">Thời lượng</span><span className="font-bold text-main">{service?.durationMinutes || 0} phút</span></div>
-                    <div className="flex justify-between"><span className="text-main/60">Giá</span><span className="font-bold text-main">{formatVnd(service?.priceVnd || 0)}</span></div>
+                    <div className="flex justify-between"><span className="text-main/60">Giá</span><span className="font-bold text-main">{formatVnd(service?.priceVnd || attemptAmounts.totalAmount || 0)}</span></div>
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-primary/10">

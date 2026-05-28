@@ -23,7 +23,16 @@ function loadStoredBookingDraft() {
     const raw = localStorage.getItem('public_booking_draft')
     if (!raw) return emptyDraft
     const parsed = JSON.parse(raw)
-    return { ...emptyDraft, ...(parsed || {}) }
+    const merged = { ...emptyDraft, ...(parsed || {}) }
+    const expiresAt = merged.holdExpiresAt ? new Date(merged.holdExpiresAt) : null
+    if (!expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
+      return {
+        ...merged,
+        holdToken: '',
+        holdExpiresAt: ''
+      }
+    }
+    return merged
   } catch {
     return emptyDraft
   }
@@ -127,12 +136,14 @@ export function ShopProvider({ children }) {
     } catch {
       // ignore
     }
-    // Clean up hold tokens from all shops (or specific slug if available)
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('hold_token_') || key.startsWith('hold_expires_')) {
-        localStorage.removeItem(key)
-      }
-    })
+    // Clean up client attempt ids from sessionStorage
+    try {
+      Object.keys(sessionStorage).forEach((k) => {
+        if (k && k.startsWith('client_attempt_')) sessionStorage.removeItem(k)
+      })
+    } catch {
+      // ignore
+    }
   }, [])
 
   useEffect(() => {
@@ -334,13 +345,36 @@ export function ShopProvider({ children }) {
       if (holdToken) query.set('holdToken', holdToken)
       const res = await apiRequest(`/api/public/shops/${slug}/available-slots?${query.toString()}`)
       return res.slots || []
-    } catch {
-      return []
+    } catch (err) {
+      // Surface API errors to callers so UI can distinguish "no slots" vs network/server errors.
+      console.error('[ShopContext] getAvailableSlots error', err)
+      throw err
     }
   }
 
   const createBookingFromDraft = useCallback(async (slug) => {
     if (!slug) return null
+    // ensure we have a client attempt id to support server-side idempotency
+    const attemptKey = `client_attempt_${slug}`
+    let attemptId = null
+    try {
+      attemptId = sessionStorage.getItem(attemptKey) || null
+    } catch {
+      attemptId = null
+    }
+    try {
+      if (!attemptId && typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        attemptId = crypto.randomUUID()
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      if (attemptId) sessionStorage.setItem(attemptKey, attemptId)
+    } catch {
+      // ignore
+    }
+
     const payload = {
       serviceId: bookingDraft.serviceId,
       staffId: bookingDraft.staffId === 'random' ? null : bookingDraft.staffId,
@@ -350,6 +384,7 @@ export function ShopProvider({ children }) {
       date: bookingDraft.date,
       time: bookingDraft.time,
       holdToken: bookingDraft.holdToken || undefined,
+      clientBookingAttemptId: attemptId || undefined,
       note: bookingDraft.note
     }
     let res = null
@@ -361,12 +396,18 @@ export function ShopProvider({ children }) {
         try { window.__lastBookingRes = res } catch { /* ignore */ }
       console.log('[ShopContext] createBookingFromDraft res', res)
     } catch (err) {
-        try { window.__lastBookingError = err } catch { /* ignore */ }
-        console.error('[ShopContext] createBookingFromDraft error', err)
+      try { window.__lastBookingError = err } catch { /* ignore */ }
+      console.error('[ShopContext] createBookingFromDraft error', err)
       const errMsg = String(err?.message || '').toLowerCase()
+      const statusCode = Number(err?.status || 0)
+
       const isExpiredHold =
-        Number(err?.status || 0) === 409 &&
-        (errMsg.includes('hết hạn') || errMsg.includes('expired') || errMsg.includes('giữ chỗ'))
+        statusCode === 409 &&
+        (errMsg.includes('hết hạn') || errMsg.includes('expired') || errMsg.includes('giữ chỗ') || errMsg.includes('hold'))
+
+      const slotConflictKeywords = ['slot', 'vừa', 'đặt', 'đã được đặt', 'vừa được', 'occupied', 'booked', 'taken', 'đã bị']
+      const isSlotConflict =
+        statusCode === 409 && slotConflictKeywords.some((k) => errMsg.includes(k)) && !isExpiredHold
 
       if (isExpiredHold) {
         try {
@@ -380,32 +421,68 @@ export function ShopProvider({ children }) {
           holdToken: '',
           holdExpiresAt: ''
         }))
+        // rethrow original error so callers can inspect status/message
+        throw err
       }
+
+      if (isSlotConflict) {
+        // Clean up hold info and payment cache, but keep selected service/date so user can re-pick time
+        try {
+          localStorage.removeItem(`hold_token_${slug}`)
+          localStorage.removeItem(`hold_expires_${slug}`)
+          localStorage.removeItem('last_payment_data_' + slug)
+        } catch {
+          // ignore
+        }
+        setBookingDraft((prev) => ({
+          ...prev,
+          holdToken: '',
+          holdExpiresAt: '',
+          time: ''
+        }))
+        const userMsg = 'Khung giờ vừa bị đặt. Vui lòng chọn khung giờ khác.'
+        const friendlyErr = new Error(userMsg)
+        friendlyErr.status = statusCode
+        throw friendlyErr
+      }
+
+      // Unknown error: rethrow for upstream handling
       throw err
     }
 
     if (res?.booking) {
-      try { localStorage.setItem('last_booking_code_' + slug, String(res.booking.bookingCode || res.booking._id || '')) } catch { /* ignore */ }
-      try {
-        if (res?.payment) localStorage.setItem('last_payment_data_' + slug, JSON.stringify(res.payment))
-      } catch {
-        // ignore
-      }
+      try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
       setBookings((prev) => [mapBooking(res.booking), ...prev])
-      // Clean up hold token after successful booking
-      localStorage.removeItem(`hold_token_${slug}`)
-      localStorage.removeItem(`hold_expires_${slug}`)
+      // Clean up client attempt id after successful booking
+      try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+      // deposit expiry will be fetched from server when needed; no client fallback write
       setBookingDraft((prev) => ({
         ...prev,
         holdToken: '',
         holdExpiresAt: ''
       }))
+      // clear attempt id after successful booking
+      try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
     }
     return res
   }, [bookingDraft])
 
   const holdBookingSlot = useCallback(async (slug, payload) => {
     if (!slug) return null
+    // ensure clientAttemptId exists and persist in sessionStorage so createBooking can use same id
+    const attemptKey = `client_attempt_${slug}`
+    try {
+      let attemptId = payload?.clientAttemptId || sessionStorage.getItem(attemptKey) || null
+      if (!attemptId && typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        attemptId = crypto.randomUUID()
+      }
+      if (attemptId) {
+        payload = { ...(payload || {}), clientAttemptId: attemptId }
+        try { sessionStorage.setItem(attemptKey, attemptId) } catch {}
+      }
+    } catch {
+      // ignore
+    }
     return await apiRequest(`/api/public/shops/${slug}/hold-slot`, { method: 'POST', body: payload })
   }, [])
 

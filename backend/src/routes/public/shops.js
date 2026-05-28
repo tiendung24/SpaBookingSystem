@@ -181,6 +181,7 @@ publicShopsRouter.get('/:slug/available-slots', asyncHandler(PublicShopsControll
  */
 publicShopsRouter.get('/:slug/bookings', asyncHandler(PublicShopsController.getBookingsByPhone))
 publicShopsRouter.post('/:slug/bookings', asyncHandler(PublicShopsController.createBooking))
+publicShopsRouter.get('/:slug/booking-attempts/:attemptId', asyncHandler(PublicShopsController.getBookingAttempt))
 /**
  * @openapi
  * /api/public/shops/{slug}/hold-slot:

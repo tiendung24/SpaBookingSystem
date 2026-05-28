@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 
@@ -70,32 +70,11 @@ export default function CustomerBookingTimePage() {
 
   const [selectedDate, setSelectedDate] = useState(bookingDraft.date || dateOnly(today))
   const [selectedTime, setSelectedTime] = useState(bookingDraft.time || '')
-  const [availableSlots, setAvailableSlots] = useState([])
+  const [availableSlots, setAvailableSlots] = useState(null)
   const [nowTick, setNowTick] = useState(() => Date.now())
+  const slotsRequestSeqRef = useRef(0)
 
-  const storedHoldToken = (() => {
-    try {
-      return localStorage.getItem(`hold_token_${slug}`) || ''
-    } catch {
-      return ''
-    }
-  })()
-
-  const storedHoldExpiresAt = (() => {
-    try {
-      return localStorage.getItem(`hold_expires_${slug}`) || ''
-    } catch {
-      return ''
-    }
-  })()
-
-  const storedBookingCode = (() => {
-    try {
-      return localStorage.getItem(`last_booking_code_${slug}`) || ''
-    } catch {
-      return ''
-    }
-  })()
+  // We no longer use localStorage fallbacks for hold/payment; bookingDraft and server-side attempt are authoritative
 
   useEffect(() => {
     if (!slug) return
@@ -104,28 +83,39 @@ export default function CustomerBookingTimePage() {
 
   useEffect(() => {
     if (!slug || !bookingDraft.serviceId || !selectedDate) return
-    let active = true
+    const requestSeq = ++slotsRequestSeqRef.current
+    const abortController = new AbortController()
     const staffId = bookingDraft.staffId === 'random' ? null : bookingDraft.staffId
-    const holdToken = bookingDraft.holdToken || storedHoldToken || ''
+    const holdToken = bookingDraft.holdToken || ''
 
     const run = async () => {
       try {
         const slots = await getAvailableSlots(slug, { serviceId: bookingDraft.serviceId, date: selectedDate, staffId, holdToken })
-        if (active) setAvailableSlots(Array.isArray(slots) ? slots : [])
-      } catch {
-        if (active) setAvailableSlots([])
+        if (!abortController.signal.aborted && requestSeq === slotsRequestSeqRef.current) {
+          setAvailableSlots(Array.isArray(slots) ? slots : [])
+        }
+      } catch (err) {
+        // network/server error: mark as null so UI uses client-side fallback and shows an explicit error if needed
+        if (!abortController.signal.aborted && requestSeq === slotsRequestSeqRef.current) {
+          console.error('[CustomerBookingTimePage] getAvailableSlots failed', err)
+          setAvailableSlots(null)
+        }
       }
     }
 
     run()
-    const timer = setInterval(() => {
-      run()
-    }, 3000)
-    return () => {
-      active = false
-      clearInterval(timer)
+    const onFocus = () => run()
+    const onVisibility = () => {
+      if (!document.hidden) run()
     }
-  }, [slug, bookingDraft.serviceId, bookingDraft.staffId, bookingDraft.holdToken, selectedDate, getAvailableSlots, storedHoldToken])
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      abortController.abort()
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [slug, bookingDraft.serviceId, bookingDraft.staffId, bookingDraft.holdToken, selectedDate, getAvailableSlots])
 
   useEffect(() => {
     const t = setInterval(() => setNowTick(Date.now()), 1000)
@@ -133,27 +123,7 @@ export default function CustomerBookingTimePage() {
   }, [])
 
 
-  // Restore holdToken from localStorage if exists
-  useEffect(() => {
-    if (!slug || bookingDraft.holdToken) return
-    const storedToken = localStorage.getItem(`hold_token_${slug}`)
-    const storedExpiresAt = localStorage.getItem(`hold_expires_${slug}`)
-    if (storedToken && storedExpiresAt) {
-      const expiresAt = new Date(storedExpiresAt)
-      if (expiresAt > new Date()) {
-        // Token still valid, restore it to context
-        setBookingDraft((prev) => ({
-          ...prev,
-          holdToken: storedToken,
-          holdExpiresAt: storedExpiresAt
-        }))
-      } else {
-        // Token expired, clean up
-        localStorage.removeItem(`hold_token_${slug}`)
-        localStorage.removeItem(`hold_expires_${slug}`)
-      }
-    }
-  }, [slug, bookingDraft.holdToken, setBookingDraft])
+  // No localStorage restore for holdToken; session-scoped attempt is used instead when available
 
   const [name, setName] = useState(bookingDraft.customerName || '')
   const [phone, setPhone] = useState(bookingDraft.customerPhone || '')
@@ -167,8 +137,8 @@ export default function CustomerBookingTimePage() {
   const emailOk = isValidEmail(emailTrimmed)
 
   const ownHoldSlot = useMemo(() => {
-    const holdToken = bookingDraft.holdToken || storedHoldToken || ''
-    const holdExpiresAt = bookingDraft.holdExpiresAt || storedHoldExpiresAt ? new Date(bookingDraft.holdExpiresAt || storedHoldExpiresAt) : null
+    const holdToken = bookingDraft.holdToken || ''
+    const holdExpiresAt = bookingDraft.holdExpiresAt ? new Date(bookingDraft.holdExpiresAt) : null
     if (!holdToken || !selectedDate || !bookingDraft.time) return null
     if (!holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) || holdExpiresAt.getTime() <= nowTick) return null
     return {
@@ -178,23 +148,17 @@ export default function CustomerBookingTimePage() {
       staffId: bookingDraft.staffId,
       holdToken
     }
-  }, [bookingDraft.holdToken, bookingDraft.holdExpiresAt, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate, storedHoldToken, storedHoldExpiresAt, nowTick])
+  }, [bookingDraft.holdToken, bookingDraft.holdExpiresAt, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate, nowTick])
 
   const ownBookedSlot = useMemo(() => {
-    if (!storedBookingCode || !bookingDraft.time || !selectedDate) return null
-    return {
-      date: selectedDate,
-      start: bookingDraft.time,
-      serviceId: bookingDraft.serviceId,
-      staffId: bookingDraft.staffId,
-      bookingCode: storedBookingCode
-    }
-  }, [storedBookingCode, bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate])
+    // We don't rely on localStorage last booking code; if needed UI should be hydrated from server
+    return null
+  }, [bookingDraft.time, bookingDraft.serviceId, bookingDraft.staffId, selectedDate])
 
   const slots = useMemo(() => {
     if (!service) return []
 
-    const hasBackendSlots = Array.isArray(availableSlots) && availableSlots.length > 0
+    const hasBackendSlots = Array.isArray(availableSlots)
     const availableSet = hasBackendSlots ? new Set(availableSlots) : null
 
     const start = toMinutes(openTime)
@@ -242,6 +206,14 @@ export default function CustomerBookingTimePage() {
 
   const confirmStep2 = async () => {
     if (!canConfirm) return
+    const currentHoldToken = bookingDraft.holdToken || ''
+    const currentHoldExpiresAt = bookingDraft.holdExpiresAt || ''
+    const currentHoldDateValid = currentHoldExpiresAt ? new Date(currentHoldExpiresAt) : null
+
+    const clearPreviousPaymentSession = () => {
+      try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+    }
+
     const isOwnBookedSlot = Boolean(
       ownBookedSlot &&
         ownBookedSlot.date === selectedDate &&
@@ -256,13 +228,44 @@ export default function CustomerBookingTimePage() {
         ownHoldSlot.serviceId === bookingDraft.serviceId &&
         String(ownHoldSlot.staffId || '') === String(bookingDraft.staffId || '')
     )
-    if (availableSlots.length > 0 && !availableSlots.includes(selectedTime) && !isOwnHeldSlot && !isOwnBookedSlot) {
+    if (Array.isArray(availableSlots) && !availableSlots.includes(selectedTime) && !isOwnHeldSlot && !isOwnBookedSlot) {
       alert('Khung giờ bạn chọn vừa kín. Vui lòng chọn giờ khác.')
       setSelectedTime('')
       return
     }
 
     if (isOwnBookedSlot) {
+      clearPreviousPaymentSession()
+      navigate(`/${slug}/book/pay`)
+      return
+    }
+
+    const canReuseExistingHold = Boolean(
+      currentHoldToken &&
+      ownHoldSlot &&
+      ownHoldSlot.date === selectedDate &&
+      ownHoldSlot.start === selectedTime &&
+      ownHoldSlot.serviceId === bookingDraft.serviceId &&
+      String(ownHoldSlot.staffId || '') === String(bookingDraft.staffId || '') &&
+      currentHoldDateValid &&
+      !Number.isNaN(currentHoldDateValid.getTime()) &&
+      currentHoldDateValid.getTime() > Date.now()
+    )
+
+    if (canReuseExistingHold) {
+      clearPreviousPaymentSession()
+      try { /* keep in bookingDraft/session attempt; no localStorage fallback */ } catch {}
+      setBookingDraft((prev) => ({
+        ...prev,
+        date: selectedDate,
+        time: selectedTime,
+        customerName: name.trim(),
+        customerPhone: phoneTrimmed,
+        customerEmail: emailTrimmed,
+        note,
+        holdToken: currentHoldToken,
+        holdExpiresAt: currentHoldExpiresAt
+      }))
       navigate(`/${slug}/book/pay`)
       return
     }
@@ -276,18 +279,18 @@ export default function CustomerBookingTimePage() {
         time: selectedTime
       }
       // If already holding a slot, reuse the token
-      const currentHoldToken = bookingDraft.holdToken || storedHoldToken || ''
       if (currentHoldToken) {
         payload.holdToken = currentHoldToken
       }
       const res = await holdBookingSlot(slug, payload)
       const newToken = res?.holdToken || currentHoldToken || ''
       const newExpiresAt = res?.expiresAt || bookingDraft.holdExpiresAt || storedHoldExpiresAt || ''
+
+      clearPreviousPaymentSession()
       
       // Save token to localStorage
       if (newToken) {
-        localStorage.setItem(`hold_token_${slug}`, newToken)
-        localStorage.setItem(`hold_expires_${slug}`, newExpiresAt)
+        // hold token stored in bookingDraft; client attempt id persisted via holdBookingSlot
       }
       
       setBookingDraft((prev) => ({

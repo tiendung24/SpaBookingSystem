@@ -93,16 +93,16 @@ export async function createBooking(req, res) {
   let staffId = requestedStaffId || null
   if (staffId) {
     const staff = await ShopStaff.findOne({ _id: staffId, shopId, status: 'active' }).lean()
-    if (!staff) throw httpError(404, 'Không tìm thấy nhân viên khả dụng')
+      if (!staff) throw httpError(404, 'Không tìm thấy nhân viên khả dụng')
     const staffBusy = overlapping.some((booking) => String(booking.staffId || '') === String(staffId))
-    if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
+      if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
   } else {
     const staffs = await ShopStaff.find({ shopId, status: 'active' }).lean()
     const availableStaff = staffs.find((staff) => {
       const busy = overlapping.some((booking) => String(booking.staffId || '') === String(staff._id))
       return !busy
     })
-    if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
+      if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
     staffId = String(availableStaff._id)
   }
 
@@ -110,17 +110,17 @@ export async function createBooking(req, res) {
   const session = await mongoose.startSession()
   let booking
   try {
-    await session.withTransaction(async () => {
-      await BookingSlotLock.create([{ shopId, staffId: String(staffId), serviceId: String(serviceId), startTime, endTime }], { session })
-
-      const created = await Booking.create(
+    const runOps = async (useSession) => {
+      const createOpts = useSession ? { session } : undefined
+      await BookingSlotLock.create([{ shopId, staffId: String(staffId), serviceId: String(serviceId), startTime, endTime }], createOpts)
+      const newBooking = await Booking.create(
         [
           {
             bookingCode,
             shopId,
             customerId: String(customer._id),
             customerName,
-            customerPhone: String(phone).replace(/\s+/g, ''),
+            customerPhone: String(phone).replace(/\\s+/g, ''),
             serviceId,
             staffId: staffId || null,
             startTime,
@@ -133,10 +133,19 @@ export async function createBooking(req, res) {
             updatedAt: new Date()
           }
         ],
-        { session }
+        createOpts
       )
-      booking = created[0]
-    })
+      booking = newBooking[0]
+    }
+
+    try {
+      await session.withTransaction(async () => runOps(true))
+    } catch (error) {
+      const msg = String(error?.message || '')
+      const illegalTxn = error?.code === 20 || msg.includes('Transaction numbers are only allowed')
+      if (!illegalTxn) throw error
+      await runOps(false)
+    }
   } catch (error) {
     await session.endSession()
     if (error?.code === 11000) throw httpError(409, 'Slot vừa được đặt, vui lòng chọn giờ khác')
