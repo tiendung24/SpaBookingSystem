@@ -102,6 +102,11 @@ function isSuccessfulPaymentStatus(status) {
   return ['success', 'paid', 'completed'].includes(String(status || '').toLowerCase())
 }
 
+function pickBookingCode(booking) {
+  const bookingCode = String(booking?.bookingCode || '').trim()
+  return bookingCode || ''
+}
+
 function normalizePhone(input) {
   return String(input || '')
     .trim()
@@ -287,11 +292,15 @@ export default function CustomerPaymentPage() {
   const [bookingExpiresAt, setBookingExpiresAt] = useState(bookingDraft?.holdExpiresAt || paymentSnapshot?.bookingExpiresAt || paymentSnapshot?.depositExpiresAt || '')
   const [success, setSuccess] = useState(false)
   const [expired, setExpired] = useState(false)
-  const [createdBookingId, setCreatedBookingId] = useState(paymentSnapshot?.createdBookingId || null)
+  const [createdBookingId, setCreatedBookingId] = useState(() => {
+    const initial = String(paymentSnapshot?.createdBookingId || '').trim()
+    return /^BK/i.test(initial) ? initial : null
+  })
   const [confetti, setConfetti] = useState(false)
 
   const [payosData, setPayosData] = useState(paymentSnapshot?.payosData ? normalizePaymentPayload(paymentSnapshot.payosData) : null)
   const [creating, setCreating] = useState(false)
+  const [qrFetchHint, setQrFetchHint] = useState('')
   const [restoreChecked, setRestoreChecked] = useState(false)
   const [showRestoreHold, setShowRestoreHold] = useState(false)
   const [attemptAmounts, setAttemptAmounts] = useState(paymentSnapshot?.attemptAmounts || { depositAmount: 0, totalAmount: 0 })
@@ -415,7 +424,7 @@ export default function CustomerPaymentPage() {
     if (!bookingCode) return null
     const res = await checkBookingStatus(bookingCode)
     if (res?.booking) {
-      setCreatedBookingId(res.booking.bookingCode || res.booking._id)
+      setCreatedBookingId(pickBookingCode(res.booking))
       if (res.booking.depositExpiresAt) {
         setBookingExpiresAt(res.booking.depositExpiresAt)
       }
@@ -448,6 +457,52 @@ export default function CustomerPaymentPage() {
     }
     return null
   }, [checkBookingStatus])
+
+  const retryFetchPaymentNow = useCallback(async () => {
+    const bookingCode = String(createdBookingId || '').trim()
+    if (!bookingCode) {
+      setQrFetchHint('Không tìm thấy mã booking để lấy lại QR.')
+      return
+    }
+
+    setQrFetchHint('Đang thử lấy lại mã thanh toán...')
+    try {
+      try {
+        await apiRequest(`/api/public/bookings/${encodeURIComponent(bookingCode)}/refresh-payment`, { method: 'POST' })
+      } catch {
+        // ignore
+      }
+      const normalized = await fetchPaymentWithRetries(bookingCode, 12, 500)
+      if (normalized) {
+        setQrFetchHint('Đã lấy lại mã thanh toán.')
+        return
+      }
+      const res = await syncBookingState(bookingCode)
+      const payment = res?.payment || res?.data?.payment || null
+      if (payment) {
+        setPayosData(normalizePaymentPayload(payment))
+        setQrFetchHint('Đã lấy lại mã thanh toán.')
+        return
+      }
+      setQrFetchHint('Chưa lấy được mã thanh toán. Vui lòng thử lại sau vài giây.')
+    } catch {
+      setQrFetchHint('Không thể lấy lại mã thanh toán. Vui lòng thử lại.')
+    }
+  }, [createdBookingId, fetchPaymentWithRetries, syncBookingState])
+
+  // Fail-safe: if booking exists but QR/payment is still missing after a short delay, show a retry hint.
+  useEffect(() => {
+    if (success || expired) return
+    if (!shop?.deposit?.enabled) return
+    if (!createdBookingId) return
+    if (payosData) return
+    if (!depositAmount || depositAmount <= 0) return
+
+    const timer = setTimeout(() => {
+      setQrFetchHint((prev) => prev || 'Đang lấy mã thanh toán cọc... Nếu chờ lâu, bấm “Thử lấy lại mã cọc”.')
+    }, 3500)
+    return () => clearTimeout(timer)
+  }, [success, expired, shop?.deposit?.enabled, createdBookingId, payosData, depositAmount])
 
   // Seed payosData from globals if present (helps avoid first-render race in prod)
   useEffect(() => {
@@ -542,7 +597,7 @@ export default function CustomerPaymentPage() {
                 depositAmount: Number(attemptRes.booking.depositAmount || 0),
                 totalAmount: Number(attemptRes.booking.totalAmount || 0)
               })
-              setCreatedBookingId(attemptRes.booking.bookingCode || attemptRes.booking._id)
+              setCreatedBookingId(pickBookingCode(attemptRes.booking))
             }
             if (attemptRes?.payment) setPayosData(normalizePaymentPayload(attemptRes.payment))
           } catch {
@@ -625,7 +680,7 @@ export default function CustomerPaymentPage() {
               ...(hydratedDraft || {})
             }
             writePaymentSnapshot(slug, {
-              createdBookingId: res.booking.bookingCode || res.booking._id,
+              createdBookingId: pickBookingCode(res.booking),
               bookingExpiresAt: res.booking.depositExpiresAt || bookingExpiresAt,
               payosData: res?.payment ? normalizePaymentPayload(res.payment) : payosData,
               attemptAmounts: {
@@ -651,7 +706,7 @@ export default function CustomerPaymentPage() {
               depositAmount: Number(res.booking.depositAmount || 0),
               totalAmount: Number(res.booking.totalAmount || 0)
             })
-            setCreatedBookingId(res.booking.bookingCode || res.booking._id)
+            setCreatedBookingId(pickBookingCode(res.booking))
             if (res.booking.depositExpiresAt) {
               setBookingExpiresAt(res.booking.depositExpiresAt)
             }
@@ -661,7 +716,7 @@ export default function CustomerPaymentPage() {
             const normalized = normalizePaymentPayload(res.payment)
             setPayosData(normalized)
             writePaymentSnapshot(slug, {
-              createdBookingId: res.booking?.bookingCode || res.booking?._id || createdBookingId,
+              createdBookingId: pickBookingCode(res.booking) || createdBookingId,
               bookingExpiresAt: res.booking?.depositExpiresAt || bookingExpiresAt,
               payosData: normalized,
               attemptAmounts,
@@ -676,17 +731,17 @@ export default function CustomerPaymentPage() {
             const needPolling = !normalized?.checkoutUrl && !normalized?.qrCodeUrl && !normalized?.qrCode
             if (needPolling) {
               // increase attempts for this situation (webhook persistence lag)
-              void fetchPaymentWithRetries(res.booking?.bookingCode || res.booking?._id, 24, 500)
-              void syncBookingState(res.booking?.bookingCode || res.booking?._id)
+              void fetchPaymentWithRetries(pickBookingCode(res.booking), 24, 500)
+              void syncBookingState(pickBookingCode(res.booking))
             }
           } else if (res?.booking) {
             // Booking was created but payment object may not be persisted yet in prod.
             // Try to hydrate payment info for a few seconds to avoid forcing user reload.
-            if (!res?.payment && res?.booking?.bookingCode) {
-              void fetchPaymentWithRetries(res.booking.bookingCode, 12, 500)
+            if (res?.booking?.bookingCode) {
+              void fetchPaymentWithRetries(res.booking.bookingCode, 24, 500)
             }
             // Booking exists but no immediate payment payload; sync authoritative state from server.
-            void syncBookingState(res.booking.bookingCode || res.booking._id)
+            void syncBookingState(res.booking.bookingCode)
 
             // If the shop does not require a deposit, consider this step complete for the customer
             // UX-wise even if the payment system hasn't separately recorded a payment object yet.
@@ -694,7 +749,7 @@ export default function CustomerPaymentPage() {
             // completed because no deposit is required.
             try {
               if (!shop?.deposit?.enabled) {
-                setCreatedBookingId(res.booking.bookingCode || res.booking._id)
+                setCreatedBookingId(pickBookingCode(res.booking))
                 setSuccess(true)
                 setConfetti(true)
                 setTimeout(() => setConfetti(false), 2500)
@@ -919,7 +974,7 @@ export default function CustomerPaymentPage() {
         const paid = booking?.status === 'confirmed' || isSuccessfulPaymentStatus(payment?.status)
 
         if (paid) {
-          setCreatedBookingId(booking?.bookingCode || bookingCode)
+          setCreatedBookingId(pickBookingCode(booking) || bookingCode)
           setSuccess(true)
           setConfetti(true)
           setTimeout(() => setConfetti(false), 2500)
@@ -1024,7 +1079,18 @@ export default function CustomerPaymentPage() {
                   <h3 className="font-bold mb-3">Quét QR để thanh toán</h3>
                   <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 min-h-[320px]">
                       {isPaymentLoading ? (
-                        <div className="text-main/60">Đang lấy mã thanh toán cọc...</div>
+                        <div className="text-center text-main/70 space-y-3">
+                          <div>{qrFetchHint || 'Đang lấy mã thanh toán cọc...'}</div>
+                          {qrFetchHint ? (
+                            <button
+                              type="button"
+                              className="px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110"
+                              onClick={retryFetchPaymentNow}
+                            >
+                              Thử lấy lại mã cọc
+                            </button>
+                          ) : null}
+                        </div>
                     ) : (payosData?.qrCodeUrl || payosData?.qrCode || payosData?.checkoutUrl) ? (
                       <img
                         className="w-[300px] h-[300px] rounded-2xl"
@@ -1033,7 +1099,16 @@ export default function CustomerPaymentPage() {
                       />
                     ) : (
                         <div className="text-main/60 text-center">
-                          {depositAmount > 0 ? 'Không lấy được mã QR. Vui lòng mở liên kết PayOS.' : 'Không cần đặt cọc.'}
+                          <p>{depositAmount > 0 ? 'Không lấy được mã QR. Vui lòng thử lấy lại mã cọc.' : 'Không cần đặt cọc.'}</p>
+                          {depositAmount > 0 ? (
+                            <button
+                              type="button"
+                              className="mt-3 px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110"
+                              onClick={retryFetchPaymentNow}
+                            >
+                              Thử lấy lại mã cọc
+                            </button>
+                          ) : null}
                         </div>
                     )}
                   </div>

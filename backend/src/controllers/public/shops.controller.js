@@ -296,7 +296,38 @@ export async function createBooking(req, res) {
   if (clientBookingAttemptId) {
     const existingBooking = await Booking.findOne({ shopId: String(shop._id), clientAttemptId: String(clientBookingAttemptId) }).lean()
     if (existingBooking) {
-      const paymentRow = await PayosPayment.findOne({ bookingId: String(existingBooking._id) }).lean()
+      let paymentRow = await PayosPayment.findOne({ bookingId: String(existingBooking._id) }).lean()
+      if (!paymentRow && Number(existingBooking.depositAmount || 0) > 0) {
+        const payos = new PayOSService()
+        const payment = await payos.createDepositPayment({
+          bookingCode: existingBooking.bookingCode,
+          amount: Number(existingBooking.depositAmount || 0),
+          description: `LUMIX_${existingBooking.bookingCode}`
+        })
+        paymentRow = await PayosPayment.create({
+          bookingId: String(existingBooking._id),
+          shopId: String(shop._id),
+          amount: payment.amount,
+          orderCode: String(payment.payosOrderId || ''),
+          status: payment.status,
+          raw: payment,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        await Deposit.findOneAndUpdate(
+          { bookingId: String(existingBooking._id) },
+          {
+            $setOnInsert: {
+              shopId: String(shop._id),
+              amount: Number(existingBooking.depositAmount || 0),
+              status: 'pending',
+              createdAt: new Date()
+            },
+            $set: { updatedAt: new Date() }
+          },
+          { upsert: true, new: true }
+        )
+      }
       return res.status(200).json({ booking: existingBooking, payment: paymentRow || null })
     }
   }
