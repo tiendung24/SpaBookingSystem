@@ -48,9 +48,10 @@ export async function payosWebhook(req, res) {
   if (!isSuccess) return res.json({ ok: true, paymentId: String(payment._id), status: payment.status })
 
   if (!payment.bookingId) {
+    const defaultMin = Number(process.env.SHOP_WALLET_MIN_BALANCE || 100000)
     const wallet = await Wallet.findOneAndUpdate(
       { shopId: payment.shopId },
-      { $setOnInsert: { balance: 0, minBalance: 0, escrowBalance: 0, status: 'active' }, $set: { updatedAt: new Date() } },
+      { $setOnInsert: { balance: 0, minBalance: defaultMin, escrowBalance: 0, status: 'active' }, $set: { updatedAt: new Date() } },
       { upsert: true, new: true }
     )
 
@@ -91,9 +92,10 @@ export async function payosWebhook(req, res) {
         await deposit.save()
       }
 
+      const defaultMin = Number(process.env.SHOP_WALLET_MIN_BALANCE || 100000)
       const wallet = await Wallet.findOneAndUpdate(
         { shopId: payment.shopId },
-        { $setOnInsert: { balance: 0, minBalance: 0, escrowBalance: 0, status: 'active' }, $set: { updatedAt: new Date() } },
+        { $setOnInsert: { balance: 0, minBalance: defaultMin, escrowBalance: 0, status: 'active' }, $set: { updatedAt: new Date() } },
         { upsert: true, new: true }
       )
 

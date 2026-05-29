@@ -794,7 +794,8 @@ export function ShopProvider({ children }) {
       token,
       body: { amount: Number(amount || 0) }
     })
-    await loadMeAndShop(token)
+    // Do not refresh wallet here: payment must complete via webhook.
+    // Caller (UI) should poll topup status and then call `loadMeAndShop` when confirmed.
     return res
   }
 

@@ -3,7 +3,7 @@ import ShopSidebar from '../components/shop/ShopSidebar';
 import { useShop } from '../context/ShopContext';
 
 export default function ShopWalletPage() {
-  const { shop, walletTransactions, topupWallet, bookings } = useShop();
+  const { shop, walletTransactions, topupWallet, bookings, loadMeAndShop, token } = useShop();
   const [cardTransform, setCardTransform] = useState('perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)');
   const [topupAmount, setTopupAmount] = useState(200000);
   const [qrVisible, setQrVisible] = useState(false);
@@ -97,6 +97,29 @@ export default function ShopWalletPage() {
       const res = await topupWallet(Number(topupAmount || 0));
       if (res && res.topup) {
         setPayosData(res.topup);
+
+        // Poll topup status until success, then refresh wallet
+        const topupId = String(res.topup.topupId || res.topup.orderCode || '');
+        if (topupId) {
+          const interval = setInterval(async () => {
+            try {
+              const statusRes = await fetch((import.meta.env.VITE_API_BASE_URL || '') + `/api/shop/wallet/topup/${encodeURIComponent(topupId)}/status`, {
+                headers: { Authorization: token ? `Bearer ${token}` : '' }
+              });
+              if (!statusRes.ok) return;
+              const data = await statusRes.json();
+              const st = String(data.status || '').toLowerCase();
+              if (st === 'success' || st === 'paid' || st === 'completed') {
+                clearInterval(interval);
+                try { await loadMeAndShop(token) } catch {}
+                setQrVisible(false);
+                setPayosData(null);
+              }
+            } catch (e) {
+              // ignore polling errors
+            }
+          }, 3000);
+        }
       }
     } catch (err) {
       console.error("Lỗi tạo link nạp tiền:", err);
