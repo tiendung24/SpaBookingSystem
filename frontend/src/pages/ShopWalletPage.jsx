@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ShopSidebar from '../components/shop/ShopSidebar';
 import { useShop } from '../context/ShopContext';
+import { apiRequest } from '../lib/api';
 
 export default function ShopWalletPage() {
   const { shop, walletTransactions, topupWallet, bookings, loadMeAndShop, token } = useShop();
@@ -89,11 +90,16 @@ export default function ShopWalletPage() {
 
   const [payosData, setPayosData] = useState(null);
   const [loadingQr, setLoadingQr] = useState(false);
+  const topupPollRef = useRef(null);
 
   const createPayosQr = async () => {
     setLoadingQr(true);
     setQrVisible(true);
     try {
+      if (topupPollRef.current) {
+        clearInterval(topupPollRef.current);
+        topupPollRef.current = null;
+      }
       const res = await topupWallet(Number(topupAmount || 0));
       if (res && res.topup) {
         setPayosData(res.topup);
@@ -101,16 +107,31 @@ export default function ShopWalletPage() {
         // Poll topup status until success, then refresh wallet
         const topupId = String(res.topup.topupId || res.topup.orderCode || '');
         if (topupId) {
-          const interval = setInterval(async () => {
+          let attempts = 0;
+          topupPollRef.current = setInterval(async () => {
             try {
-              const statusRes = await fetch((import.meta.env.VITE_API_BASE_URL || '') + `/api/shop/wallet/topup/${encodeURIComponent(topupId)}/status`, {
-                headers: { Authorization: token ? `Bearer ${token}` : '' }
+              attempts += 1;
+              if (attempts > 40) {
+                clearInterval(topupPollRef.current);
+                topupPollRef.current = null;
+                return;
+              }
+              const data = await apiRequest(`/api/shop/wallet/topup/${encodeURIComponent(topupId)}/status`, {
+                method: 'GET',
+                token
+              }).catch((err) => {
+                if (err?.status === 404) return { status: 'not_found' };
+                throw err;
               });
-              if (!statusRes.ok) return;
-              const data = await statusRes.json();
               const st = String(data.status || '').toLowerCase();
+              if (st === 'not_found') {
+                clearInterval(topupPollRef.current);
+                topupPollRef.current = null;
+                return;
+              }
               if (st === 'success' || st === 'paid' || st === 'completed') {
-                clearInterval(interval);
+                clearInterval(topupPollRef.current);
+                topupPollRef.current = null;
                 try { await loadMeAndShop(token) } catch {}
                 setQrVisible(false);
                 setPayosData(null);
@@ -132,6 +153,15 @@ export default function ShopWalletPage() {
     setQrVisible(false);
     setPayosData(null);
   };
+
+  useEffect(() => {
+    return () => {
+      if (topupPollRef.current) {
+        clearInterval(topupPollRef.current);
+        topupPollRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 font-body-md text-main">

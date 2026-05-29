@@ -60,7 +60,10 @@ export async function createTopup(req, res) {
 export async function getTopupStatus(req, res) {
   const shopId = req.auth.shopId
   const payment = await PayosPayment.findOne({ shopId, orderCode: req.params.topupId }).lean()
-  res.json({ topupId: req.params.topupId, status: payment?.status || 'unknown', payment })
+  if (!payment) {
+    throw httpError(404, 'Không tìm thấy giao dịch nạp ví')
+  }
+  res.json({ topupId: req.params.topupId, status: payment.status || 'pending', payment })
 }
 
 export async function getDepositSettings(req, res) {
