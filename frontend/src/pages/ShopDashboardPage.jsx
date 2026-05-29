@@ -60,6 +60,10 @@ export default function ShopDashboardPage() {
   const [dateFilter, setDateFilter] = useState('today')
   const [customDate, setCustomDate] = useState(new Date().toISOString().slice(0, 10))
 
+  const walletBalance = Number(shop.wallet?.balance || 0)
+  const walletMinBalance = Number(shop.wallet?.minBalance || 100000)
+  const isWalletHealthy = walletBalance >= walletMinBalance
+
   const bookingLink = `${window.location.origin}/${shop.slug}`
 
   const todayBookings = useMemo(() => bookings.filter((item) => isToday(item.time)), [bookings])
@@ -144,11 +148,11 @@ export default function ShopDashboardPage() {
     },
     {
       title: 'Số dư ví LumiX',
-      value: formatVnd(shop.wallet.balance),
+      value: formatVnd(walletBalance),
       icon: 'wallet',
       valueColor: 'text-primary',
-      note: shop.wallet.balance >= shop.wallet.minBalance ? 'An toàn' : 'Cần nạp thêm',
-      noteColor: shop.wallet.balance >= shop.wallet.minBalance ? 'text-cyan-700' : 'text-red-600'
+      note: isWalletHealthy ? 'An toàn' : 'Cần nạp thêm',
+      noteColor: isWalletHealthy ? 'text-cyan-700' : 'text-red-600'
     }
   ]
 
@@ -180,6 +184,29 @@ export default function ShopDashboardPage() {
           </button>
         </header>
 
+        {!isWalletHealthy ? (
+          <section className="glass-card rounded-3xl border border-amber-200 bg-amber-50/90 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              </div>
+              <div>
+                <p className="font-h3 text-h3 text-amber-800">Ví LumiX dưới mức duy trì</p>
+                <p className="text-main/80 mt-1">
+                  Ví hiện tại chỉ còn <strong>{formatVnd(walletBalance)}</strong>. Bạn cần duy trì tối thiểu <strong>{formatVnd(walletMinBalance)}</strong> để link đặt lịch tiếp tục hoạt động.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/shop/wallet')}
+              className="px-4 py-3 rounded-xl bg-amber-600 text-white font-bold hover:bg-amber-700 transition-all"
+            >
+              Nạp ví ngay
+            </button>
+          </section>
+        ) : null}
+
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {stats.map((stat) => (
             <article key={stat.title} className="glass-card inner-glow rounded-3xl p-6 bg-white relative overflow-hidden">
@@ -197,8 +224,8 @@ export default function ShopDashboardPage() {
           <article className="glass-card bg-white rounded-3xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-h3 text-h3 text-primary">Link đặt lịch</h4>
-              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-                {copied ? 'Đã sao chép' : 'Online'}
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${isWalletHealthy ? 'bg-primary/10 text-primary' : 'bg-amber-100 text-amber-700'}`}>
+                {copied ? 'Đã sao chép' : (isWalletHealthy ? 'Online' : 'Tạm ngưng')}
               </span>
             </div>
             <div className="flex items-center justify-between rounded-2xl bg-rose-50 border border-rose-100 px-4 py-3">
@@ -278,7 +305,7 @@ export default function ShopDashboardPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-main/70">Ngưỡng ví tối thiểu</span>
-                <span className="font-bold text-primary">{formatVnd(shop.wallet.minBalance)}</span>
+                <span className="font-bold text-primary">{formatVnd(walletMinBalance)}</span>
               </div>
             </div>
           </article>

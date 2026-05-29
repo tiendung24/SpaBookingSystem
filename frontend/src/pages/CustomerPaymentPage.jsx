@@ -911,6 +911,8 @@ export default function CustomerPaymentPage() {
     let lastError = null
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
+        // First, ask server to refresh payment by querying PayOS (best-effort)
+        try { await apiRequest(`/api/public/bookings/${bookingCode}/refresh-payment`, { method: 'POST' }) } catch {}
         const res = await checkBookingStatus(bookingCode)
         const booking = res?.booking || res?.data?.booking || null
         const payment = res?.payment || res?.data?.payment || null

@@ -95,6 +95,8 @@ export async function createService(req, res) {
     name: serviceName,
     slug: serviceSlug || undefined,
     description: req.body?.description || '',
+    shortDescription: req.body?.shortDescription || '',
+    detailedDescription: req.body?.detailedDescription || '',
     price,
     durationMinutes,
     imageUrl: req.body?.imageUrl || '',
@@ -131,6 +133,8 @@ export async function updateService(req, res) {
   if (patch.price !== undefined) patch.price = requireNumber(patch.price, 'price', { min: 0 })
   if (patch.durationMinutes !== undefined) patch.durationMinutes = requireNumber(patch.durationMinutes, 'durationMinutes', { min: 15 })
   if (patch.sortOrder !== undefined) patch.sortOrder = toNumber(patch.sortOrder)
+  if (patch.shortDescription !== undefined) patch.shortDescription = String(patch.shortDescription || '')
+  if (patch.detailedDescription !== undefined) patch.detailedDescription = String(patch.detailedDescription || '')
   patch.updatedAt = new Date()
 
   const service = await Service.findOneAndUpdate({ _id: req.params.serviceId, shopId }, patch, { new: true }).lean()

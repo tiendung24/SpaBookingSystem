@@ -8,6 +8,10 @@ export default function ShopWalletPage() {
   const [topupAmount, setTopupAmount] = useState(200000);
   const [qrVisible, setQrVisible] = useState(false);
 
+  const walletBalance = Number(shop.wallet?.balance || 0);
+  const walletMinBalance = Number(shop.wallet?.minBalance || 100000);
+  const isWalletHealthy = walletBalance >= walletMinBalance;
+
   const transactions = useMemo(() => {
     return walletTransactions.map((t) => {
       const typeMeta =
@@ -124,6 +128,35 @@ export default function ShopWalletPage() {
           </div>
         </header>
 
+        <div className={`mb-8 rounded-3xl border p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 ${isWalletHealthy ? 'border-emerald-200 bg-emerald-50/80' : 'border-amber-200 bg-amber-50/90'}`}>
+          <div className="flex items-start gap-3">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${isWalletHealthy ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                {isWalletHealthy ? 'check_circle' : 'warning'}
+              </span>
+            </div>
+            <div>
+              <p className={`font-h3 text-h3 ${isWalletHealthy ? 'text-emerald-800' : 'text-amber-800'}`}>
+                {isWalletHealthy ? 'Ví LumiX đang hoạt động' : 'Ví LumiX dưới mức duy trì'}
+              </p>
+              <p className="font-body-md text-body-md text-main/80 mt-1">
+                {isWalletHealthy
+                  ? `Số dư hiện tại ${walletBalance.toLocaleString('vi-VN')}đ, ngưỡng tối thiểu ${walletMinBalance.toLocaleString('vi-VN')}đ.`
+                  : `Ví hiện tại chỉ còn ${walletBalance.toLocaleString('vi-VN')}đ. Bạn cần nạp tối thiểu ${walletMinBalance.toLocaleString('vi-VN')}đ để link đặt lịch tiếp tục hoạt động.`}
+              </p>
+            </div>
+          </div>
+          {!isWalletHealthy ? (
+            <button
+              type="button"
+              onClick={createPayosQr}
+              className="px-5 py-3 rounded-xl bg-amber-600 text-white font-label-bold text-label-bold hover:bg-amber-700 transition-all active:scale-95"
+            >
+              Nạp ví ngay
+            </button>
+          ) : null}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mb-16">
           <div
             className="lg:col-span-5 rounded-3xl p-6 flex flex-col justify-between text-white shadow-2xl relative overflow-hidden transition-transform duration-300 bg-gradient-to-br from-primary to-secondary"
@@ -136,11 +169,11 @@ export default function ShopWalletPage() {
             <div className="flex justify-between items-start z-10">
               <div>
                 <p className="font-label-bold text-label-bold opacity-80 mb-1 uppercase tracking-widest">Số dư khả dụng</p>
-                <h3 className="font-h1 text-h1 font-bold">{Number(shop.wallet?.balance || 0).toLocaleString('vi-VN')} VNĐ</h3>
+                <h3 className="font-h1 text-h1 font-bold">{walletBalance.toLocaleString('vi-VN')} VNĐ</h3>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full backdrop-blur-md">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                <span className="font-label-bold text-label-bold">Link đang hoạt động</span>
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full backdrop-blur-md ${isWalletHealthy ? 'bg-white/20' : 'bg-amber-500/20'}`}>
+                <span className={`w-2 h-2 rounded-full animate-pulse ${isWalletHealthy ? 'bg-green-400' : 'bg-amber-300'}`}></span>
+                <span className="font-label-bold text-label-bold">{isWalletHealthy ? 'Link đang hoạt động' : 'Link tạm ngưng'}</span>
               </div>
             </div>
 
@@ -163,7 +196,7 @@ export default function ShopWalletPage() {
               <div>
                 <p className="font-h3 text-h3 text-red-700 mb-1">Cảnh báo duy trì số dư</p>
                 <p className="font-body-md text-body-md text-red-900/80">
-                  Bạn cần duy trì tối thiểu <strong>{Number(shop.wallet?.minBalance || 0).toLocaleString('vi-VN')}đ</strong> để nhận lịch online. Nếu số dư thấp hơn, link sẽ tạm ngưng hoạt động.
+                  Bạn cần duy trì tối thiểu <strong>{walletMinBalance.toLocaleString('vi-VN')}đ</strong> để nhận lịch online. Nếu số dư thấp hơn, link sẽ tạm ngưng hoạt động.
                 </p>
               </div>
             </div>

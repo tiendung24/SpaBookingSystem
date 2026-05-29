@@ -13,8 +13,11 @@ const menus = [
 export default function ShopSidebar({ onNewBooking }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { logout, unreadNotificationCount } = useShop()
+  const { logout, unreadNotificationCount, shop } = useShop()
   const configActive = location.pathname.startsWith('/shop/config')
+  const walletBalance = Number(shop.wallet?.balance || 0)
+  const walletMinBalance = Number(shop.wallet?.minBalance || 100000)
+  const isWalletHealthy = walletBalance >= walletMinBalance
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-white/90 backdrop-blur-xl border-r border-slate-200 p-4 flex flex-col z-40">
@@ -34,6 +37,24 @@ export default function ShopSidebar({ onNewBooking }) {
         <span className="material-symbols-outlined">add_circle</span>
         Tạo lịch hẹn mới
       </button>
+
+      <div className={`mt-4 rounded-2xl border px-4 py-3 ${isWalletHealthy ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
+        <div className="flex items-start gap-3">
+          <span className={`material-symbols-outlined ${isWalletHealthy ? 'text-emerald-600' : 'text-amber-700'}`}>
+            {isWalletHealthy ? 'check_circle' : 'warning'}
+          </span>
+          <div className="min-w-0">
+            <p className={`text-sm font-bold ${isWalletHealthy ? 'text-emerald-700' : 'text-amber-800'}`}>
+              {isWalletHealthy ? 'Ví LumiX đang hoạt động' : 'Ví LumiX dưới mức duy trì'}
+            </p>
+            <p className="text-xs text-main/70 mt-1">
+              {isWalletHealthy
+                ? `Số dư ${walletBalance.toLocaleString('vi-VN')}đ, ngưỡng tối thiểu ${walletMinBalance.toLocaleString('vi-VN')}đ.`
+                : `Còn ${walletBalance.toLocaleString('vi-VN')}đ. Cần nạp tối thiểu ${walletMinBalance.toLocaleString('vi-VN')}đ để link hoạt động.`}
+            </p>
+          </div>
+        </div>
+      </div>
 
       <nav className="flex-grow space-y-2 overflow-y-auto pr-1 pt-4">
         {menus.map((menu) => {

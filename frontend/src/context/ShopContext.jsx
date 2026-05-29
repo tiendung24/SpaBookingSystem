@@ -54,6 +54,8 @@ function mapService(item) {
     id: item._id,
     name: item.name,
     category: item.categoryId || '',
+    shortDescription: item.shortDescription || '',
+    detailedDescription: item.detailedDescription || '',
     priceVnd: Number(item.price || 0),
     durationMinutes: Number(item.durationMinutes || 0),
     visible: item.status !== 'inactive',
@@ -66,6 +68,9 @@ function mapStaff(item) {
   return {
     id: item._id,
     name: item.fullName || item.name || '',
+    shortBio: item.shortBio || '',
+    bio: item.bio || '',
+    specialties: item.specialties || [],
     phone: item.phone || '',
     role: item.role || 'tech',
     status: item.status || 'active',
@@ -146,7 +151,7 @@ export function ShopProvider({ children }) {
       value: 0,
       cancelHours: 4
     },
-    wallet: { balance: 0, escrow: 0 }
+    wallet: { balance: 0, escrow: 0, minBalance: 100000 }
   })
   const [services, setServices] = useState([])
   const [staff, setStaff] = useState([])
@@ -223,7 +228,8 @@ export function ShopProvider({ children }) {
         ...prev,
         wallet: {
           balance: Number(walletRes.balance || 0),
-          escrow: Number(walletRes.escrowBalance || 0)
+          escrow: Number(walletRes.escrowBalance || 0),
+          minBalance: Number(walletRes.minBalance || prev.wallet?.minBalance || 100000)
         }
       }))
       setError('')
@@ -658,12 +664,14 @@ export function ShopProvider({ children }) {
 
   const addService = async (service) => {
     const payload = {
-      name: service.name,
-      categoryId: service.category || service.categoryId,
-      price: Number(service.priceVnd ?? service.price ?? 0),
-      durationMinutes: Number(service.durationMinutes || 0),
-      imageUrl: service.imageUrl || '',
-      availableStaffIds: service.staffIds || []
+        name: service.name,
+        categoryId: service.category || service.categoryId,
+        price: Number(service.priceVnd ?? service.price ?? 0),
+        durationMinutes: Number(service.durationMinutes || 0),
+        imageUrl: service.imageUrl || '',
+        availableStaffIds: service.staffIds || [],
+        shortDescription: service.shortDescription || service.shortDesc || '',
+        detailedDescription: service.detailedDescription || service.details || ''
     }
     const res = await apiRequest('/api/shop/services', { method: 'POST', token, body: payload })
     const mapped = mapService(res.service)
@@ -689,7 +697,9 @@ export function ShopProvider({ children }) {
       price: Number(patch.priceVnd ?? patch.price ?? 0),
       durationMinutes: Number(patch.durationMinutes || 0),
       imageUrl: patch.imageUrl || '',
-      availableStaffIds: patch.staffIds || []
+      availableStaffIds: patch.staffIds || [],
+      shortDescription: patch.shortDescription || patch.shortDesc || undefined,
+      detailedDescription: patch.detailedDescription || patch.details || undefined
     }
     const res = await apiRequest(`/api/shop/services/${id}`, { method: 'PUT', token, body: payload })
     const mapped = mapService(res.service)
@@ -708,7 +718,10 @@ export function ShopProvider({ children }) {
       phone: member.phone,
       role: member.role || 'tech',
       serviceIds: member.services || [],
-      avatarUrl: member.avatar || member.avatarUrl || ''
+      avatarUrl: member.avatar || member.avatarUrl || '',
+      shortBio: member.shortBio || member.short_description || '',
+      bio: member.bio || member.description || '',
+      specialties: Array.isArray(member.specialties) ? member.specialties : (member.specialties ? String(member.specialties).split(',').map((s) => s.trim()).filter(Boolean) : [])
     }
     const res = await apiRequest('/api/shop/staffs', { method: 'POST', token, body: payload })
     const mapped = mapStaff(res.staff)
@@ -732,7 +745,10 @@ export function ShopProvider({ children }) {
       phone: patch.phone,
       role: patch.role,
       serviceIds: patch.services || patch.serviceIds || [],
-      avatarUrl: patch.avatar || patch.avatarUrl || undefined
+      avatarUrl: patch.avatar || patch.avatarUrl || undefined,
+      shortBio: patch.shortBio !== undefined ? patch.shortBio : undefined,
+      bio: patch.bio !== undefined ? patch.bio : undefined,
+      specialties: patch.specialties !== undefined ? (Array.isArray(patch.specialties) ? patch.specialties : String(patch.specialties).split(',').map((s) => s.trim()).filter(Boolean)) : undefined
     }
     const res = await apiRequest(`/api/shop/staffs/${id}`, { method: 'PUT', token, body: payload })
     const mapped = mapStaff(res.staff)

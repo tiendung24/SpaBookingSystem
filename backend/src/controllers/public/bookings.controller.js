@@ -1,4 +1,4 @@
-import { Booking, BookingSlotLock, Deposit, FraudReport, RefundRequest } from '../../models/index.js'
+import { Booking, BookingSlotLock, Deposit, FraudReport, RefundRequest, PayosPayment, Wallet, WalletTransaction, Notification } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { getBookingWithRelations } from '../../utils/shop.js'
 import { writeAuditLog } from '../../utils/audit.js'
@@ -121,6 +121,81 @@ export async function reportShopFraud(req, res) {
   })
 
   res.json({ bookingCode: booking.bookingCode, reportId: String(report._id), reported: true })
+}
+
+export async function refreshPaymentForBooking(req, res) {
+  const booking = await Booking.findOne({ bookingCode: req.params.bookingCode })
+  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+
+  // Find PayOS payment record for this booking
+  const payos = await PayosPayment.findOne({ bookingId: String(booking._id) }).lean()
+  if (!payos) return res.json({ bookingCode: booking.bookingCode, refreshed: false, reason: 'no_payment_record' })
+
+  const payosSvc = new (await import('../../services/payos.service.js')).PayOSService()
+  const remote = await payosSvc.fetchPaymentStatus(payos.orderCode)
+  if (!remote) return res.json({ bookingCode: booking.bookingCode, refreshed: false, reason: 'no_remote_info' })
+
+  // If remote indicates success, emulate webhook processing to update booking/deposit
+  const status = String(remote.status || '').toLowerCase()
+  const isSuccess = ['success', 'paid', 'completed'].includes(status)
+  if (!isSuccess) {
+    return res.json({ bookingCode: booking.bookingCode, refreshed: false, status })
+  }
+
+  // Update PayosPayment record
+  await PayosPayment.findOneAndUpdate({ bookingId: String(booking._id) }, { status, raw: remote.raw, updatedAt: new Date() })
+
+  // Update booking and deposit/wallet similarly to webhook handler
+  const wasPending = booking.status === 'pending'
+  if (booking.status === 'pending') {
+    booking.status = 'confirmed'
+    booking.updatedAt = new Date()
+    await booking.save()
+  }
+
+  const deposit = await Deposit.findOne({ bookingId: String(booking._id) })
+  if (deposit) {
+    deposit.status = 'holding'
+    deposit.updatedAt = new Date()
+    await deposit.save()
+  }
+
+  // create wallet/escrow tx if needed
+  const wallet = await Wallet.findOneAndUpdate(
+    { shopId: booking.shopId },
+    { $setOnInsert: { balance: 0, minBalance: 0, escrowBalance: 0, status: 'active' }, $set: { updatedAt: new Date() } },
+    { upsert: true, new: true }
+  )
+
+  const existingHoldTx = await WalletTransaction.findOne({ shopId: booking.shopId, type: 'escrow_hold', refId: String(payos._id) }).lean()
+  if (!existingHoldTx) {
+    const amount = Number(payos.amount || 0)
+    wallet.escrowBalance = Number(wallet.escrowBalance || 0) + amount
+    await wallet.save()
+    await WalletTransaction.create({
+      shopId: booking.shopId,
+      walletId: String(wallet._id),
+      type: 'escrow_hold',
+      amount,
+      description: `Giữ cọc (escrow) cho booking ${booking.bookingCode || booking._id}`,
+      refId: String(payos._id),
+      status: 'success',
+      createdAt: new Date()
+    })
+  }
+
+  // Notify shop/admins via realtime (best-effort)
+  try {
+    await Notification.create({ shopId: String(booking.shopId), type: 'payment_received', title: 'Thanh toán đã được ghi nhận', content: `Đã xác nhận thanh toán cho booking ${booking.bookingCode || booking._id}`, createdAt: new Date() })
+  } catch {}
+
+  try {
+    const { broadcastToShop, broadcastToAdmins } = await import('../../utils/realtime.js')
+    broadcastToShop(String(booking.shopId), { type: 'booking.updated', shopId: String(booking.shopId), bookingId: String(booking._id), status: booking.status })
+    broadcastToAdmins({ type: 'booking.updated', shopId: String(booking.shopId), bookingId: String(booking._id), status: booking.status, bookingCode: booking.bookingCode })
+  } catch {}
+
+  res.json({ bookingCode: booking.bookingCode, refreshed: true, status: booking.status })
 }
 
 export async function createReview(req, res) {

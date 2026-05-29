@@ -10,7 +10,7 @@ export async function getWallet(req, res) {
     wallet: wallet || {
       shopId,
       balance: 0,
-      minBalance: 0,
+      minBalance: 100000,
       escrowBalance: 0,
       status: 'active'
     }
@@ -27,6 +27,7 @@ export async function createTopup(req, res) {
   const shopId = req.auth.shopId
   const amount = Number(req.body?.amount || 0)
   if (!amount || amount <= 0) throw httpError(400, 'Số tiền nạp không hợp lệ')
+  if (amount < 100000) throw httpError(400, 'Số tiền nạp tối thiểu là 100.000đ')
 
   const payos = new PayOSService()
   const topup = await payos.createTopupPayment({

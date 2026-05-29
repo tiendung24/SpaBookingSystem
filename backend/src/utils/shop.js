@@ -9,7 +9,8 @@ import {
   Shop,
   ShopClosureDay,
   ShopStaff,
-  ShopWorkingHour
+  ShopWorkingHour,
+  Wallet
 } from '../models/index.js'
 import { httpError } from './httpError.js'
 
@@ -25,8 +26,14 @@ export async function findShopById(shopId) {
   return shop
 }
 
-export function isShopBookable(shop) {
-  return shop.status !== 'locked' && shop.status !== 'inactive' && shop.onlineBookingEnabled !== false
+export async function isShopBookable(shop) {
+  if (!shop) return false
+  if (shop.status === 'locked' || shop.status === 'inactive' || shop.onlineBookingEnabled === false) return false
+
+  const wallet = shop._id ? await Wallet.findOne({ shopId: String(shop._id) }).lean() : null
+  const minBalance = Number(wallet?.minBalance || process.env.SHOP_WALLET_MIN_BALANCE || 100000)
+  const balance = Number(wallet?.balance || 0)
+  return balance >= minBalance
 }
 
 export async function ensureCustomer({ name, phone }) {

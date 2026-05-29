@@ -6,6 +6,8 @@ export const Service = createModel('Service', 'services', {
   name: { type: String, index: true },
   slug: { type: String, index: true },
   description: String,
+  shortDescription: String,
+  detailedDescription: String,
   price: Number,
   durationMinutes: Number,
   imageUrl: String,

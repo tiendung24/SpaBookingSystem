@@ -27,6 +27,47 @@ export class PayOSService {
     this.cancelUrl = process.env.PAYOS_CANCEL_URL || ''
   }
 
+  async fetchPaymentStatus(orderCode) {
+    if (!orderCode) return null
+    try {
+      const PayOS = await loadPayOSSdk()
+      const payOS = new PayOS(this.clientId, this.apiKey, this.checksumKey)
+
+      // Try common SDK method names
+      const tries = [
+        'getPayment',
+        'getPaymentByOrderCode',
+        'getPaymentInfo',
+        'retrievePayment',
+        'findPayment',
+        'findPayments'
+      ]
+
+      for (const method of tries) {
+        if (typeof payOS[method] === 'function') {
+          try {
+            const resp = await payOS[method](orderCode)
+            return this.normalizePaymentResponse(resp)
+          } catch (e) {
+            // try next
+          }
+        }
+      }
+
+      // Last resort: some SDKs expose `get` under `payment` namespace
+      try {
+        const resp = await (payOS.payment && typeof payOS.payment.get === 'function' ? payOS.payment.get(orderCode) : null)
+        if (resp) return this.normalizePaymentResponse(resp)
+      } catch (e) {
+        // ignore
+      }
+
+      return null
+    } catch (e) {
+      return null
+    }
+  }
+
   async createPaymentLink({ orderCode, amount, description, returnUrl, cancelUrl, items = [] }) {
     const PayOS = await loadPayOSSdk()
     const payOS = new PayOS(

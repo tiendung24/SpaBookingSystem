@@ -30,7 +30,9 @@ export default function ShopServicesPage() {
     priceVnd: 150000,
     visible: true,
     imageUrl: fallbackImage,
-    staffIds: []
+    staffIds: [],
+    shortDescription: '',
+    detailedDescription: ''
   })
 
   const filtered = useMemo(() => {
@@ -59,7 +61,9 @@ export default function ShopServicesPage() {
       priceVnd: 150000,
       visible: true,
       imageUrl: fallbackImage,
-      staffIds: []
+      staffIds: [],
+      shortDescription: '',
+      detailedDescription: ''
     })
     setModalOpen(true)
   }
@@ -74,7 +78,9 @@ export default function ShopServicesPage() {
       priceVnd: Number(service.priceVnd || 0),
       visible: Boolean(service.visible),
       imageUrl: service.imageUrl || fallbackImage,
-      staffIds: service.staffIds || []
+      staffIds: service.staffIds || [],
+      shortDescription: service.shortDescription || '',
+      detailedDescription: service.detailedDescription || ''
     })
     setModalOpen(true)
   }
@@ -158,6 +164,7 @@ export default function ShopServicesPage() {
                 <div className="p-4 space-y-2">
                   <h3 className="font-bold text-lg">{service.name}</h3>
                   <p className="text-sm text-main/70">{service.durationMinutes} phút · {formatVnd(service.priceVnd)}</p>
+                  {service.shortDescription ? <p className="text-sm text-main/60">{service.shortDescription}</p> : null}
                   <p className="text-sm text-main/70">Nhân sự: {(service.staffIds || []).length}</p>
                   <div className="flex gap-2">
                     <button type="button" className="px-3 py-2 rounded-lg border border-slate-300" onClick={() => openEdit(service)}>Sửa</button>
@@ -191,6 +198,27 @@ export default function ShopServicesPage() {
                 <label className="text-sm font-bold text-main/70">Ảnh dịch vụ</label>
                 <input type="file" accept="image/*" className="w-full mt-1 p-3 rounded-xl border border-slate-300 bg-white" onChange={handleImageUpload} />
                 {form.imageUrl && <img src={form.imageUrl} alt="Preview dịch vụ" className="mt-3 h-32 w-full object-cover rounded-xl border border-slate-200" />}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-sm font-bold text-main/70">Mô tả ngắn</label>
+                <input
+                  className="w-full p-3 rounded-xl border border-slate-300 mt-1"
+                  placeholder="Mô tả ngắn hiển thị trong danh sách"
+                  value={form.shortDescription}
+                  onChange={(e) => setForm((prev) => ({ ...prev, shortDescription: e.target.value }))}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="text-sm font-bold text-main/70">Mô tả chi tiết</label>
+                <textarea
+                  className="w-full p-3 rounded-xl border border-slate-300 mt-1"
+                  rows={4}
+                  placeholder="Mô tả chi tiết hiển thị trên trang dịch vụ"
+                  value={form.detailedDescription}
+                  onChange={(e) => setForm((prev) => ({ ...prev, detailedDescription: e.target.value }))}
+                />
               </div>
             </div>
 

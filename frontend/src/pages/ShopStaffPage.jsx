@@ -86,6 +86,9 @@ export default function ShopStaffPage() {
       rating: 5,
       bookingEnabled: true,
       services: [],
+      shortBio: '',
+      bio: '',
+      specialties: [],
       shifts: ['Sáng'],
       avatar: avatarFallback
     })
@@ -103,6 +106,9 @@ export default function ShopStaffPage() {
       rating: Number(member.rating || 5),
       bookingEnabled: Boolean(member.bookingEnabled),
       services: member.services || [],
+      shortBio: member.shortBio || '',
+      bio: member.bio || '',
+      specialties: member.specialties || [],
       shifts: member.shifts || ['Sáng'],
       avatar: member.avatar || avatarFallback
     })
@@ -189,7 +195,8 @@ export default function ShopStaffPage() {
                     <img src={member.avatar || avatarFallback} alt={member.name} className="h-14 w-14 rounded-xl object-cover" />
                     <div>
                       <h3 className="font-bold">{member.name}</h3>
-                      <p className="text-sm text-main/70">{roleLabel(member.role)}</p>
+                        <p className="text-sm text-main/70">{roleLabel(member.role)}</p>
+                        {member.shortBio ? <p className="text-sm text-main/60">{member.shortBio}</p> : null}
                     </div>
                   </div>
                   <p className="mt-3 text-sm text-main/70">{member.phone || 'Chưa có số điện thoại'}</p>
@@ -226,6 +233,15 @@ export default function ShopStaffPage() {
                 <option value="working">Đang làm</option>
                 <option value="off">Tạm nghỉ</option>
               </select>
+
+              <input className="p-3 rounded-xl border border-slate-300 md:col-span-2" placeholder="Mô tả ngắn (chuyên môn)" value={form.shortBio || ''} onChange={(e) => setForm((prev) => ({ ...prev, shortBio: e.target.value }))} />
+
+              <div className="md:col-span-2">
+                <label className="text-sm font-bold text-main/70">Mô tả chi tiết (chuyên môn)</label>
+                <textarea className="w-full p-3 rounded-xl border border-slate-300 mt-1" rows={3} placeholder="Mô tả chi tiết về chuyên môn, chứng chỉ..." value={form.bio || ''} onChange={(e) => setForm((prev) => ({ ...prev, bio: e.target.value }))} />
+              </div>
+
+              <input className="p-3 rounded-xl border border-slate-300 md:col-span-2" placeholder="Chuyên môn (phân tách bằng dấu phẩy)" value={(Array.isArray(form.specialties) ? form.specialties.join(', ') : form.specialties) || ''} onChange={(e) => setForm((prev) => ({ ...prev, specialties: String(e.target.value || '').split(',').map((s) => s.trim()).filter(Boolean) }))} />
 
               <div className="md:col-span-2">
                 <label className="text-sm font-bold text-main/70">Ảnh đại diện</label>

@@ -63,6 +63,8 @@ export function buildSwaggerSpec() {
               shopId: { type: 'string' },
               categoryId: { type: 'string' },
               name: { type: 'string' },
+              shortDescription: { type: 'string', nullable: true },
+              detailedDescription: { type: 'string', nullable: true },
               price: { type: 'number' },
               durationMinutes: { type: 'number' },
               status: { type: 'string' }
@@ -74,6 +76,9 @@ export function buildSwaggerSpec() {
               _id: { type: 'string' },
               shopId: { type: 'string' },
               fullName: { type: 'string' },
+              shortBio: { type: 'string', nullable: true },
+              bio: { type: 'string', nullable: true },
+              specialties: { type: 'array', items: { type: 'string' } },
               phone: { type: 'string' },
               role: { type: 'string' },
               status: { type: 'string' }

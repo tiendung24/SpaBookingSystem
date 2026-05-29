@@ -50,23 +50,39 @@ export default function AdminBookingDetailPage() {
   const [loading, setLoading] = useState(true)
   const [booking, setBooking] = useState(null)
 
-  useEffect(() => {
-    let mounted = true
-    const load = async () => {
-      if (!token || !id) return
-      setLoading(true)
-      try {
-        const res = await apiRequest(`/api/admin/bookings/${id}`, { token })
-        if (mounted) setBooking(res.booking || null)
-      } catch (error) {
+  const loadBooking = async (mountedRef = { current: true }) => {
+    if (!token || !id) return
+    setLoading(true)
+    try {
+      const res = await apiRequest(`/api/admin/bookings/${id}`, { token })
+      if (mountedRef.current) setBooking(res.booking || null)
+    } catch (error) {
+      if (mountedRef.current) {
         pushToast({ type: 'error', title: 'Không tải được booking', message: error?.message || 'Lỗi không xác định' })
-      } finally {
-        if (mounted) setLoading(false)
       }
+    } finally {
+      if (mountedRef.current) setLoading(false)
     }
-    void load()
+  }
+
+  useEffect(() => {
+    const mountedRef = { current: true }
+    void loadBooking(mountedRef)
+
+    const onFocus = () => { void loadBooking(mountedRef) }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void loadBooking(mountedRef)
+    }
+    const intervalId = window.setInterval(() => { void loadBooking(mountedRef) }, 15000)
+
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+
     return () => {
-      mounted = false
+      mountedRef.current = false
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [id, token, pushToast])
 

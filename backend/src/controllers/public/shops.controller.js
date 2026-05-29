@@ -70,7 +70,7 @@ export async function getShopStatus(req, res) {
   res.json({
     slug: shop.slug,
     status: shop.status,
-    acceptingBookings: isShopBookable(shop)
+    acceptingBookings: await isShopBookable(shop)
   })
 }
 
@@ -179,7 +179,7 @@ export async function holdSlot(req, res) {
 
   const shop = await findShopBySlug(req.params.slug)
   await cleanupExpiredAwaitingDeposits(String(shop._id))
-  if (!isShopBookable(shop)) throw httpError(409, 'Shop hiện không nhận lịch')
+  if (!(await isShopBookable(shop))) throw httpError(409, 'Shop hiện không nhận lịch')
 
     const service = await Service.findById(serviceId).lean()
     if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
@@ -278,7 +278,7 @@ export async function createBooking(req, res) {
 
   const shop = await findShopBySlug(req.params.slug)
   await cleanupExpiredAwaitingDeposits(String(shop._id))
-  if (!isShopBookable(shop)) throw httpError(409, 'Shop hiện không nhận lịch')
+  if (!(await isShopBookable(shop))) throw httpError(409, 'Shop hiện không nhận lịch')
 
     const service = await Service.findById(serviceId).lean()
     if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
