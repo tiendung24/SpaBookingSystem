@@ -32,61 +32,69 @@ function buildQrImageSrc(value) {
 
 function normalizePaymentPayload(payment) {
   if (!payment || typeof payment !== 'object') return null
+
   const raw = payment.raw && typeof payment.raw === 'object' ? payment.raw : null
   const rawData = raw?.data && typeof raw.data === 'object' ? raw.data : null
   const directData = payment.data && typeof payment.data === 'object' ? payment.data : null
-  const rawMeta = payment.raw && typeof payment.raw === 'object' ? payment.raw : {}
+  const rawMeta = raw?.meta && typeof raw.meta === 'object' ? raw.meta : raw
 
-  const qrCodeUrl =
-    payment.qrCodeUrl ||
-    payment.qrCodeURL ||
-    payment.qr_url ||
-    payment.qrCode ||
-    payment.qr ||
-    directData?.qrCodeUrl ||
-    directData?.qrCodeURL ||
-    directData?.qr_url ||
-    directData?.qrCode ||
-    directData?.qr ||
-    raw?.qrCodeUrl ||
-    raw?.qrCodeURL ||
-    raw?.qr_url ||
-    raw?.qrCode ||
-    raw?.qr ||
-    rawData?.qrCodeUrl ||
-    rawData?.qrCodeURL ||
-    rawData?.qr_url ||
-    rawData?.qrCode ||
-    rawData?.qr ||
-    payment.checkoutUrl ||
-    payment.checkoutURL ||
-    directData?.checkoutUrl ||
-    directData?.checkoutURL ||
-    raw?.checkoutUrl ||
-    raw?.checkoutURL ||
-    rawData?.checkoutUrl ||
-    rawData?.checkoutURL ||
-    rawMeta?.paymentLink ||
-    rawMeta?.paymentLinkUrl ||
-    ''
+  // helper: probe a few likely nested locations and prefer the first non-empty value
+  const candidates = [payment, directData, rawData, raw, rawMeta].filter(Boolean)
 
-  const checkoutUrl =
-    payment.checkoutUrl ||
-    payment.checkoutURL ||
-    directData?.checkoutUrl ||
-    directData?.checkoutURL ||
-    raw?.checkoutUrl ||
-    raw?.checkoutURL ||
-    rawData?.checkoutUrl ||
-    rawData?.checkoutURL ||
-    rawMeta?.paymentLink ||
-    rawMeta?.paymentLinkUrl ||
-    ''
+  const readPath = (obj, path) => {
+    if (!obj) return undefined
+    const parts = String(path || '').split('.')
+    let cur = obj
+    for (const p of parts) {
+      if (!cur) return undefined
+      const m = p.match(/^([a-zA-Z0-9_]+)(?:\[(\d+)\])?$/)
+      if (!m) {
+        cur = cur[p]
+      } else {
+        const key = m[1]
+        const idx = m[2] != null ? Number(m[2]) : null
+        cur = cur[key]
+        if (idx != null) {
+          if (!Array.isArray(cur)) return undefined
+          cur = cur[idx]
+        }
+      }
+    }
+    return cur
+  }
+
+  const pick = (paths) => {
+    for (const obj of candidates) {
+      for (const p of paths) {
+        const v = readPath(obj, p)
+        if (v != null && v !== '') return v
+      }
+    }
+    return ''
+  }
+
+  const qrCodeUrl = pick([
+    'qrCodeUrl', 'qrCodeURL', 'qr_url', 'qrCode', 'qr',
+    'data.qrCodeUrl', 'data.qrCode', 'data.qr', 'raw.data.qr', 'raw.qr',
+    'checkoutUrl', 'checkoutURL', 'paymentLink', 'paymentLinkUrl', 'meta.paymentLink', 'meta.paymentLinkUrl'
+  ])
+
+  const checkoutUrl = pick([
+    'checkoutUrl', 'checkoutURL', 'paymentLink', 'paymentLinkUrl',
+    'data.checkoutUrl', 'raw.data.checkoutUrl', 'meta.paymentLink', 'gateway.paymentUrl', 'data.paymentUrl'
+  ])
+
+  const chooseUrl = (v) => {
+    if (!v) return ''
+    const s = String(v)
+    if (/^https?:\/\//i.test(s) || /^data:image\//i.test(s)) return s
+    return s
+  }
 
   return {
     ...payment,
-    qrCodeUrl,
-    checkoutUrl
+    qrCodeUrl: chooseUrl(qrCodeUrl),
+    checkoutUrl: chooseUrl(checkoutUrl)
   }
 }
 
@@ -664,7 +672,11 @@ export default function CustomerPaymentPage() {
               updatedAt: Date.now()
             })
             try { window.__payosData = res.payment } catch {}
-            if (!normalized?.checkoutUrl && !normalized?.qrCodeUrl && !normalized?.qrCode) {
+            // If normalized payload lacks a usable checkout/QR, poll the server
+            const needPolling = !normalized?.checkoutUrl && !normalized?.qrCodeUrl && !normalized?.qrCode
+            if (needPolling) {
+              // increase attempts for this situation (webhook persistence lag)
+              void fetchPaymentWithRetries(res.booking?.bookingCode || res.booking?._id, 24, 500)
               void syncBookingState(res.booking?.bookingCode || res.booking?._id)
             }
           } else if (res?.booking) {
