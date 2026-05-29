@@ -410,6 +410,7 @@ shopRouter.post('/wallet/topup/create', asyncHandler(ShopWalletController.create
  *       404: { $ref: '#/components/responses/NotFound' }
  */
 shopRouter.get('/wallet/topup/:topupId/status', asyncHandler(ShopWalletController.getTopupStatus))
+shopRouter.post('/wallet/topup/:topupId/refresh', asyncHandler(ShopWalletController.refreshTopup))
 
 /**
  * @openapi

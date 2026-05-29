@@ -90,7 +90,9 @@ export default function ShopWalletPage() {
 
   const [payosData, setPayosData] = useState(null);
   const [loadingQr, setLoadingQr] = useState(false);
+  const [topupStatusText, setTopupStatusText] = useState('');
   const topupPollRef = useRef(null);
+  const topupRefreshedRef = useRef(false);
 
   const createPayosQr = async () => {
     setLoadingQr(true);
@@ -100,9 +102,12 @@ export default function ShopWalletPage() {
         clearInterval(topupPollRef.current);
         topupPollRef.current = null;
       }
+      setTopupStatusText('Đang tạo liên kết nạp tiền...');
       const res = await topupWallet(Number(topupAmount || 0));
       if (res && res.topup) {
         setPayosData(res.topup);
+        topupRefreshedRef.current = false;
+        setTopupStatusText('Đã tạo QR. Đang chờ PayOS xác nhận...');
 
         // Poll topup status until success, then refresh wallet
         const topupId = String(res.topup.topupId || res.topup.orderCode || '');
@@ -114,7 +119,15 @@ export default function ShopWalletPage() {
               if (attempts > 40) {
                 clearInterval(topupPollRef.current);
                 topupPollRef.current = null;
+                setTopupStatusText('Quá thời gian chờ xác nhận thanh toán.');
                 return;
+              }
+              if (attempts >= 5 && !topupRefreshedRef.current) {
+                topupRefreshedRef.current = true;
+                await apiRequest(`/api/shop/wallet/topup/${encodeURIComponent(topupId)}/refresh`, {
+                  method: 'POST',
+                  token
+                }).catch(() => null);
               }
               const data = await apiRequest(`/api/shop/wallet/topup/${encodeURIComponent(topupId)}/status`, {
                 method: 'GET',
@@ -127,17 +140,26 @@ export default function ShopWalletPage() {
               if (st === 'not_found') {
                 clearInterval(topupPollRef.current);
                 topupPollRef.current = null;
+                setTopupStatusText('Không tìm thấy giao dịch nạp tiền.');
                 return;
+              }
+              if (st && st !== 'pending') {
+                setTopupStatusText(`Trạng thái thanh toán: ${st}`);
               }
               if (st === 'success' || st === 'paid' || st === 'completed') {
                 clearInterval(topupPollRef.current);
                 topupPollRef.current = null;
                 try { await loadMeAndShop(token) } catch {}
-                setQrVisible(false);
-                setPayosData(null);
+                setTopupStatusText('Thanh toán đã được ghi nhận. Ví sẽ cập nhật ngay.');
+                setTimeout(() => {
+                  setQrVisible(false);
+                  setPayosData(null);
+                  setTopupStatusText('');
+                }, 1500);
               }
             } catch (e) {
               // ignore polling errors
+              setTopupStatusText('Không thể kiểm tra trạng thái thanh toán.');
             }
           }, 3000);
         }
@@ -152,6 +174,8 @@ export default function ShopWalletPage() {
   const confirmTopup = () => {
     setQrVisible(false);
     setPayosData(null);
+    setTopupStatusText('');
+    topupRefreshedRef.current = false;
   };
 
   useEffect(() => {
@@ -160,6 +184,7 @@ export default function ShopWalletPage() {
         clearInterval(topupPollRef.current);
         topupPollRef.current = null;
       }
+      topupRefreshedRef.current = false;
     };
   }, []);
 
@@ -389,6 +414,11 @@ export default function ShopWalletPage() {
                 </>
               ) : (
                 <>
+                  {topupStatusText ? (
+                    <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                      {topupStatusText}
+                    </div>
+                  ) : null}
                   <div className="mt-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
                     <div className="w-48 h-48 mx-auto rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden p-2">
                        {payosData.qrCodeUrl ? (

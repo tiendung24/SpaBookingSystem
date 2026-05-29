@@ -3,6 +3,39 @@ import { PayOSService } from '../../services/payos.service.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
 
+async function applyTopupPaymentToWallet(payment, payload = {}) {
+  const defaultMin = Number(process.env.SHOP_WALLET_MIN_BALANCE || 100000)
+  const wallet = await Wallet.findOneAndUpdate(
+    { shopId: payment.shopId },
+    { $setOnInsert: { balance: 0, minBalance: defaultMin, escrowBalance: 0, status: 'active' }, $set: { updatedAt: new Date() } },
+    { upsert: true, new: true }
+  )
+
+  const existingTx = await WalletTransaction.findOne({
+    shopId: payment.shopId,
+    type: 'topup',
+    refId: String(payment._id)
+  }).lean()
+
+  if (!existingTx) {
+    const amount = Number(payment.amount || payload.amount || 0)
+    wallet.balance = Number(wallet.balance || 0) + amount
+    await wallet.save()
+    await WalletTransaction.create({
+      shopId: payment.shopId,
+      walletId: String(wallet._id),
+      type: 'topup',
+      amount,
+      description: 'Nạp ví qua PayOS',
+      refId: String(payment._id),
+      status: 'success',
+      createdAt: new Date()
+    })
+  }
+
+  return wallet
+}
+
 export async function getWallet(req, res) {
   const shopId = req.auth.shopId
   const wallet = await Wallet.findOne({ shopId }).lean()
@@ -64,6 +97,40 @@ export async function getTopupStatus(req, res) {
     throw httpError(404, 'Không tìm thấy giao dịch nạp ví')
   }
   res.json({ topupId: req.params.topupId, status: payment.status || 'pending', payment })
+}
+
+export async function refreshTopup(req, res) {
+  const shopId = req.auth.shopId
+  const payment = await PayosPayment.findOne({ shopId, orderCode: req.params.topupId })
+  if (!payment) throw httpError(404, 'Không tìm thấy giao dịch nạp ví')
+
+  const payos = new PayOSService()
+  const remote = await payos.fetchPaymentStatus(payment.orderCode)
+  if (!remote) {
+    return res.json({ topupId: req.params.topupId, refreshed: false, reason: 'no_remote_info' })
+  }
+
+  const status = String(remote.status || '').toLowerCase()
+  payment.status = status || payment.status
+  payment.raw = remote.raw || payment.raw
+  payment.updatedAt = new Date()
+  await payment.save()
+
+  const isSuccess = ['success', 'paid', 'completed'].includes(status)
+  if (!isSuccess) {
+    return res.json({ topupId: req.params.topupId, refreshed: false, status })
+  }
+
+  await applyTopupPaymentToWallet(payment, remote)
+  await writeAuditLog({
+    actorUserId: req.auth.userId,
+    action: 'shop.wallet_topup_refresh',
+    entity: 'payos_payment',
+    entityId: String(payment._id),
+    meta: { shopId, topupId: String(payment.orderCode), status }
+  })
+
+  return res.json({ topupId: req.params.topupId, refreshed: true, status })
 }
 
 export async function getDepositSettings(req, res) {
