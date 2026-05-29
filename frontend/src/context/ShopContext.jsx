@@ -79,6 +79,7 @@ function mapStaff(item) {
     bookingEnabled: statusText !== 'inactive',
     services: item.serviceIds || [],
     slotAssignments: item.slotAssignments || [],
+    experienceYears: Number(item.experienceYears || 0),
     avatar: item.avatarUrl || item.imageUrl || ''
   }
 }
@@ -198,13 +199,30 @@ export function ShopProvider({ children }) {
       setUser(me.user || null)
 
       const meShop = await apiRequest('/api/shop/me', { token: accessToken })
+      const [workingHoursRes, slotSettingsRes] = await Promise.all([
+        apiRequest('/api/shop/working-hours', { token: accessToken }).catch(() => ({})),
+        apiRequest('/api/shop/slot-settings', { token: accessToken }).catch(() => ({}))
+      ])
+      const workingHours = workingHoursRes?.workingHours || {}
       setShop((prev) => ({
         ...prev,
         ...(meShop.shop || {}),
         onboardingCompleted: normalizeOnboardingCompleted(meShop.shop?.onboardingCompleted ?? prev.onboardingCompleted),
         hours: {
           ...(prev.hours || {}),
-          ...(meShop.shop?.hours || {})
+          ...(meShop.shop?.hours || {}),
+          open: workingHours?.openTime || meShop.shop?.hours?.open || prev.hours?.open || '09:00',
+          close: workingHours?.closeTime || meShop.shop?.hours?.close || prev.hours?.close || '20:00',
+          daysOff: Array.isArray(workingHours?.weekDays)
+            ? (() => {
+                const normalizedWeekDays = workingHours.weekDays.map((day) => (Number(day) === 7 ? 0 : Number(day)))
+                return [0, 1, 2, 3, 4, 5, 6].filter((day) => !normalizedWeekDays.includes(day))
+              })()
+            : (meShop.shop?.hours?.daysOff || prev.hours?.daysOff || [0]),
+          lunchBreakStart: workingHours?.lunchBreakStart || meShop.shop?.hours?.lunchBreakStart || prev.hours?.lunchBreakStart || '12:00',
+          lunchBreakEnd: workingHours?.lunchBreakEnd || meShop.shop?.hours?.lunchBreakEnd || prev.hours?.lunchBreakEnd || '13:00',
+          slotDuration: Number(slotSettingsRes?.slotDurationMinutes || workingHours?.slotDurationMinutes || meShop.shop?.hours?.slotDuration || prev.hours?.slotDuration || 60),
+          capacity: Number(slotSettingsRes?.maxCustomersPerSlot || workingHours?.maxCustomersPerSlot || meShop.shop?.hours?.capacity || prev.hours?.capacity || 1)
         },
         deposit: {
           enabled: Boolean(meShop.shop?.depositConfig?.enabled ?? prev.deposit.enabled),

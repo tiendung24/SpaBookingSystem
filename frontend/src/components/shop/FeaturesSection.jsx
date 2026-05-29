@@ -11,9 +11,9 @@ export default function FeaturesSection() {
             Hệ sinh thái tính năng toàn diện, thiết kế riêng cho đặc thù ngành làm đẹp.
           </p>
         </div>
-        <button className="glass-card text-primary font-label-bold text-label-bold px-8 py-4 rounded-2xl flex items-center gap-2 hover:bg-gray-50 transition-all border border-primary/20">
+        <a href="#pricing" className="glass-card text-primary font-label-bold text-label-bold px-8 py-4 rounded-2xl flex items-center gap-2 hover:bg-gray-50 transition-all border border-primary/20">
           Khám phá tất cả <span className="material-symbols-outlined">arrow_forward</span>
-        </button>
+        </a>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8 h-auto md:h-[900px]">

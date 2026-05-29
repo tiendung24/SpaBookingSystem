@@ -1,7 +1,8 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import SystemConfigTabs from '../components/shop/SystemConfigTabs'
 import { useShop } from '../context/ShopContext'
+import { apiRequest } from '../lib/api'
 
 const weekDays = [
   { key: 1, label: 'Thứ 2' },
@@ -23,7 +24,7 @@ function clamp(value, min, max) {
 }
 
 export default function ShopSlotsConfigPage() {
-  const { shop, setShop, staff } = useShop()
+  const { shop, setShop, staff, token } = useShop()
   const hours = shop.hours || {}
   const [openTime, setOpenTime] = useState(hours.open || '09:00')
   const [closeTime, setCloseTime] = useState(hours.close || '20:00')
@@ -31,6 +32,20 @@ export default function ShopSlotsConfigPage() {
   const [slotDuration, setSlotDuration] = useState(Number(hours.slotDuration || 60))
   const [capacity, setCapacity] = useState(Number(hours.capacity || 1))
   const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('Đã lưu cấu hình slot thành công!')
+  const [toastType, setToastType] = useState('success')
+  const [saving, setSaving] = useState(false)
+
+
+  useEffect(() => {
+    setOpenTime(hours.open || '09:00')
+    setCloseTime(hours.close || '20:00')
+    setDaysOff(new Set((hours.daysOff ?? [0]).map((day) => (Number(day) === 7 ? 0 : Number(day)))))
+    setSlotDuration(Number(hours.slotDuration || 60))
+    setCapacity(Number(hours.capacity || 1))
+  }, [hours.open, hours.close, hours.daysOff, hours.slotDuration, hours.capacity])
+
+  const weekDaysOpen = useMemo(() => weekDays.map((day) => day.key).filter((day) => !daysOff.has(day)), [daysOff])
 
   const toggleDayOff = (dayKey) => {
     setDaysOff((prev) => {
@@ -41,27 +56,58 @@ export default function ShopSlotsConfigPage() {
     })
   }
 
-  const saveConfig = () => {
+  const saveConfig = async () => {
+    if (!token) return
+
     const normalizedDuration = clamp(Number(slotDuration) || 60, 15, 240)
     const normalizedCapacity = clamp(Number(capacity) || 1, 1, 20)
     const open = openTime || '09:00'
     const close = closeTime || '20:00'
-    const safeClose = toMinutes(close) <= toMinutes(open) ? open : close
+    const safeClose = toMinutes(close) <= toMinutes(open) ? '20:00' : close
 
-    setShop((prev) => ({
-      ...prev,
-      hours: {
-        ...prev.hours,
-        open,
-        close: safeClose,
-        daysOff: [...daysOff],
-        slotDuration: normalizedDuration,
-        capacity: normalizedCapacity
-      }
-    }))
+    setSaving(true)
+    try {
+      await Promise.all([
+        apiRequest('/api/shop/working-hours', {
+          method: 'PUT',
+          token,
+          body: {
+            openTime: open,
+            closeTime: safeClose,
+            weekDays: weekDaysOpen
+          }
+        }),
+        apiRequest('/api/shop/slot-settings', {
+          method: 'PUT',
+          token,
+          body: {
+            slotDurationMinutes: normalizedDuration,
+            maxCustomersPerSlot: normalizedCapacity
+          }
+        })
+      ])
 
-    setToastVisible(true)
-    setTimeout(() => setToastVisible(false), 3000)
+      setShop((prev) => ({
+        ...prev,
+        hours: {
+          ...prev.hours,
+          open,
+          close: safeClose,
+          daysOff: [...daysOff],
+          slotDuration: normalizedDuration,
+          capacity: normalizedCapacity
+        }
+      }))
+      setToastType('success')
+      setToastMessage('Đã lưu cấu hình slot thành công!')
+    } catch (err) {
+      setToastType('error')
+      setToastMessage(err?.message || 'Lưu cấu hình thất bại, vui lòng thử lại.')
+    } finally {
+      setToastVisible(true)
+      setTimeout(() => setToastVisible(false), 3000)
+      setSaving(false)
+    }
   }
 
   return (
@@ -81,10 +127,11 @@ export default function ShopSlotsConfigPage() {
           <button
             type="button"
             onClick={saveConfig}
-            className="bg-primary text-white px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            disabled={saving}
+            className="bg-primary text-white px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined">save</span>
-            Lưu cấu hình
+            {saving ? 'Đang lưu...' : 'Lưu cấu hình'}
           </button>
         </header>
 
@@ -210,10 +257,10 @@ export default function ShopSlotsConfigPage() {
       <div
         className={`fixed bottom-10 right-10 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 z-50 transition-all duration-500 ${
           toastVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
-        } bg-slate-900 text-white`}
+        } ${toastType === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white'}`}
       >
-        <span className="material-symbols-outlined text-cyan-200">check_circle</span>
-        <p className="font-label-bold">Đã lưu cấu hình slot thành công!</p>
+        <span className="material-symbols-outlined text-cyan-200">{toastType === 'error' ? 'error' : 'check_circle'}</span>
+        <p className="font-label-bold">{toastMessage}</p>
       </div>
     </div>
   )

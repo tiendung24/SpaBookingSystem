@@ -1,10 +1,35 @@
 ﻿
-import heroFallback from '../../assets/lumix-logo.png';
+const heroFallback = 'https://cdn.diemnhangroup.com/seoulacademy/2025/08/luong-quan-ly-spa-1.webp';
+const heroCoverDim = 'https://www.cet.edu.vn/wp-content/uploads/2022/02/mat-trai-nghe-spa.jpg';
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden pt-16 pb-24 md:pt-24 md:pb-32 px-4 md:px-10 max-w-7xl mx-auto">
-      <div className="grid md:grid-cols-2 items-center gap-16 mt-20">
+    <section className="relative isolate overflow-hidden pt-16 pb-24 md:pt-24 md:pb-32 w-full">
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <img
+          src={heroFallback}
+          alt="Hero background"
+          className="w-full h-full object-cover opacity-70"
+          onError={(e) => {
+            e.currentTarget.onerror = null
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+        <img
+          src={heroCoverDim}
+          alt="Hero cover dim"
+          className="absolute inset-0 w-full h-full object-cover opacity-55"
+          onError={(e) => {
+            e.currentTarget.onerror = null
+            e.currentTarget.style.display = 'none'
+          }}
+        />
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.92)_0%,rgba(255,255,255,0.76)_42%,rgba(255,255,255,0.18)_100%)]" />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 md:px-10">
+        <div className="grid md:grid-cols-2 items-center gap-16 mt-20 relative z-10">
         <div className="flex flex-col gap-8">
           <div className="inline-flex items-center gap-2 glass-card px-4 py-1.5 rounded-full w-fit">
             <span className="material-symbols-outlined text-[18px] text-primary">verified</span>
@@ -17,12 +42,12 @@ export default function HeroSection() {
             Nền tảng chuyên biệt cho chủ tiệm Nail, Spa và Skincare. Tối ưu vận hành, quản lý lịch hẹn thông minh và bứt phá doanh thu.
           </p>
           <div className="flex flex-wrap gap-4">
-            <button className="bg-[#5ea4b8] text-white font-label-bold text-label-bold px-8 py-4 rounded-2xl cta-3d text-lg hover:brightness-110">
+            <Link to="/register" className="bg-[#5ea4b8] text-white font-label-bold text-label-bold px-8 py-4 rounded-2xl cta-3d text-lg hover:brightness-110">
               Trở thành đối tác
-            </button>
-            <button className="glass-card text-primary font-label-bold text-label-bold px-8 py-4 rounded-2xl hover:bg-gray-50 transition-all text-lg border border-primary/20">
+            </Link>
+            <a href="#features" className="glass-card text-primary font-label-bold text-label-bold px-8 py-4 rounded-2xl hover:bg-gray-50 transition-all text-lg border border-primary/20">
               Xem tính năng
-            </button>
+            </a>
           </div>
           <div className="flex items-center gap-4 pt-4">
             <div className="flex -space-x-3">
@@ -33,19 +58,19 @@ export default function HeroSection() {
           </div>
         </div>
         <div className="relative">
-          {/* Use external image but fallback to local asset if it fails to load */}
           <img
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuB19Yy0W4Tjl-wkR5NuQpA0y2oY4fv3c9_3mYlc4O0zgpzwSY0q_3gBqzUKHcjqfWHqIf4p0l8n0BW4wRcf4ea1q8Lw9uPrZxW2i6iMV0Qn8fPS4l0Y3yqNh3PkO9jVx66b4xJfWhV9WJqk2Dts7ubQ4B5g1S2jI_6xMOnWm8W7UZ5Xh66Z7nMRT3EfM8Yg_d5rX3skM9T8K2JXIQ"
             alt="Hero"
             className="w-full rounded-3xl shadow-2xl"
             onError={(e) => {
-              // replace with local fallback image when external fails
               e.currentTarget.onerror = null
               e.currentTarget.src = heroFallback
             }}
           />
         </div>
+        </div>
       </div>
     </section>
   );
 }
+import { Link } from 'react-router-dom'

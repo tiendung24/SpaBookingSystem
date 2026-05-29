@@ -1,7 +1,8 @@
-import { Booking, Deposit, Notification, PayosPayment, Shop, Wallet, WalletTransaction } from '../models/index.js'
+import { Booking, Deposit, Notification, PayosPayment, Service, Shop, ShopStaff, Wallet, WalletTransaction } from '../models/index.js'
 import { PayOSService } from '../services/payos.service.js'
 import { writeAuditLog } from '../utils/audit.js'
 import { broadcastToAdmins, broadcastToShop } from '../utils/realtime.js'
+import { buildBookingEmailForCustomer, buildBookingEmailForShop, sendEmailBestEffort } from '../utils/emailNotifications.js'
 
 function extractWebhookData(body = {}) {
   const data = body.data || body.payload || body
@@ -175,6 +176,48 @@ export async function payosWebhook(req, res) {
           status: booking.status,
           bookingCode: String(booking.bookingCode || booking._id)
         })
+
+        try {
+          const [shopInfo, serviceInfo, staffInfo] = await Promise.all([
+            Shop.findById(payment.shopId).lean(),
+            booking.serviceId ? Service.findById(booking.serviceId).lean() : Promise.resolve(null),
+            booking.staffId ? ShopStaff.findById(booking.staffId).lean() : Promise.resolve(null)
+          ])
+
+          const shopName = shopInfo?.name || ''
+          const serviceName = serviceInfo?.name || ''
+          const staffName = staffInfo?.fullName || ''
+
+          if (shopInfo?.email) {
+            const payloadEmailShop = buildBookingEmailForShop({
+              shopName,
+              bookingCode: booking.bookingCode,
+              startTime: booking.startTime,
+              customerName: booking.customerName,
+              customerPhone: booking.customerPhone,
+              serviceName,
+              staffName,
+              createdAt: booking.createdAt
+            })
+            await sendEmailBestEffort({ to: shopInfo.email, ...payloadEmailShop })
+          }
+
+          const customerEmail = booking.customerEmail ? String(booking.customerEmail).toLowerCase() : ''
+          if (customerEmail) {
+            const payloadEmailCustomer = buildBookingEmailForCustomer({
+              shopName,
+              bookingCode: booking.bookingCode,
+              startTime: booking.startTime,
+              serviceName,
+              staffName,
+              depositAmount: booking.depositAmount || 0,
+              createdAt: booking.createdAt
+            })
+            await sendEmailBestEffort({ to: customerEmail, ...payloadEmailCustomer })
+          }
+        } catch {
+          // ignore email failures in webhook flow
+        }
       }
     }
   }

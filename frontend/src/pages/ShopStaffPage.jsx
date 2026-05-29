@@ -41,6 +41,7 @@ export default function ShopStaffPage() {
     role: 'tech',
     status: 'working',
     rating: 5,
+    experienceYears: '',
     bookingEnabled: true,
     shortBio: '',
     bio: '',
@@ -98,6 +99,7 @@ export default function ShopStaffPage() {
       role: 'tech',
       status: 'working',
       rating: 5,
+      experienceYears: '',
       bookingEnabled: true,
       shortBio: '',
       bio: '',
@@ -117,6 +119,7 @@ export default function ShopStaffPage() {
       role: 'tech',
       status: member.status || 'working',
       rating: Number(member.rating || 5),
+      experienceYears: member.experienceYears ?? '',
       bookingEnabled: Boolean(member.bookingEnabled),
       shortBio: member.shortBio || '',
       bio: member.bio || '',
@@ -236,9 +239,18 @@ export default function ShopStaffPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <input className="p-3 rounded-xl border border-slate-300" placeholder="Họ tên" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
               <input className="p-3 rounded-xl border border-slate-300" placeholder="Số điện thoại" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
-              <select className="p-3 rounded-xl border border-slate-300" value="tech" onChange={() => {}} disabled>
-                <option value="tech">Kỹ thuật viên</option>
-              </select>
+              <div>
+            
+                <input
+                  className="w-full mt-1 p-3 rounded-xl border border-slate-300"
+                  type="number"
+                  min={0}
+                  placeholder="số năm kinh nghiệm"
+                  value={form.experienceYears ?? ''}
+                  onChange={(e) => setForm((prev) => ({ ...prev, experienceYears: e.target.value === '' ? '' : Number(e.target.value) }))}
+                />
+              </div>
+            
               <select className="p-3 rounded-xl border border-slate-300" value={form.status} onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}>
                 <option value="working">Đang làm</option>
                 <option value="off">Tạm nghỉ</option>

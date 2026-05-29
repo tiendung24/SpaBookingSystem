@@ -14,6 +14,17 @@ import {
 } from '../models/index.js'
 import { httpError } from './httpError.js'
 
+
+function toDateIsoByOffset(date, offsetMinutes) {
+  const shiftedMillis = new Date(date).getTime() + Number(offsetMinutes || 0) * 60 * 1000
+  const shifted = new Date(shiftedMillis)
+  const yyyy = shifted.getUTCFullYear()
+  const mm = String(shifted.getUTCMonth() + 1).padStart(2, '0')
+  const dd = String(shifted.getUTCDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+
 export async function findShopBySlug(slug) {
   const shop = await Shop.findOne({ slug }).lean()
   if (!shop) throw httpError(404, 'Không tìm thấy shop')
@@ -73,10 +84,14 @@ export async function getWorkingPlan(shopId, date) {
     ShopClosureDay.find({ shopId }).lean()
   ])
 
-  const isClosed = closureDays.some((item) => {
+  const offsetMinutes = getShopTimezoneOffsetMinutes()
+  const explicitlyClosed = closureDays.some((item) => {
     const closureDate = new Date(item.date || item.closedDate || item.day || 0)
-    return !Number.isNaN(closureDate.getTime()) && closureDate.toISOString().slice(0, 10) === iso
+    return !Number.isNaN(closureDate.getTime()) && toDateIsoByOffset(closureDate, offsetMinutes) === iso
   })
+  const configuredWeekDays = Array.isArray(workingHours?.weekDays) ? workingHours.weekDays.map((day) => (Number(day) == 7 ? 0 : Number(day))) : []
+  const isRegularDayOff = configuredWeekDays.length > 0 && !configuredWeekDays.includes(weekday)
+  const isClosed = explicitlyClosed || isRegularDayOff
 
   const slotMinutes =
     Number(workingHours?.slotConfig?.slotMinutes) ||

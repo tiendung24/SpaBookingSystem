@@ -130,7 +130,6 @@ export default function CustomerSelectServicePage() {
           <div className="hidden md:flex items-center gap-6">
             <Link className="text-primary font-bold border-b-2 border-primary pb-1" to={`/${slug || shop.slug}#services`}>Dịch vụ</Link>
             <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#staff`}>Nhân sự</Link>
-            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#reviews`}>Đánh giá</Link>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex bg-slate-100 border border-slate-200 rounded-full px-4 py-2 items-center gap-2">

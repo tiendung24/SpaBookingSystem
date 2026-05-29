@@ -18,7 +18,10 @@ function toHHmm(totalMinutes) {
 }
 
 function dateOnly(date) {
-  return date.toISOString().slice(0, 10)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function sameDate(a, b) {
@@ -51,6 +54,7 @@ export default function CustomerBookingTimePage() {
   const lunchBreakStart = hours.lunchBreakStart || '12:00'
   const lunchBreakEnd = hours.lunchBreakEnd || '13:00'
   const shopCapacity = Number(hours.capacity || 1)
+  const daysOff = useMemo(() => (Array.isArray(hours.daysOff) ? hours.daysOff.map((day) => (Number(day) === 7 ? 0 : Number(day))) : []), [hours.daysOff])
 
   const service = services.find((s) => s.id === bookingDraft.serviceId)
   const selectedStaff = staff.find((s) => s.id === bookingDraft.staffId)
@@ -74,6 +78,13 @@ export default function CustomerBookingTimePage() {
   )
 
   const [selectedDate, setSelectedDate] = useState(bookingDraft.date || dateOnly(today))
+
+  const isDayOffDate = useMemo(() => (dateValue) => {
+    const [year, month, day] = String(dateValue || '').split('-').map((v) => Number(v))
+    if (!year || !month || !day) return false
+    return daysOff.includes(new Date(year, month - 1, day).getDay())
+  }, [daysOff])
+
   const [selectedTime, setSelectedTime] = useState(bookingDraft.time || '')
   const [availableSlots, setAvailableSlots] = useState(null)
   const [slotsLoading, setSlotsLoading] = useState(false)
@@ -89,7 +100,14 @@ export default function CustomerBookingTimePage() {
   }, [slug, loadPublicShop])
 
   useEffect(() => {
-    if (!slug || !bookingDraft.serviceId || !selectedDate) return
+    if (!slug || !bookingDraft.serviceId || !selectedDate || isDayOffDate(selectedDate)) {
+      if (isDayOffDate(selectedDate)) {
+        setAvailableSlots([])
+        setSlotsLoading(false)
+        setSlotsError('Ngày này cửa hàng nghỉ định kỳ, vui lòng chọn ngày khác.')
+      }
+      return
+    }
     const requestSeq = ++slotsRequestSeqRef.current
     const abortController = new AbortController()
     const staffId = bookingDraft.staffId === 'random' ? null : bookingDraft.staffId
@@ -136,6 +154,16 @@ export default function CustomerBookingTimePage() {
     if (bookingDraft.date && bookingDraft.date !== selectedDate) setSelectedDate(bookingDraft.date)
     if (bookingDraft.time && bookingDraft.time !== selectedTime) setSelectedTime(bookingDraft.time)
   }, [bookingDraft.date, bookingDraft.time])
+
+  useEffect(() => {
+    if (!dateOptions.length) return
+    if (!isDayOffDate(selectedDate)) return
+    const firstOpenDate = dateOptions.find((item) => !isDayOffDate(dateOnly(item)))
+    if (firstOpenDate) {
+      setSelectedDate(dateOnly(firstOpenDate))
+      setSelectedTime('')
+    }
+  }, [selectedDate, dateOptions, isDayOffDate])
 
   useEffect(() => {
     const t = setInterval(() => setNowTick(Date.now()), 1000)
@@ -413,22 +441,27 @@ export default function CustomerBookingTimePage() {
                 {dateOptions.map((d) => {
                   const value = dateOnly(d)
                   const selected = selectedDate === value
+                  const isDayOff = isDayOffDate(value)
                   return (
                     <button
                       key={value}
                       type="button"
-                      onClick={() => setSelectedDate(value)}
+                      disabled={isDayOff}
+                      onClick={() => !isDayOff && setSelectedDate(value)}
                       className={`flex-shrink-0 w-20 h-24 rounded-2xl flex flex-col items-center justify-center transition-all ${
-                        selected
-                          ? 'border-2 border-primary bg-primary/10 shadow-md ring-2 ring-primary/20'
-                          : 'border border-slate-200 bg-white shadow-sm'
+                        isDayOff
+                          ? 'border border-slate-200 bg-slate-100 text-main/40 cursor-not-allowed opacity-60'
+                          : selected
+                            ? 'border-2 border-primary bg-primary/10 shadow-md ring-2 ring-primary/20'
+                            : 'border border-slate-200 bg-white shadow-sm'
                       }`}
                     >
-                      <span className={`text-xs font-bold ${selected ? 'text-primary' : 'text-main/60'}`}>
+                      <span className={`text-xs font-bold ${isDayOff ? 'text-main/40' : selected ? 'text-primary' : 'text-main/60'}`}>
                         {d.toLocaleDateString('vi-VN', { weekday: 'short' }).toUpperCase()}
                       </span>
-                      <span className={`text-xl font-bold ${selected ? 'text-primary' : 'text-main'}`}>{d.getDate()}</span>
-                      <span className={`text-[10px] uppercase ${selected ? 'text-primary' : 'text-main/60'}`}>{`Th ${d.getMonth() + 1}`}</span>
+                      <span className={`text-xl font-bold ${isDayOff ? 'text-main/50 line-through' : selected ? 'text-primary' : 'text-main'}`}>{d.getDate()}</span>
+                      <span className={`text-[10px] uppercase ${isDayOff ? 'text-main/40' : selected ? 'text-primary' : 'text-main/60'}`}>{`Th ${d.getMonth() + 1}`}</span>
+                      {isDayOff ? <span className="mt-1 text-[9px] font-bold uppercase text-rose-500">Nghỉ</span> : null}
                     </button>
                   )
                 })}

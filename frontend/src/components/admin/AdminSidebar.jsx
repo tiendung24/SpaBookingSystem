@@ -1,5 +1,6 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+﻿import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
+import LumiXLogo from '../../assets/lumix-logo.png'
 
 const menus = [
   { to: '/admin/dashboard', icon: 'space_dashboard', label: 'Tổng quan hệ thống' },
@@ -19,8 +20,13 @@ export default function AdminSidebar() {
   return (
     <aside className="fixed left-0 top-0 h-full w-72 bg-white/90 backdrop-blur-xl border-r border-slate-200 p-4 flex flex-col z-40">
       <div className="mb-8 px-2">
-        <h1 className="font-h3 text-h3 text-primary font-bold">LumiX Admin</h1>
-        <p className="text-sm text-main/70">Điều hành hệ thống</p>
+        <div className="flex items-center gap-3">
+          <img src={LumiXLogo} alt="LumiX" className="h-9 w-auto" />
+          <div className="min-w-0">
+            <h1 className="font-h3 text-h3 text-primary font-bold leading-tight">LumiX Admin</h1>
+            <p className="text-sm text-main/70">Điều hành hệ thống</p>
+          </div>
+        </div>
       </div>
 
       <nav className="flex-grow space-y-2 overflow-y-auto pr-1">
@@ -50,3 +56,4 @@ export default function AdminSidebar() {
     </aside>
   )
 }
+

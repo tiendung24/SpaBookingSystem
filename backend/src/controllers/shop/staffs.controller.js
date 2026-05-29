@@ -32,6 +32,7 @@ export async function createStaff(req, res) {
     status: req.body?.status || 'active',
     serviceIds: Array.isArray(req.body?.serviceIds) ? req.body.serviceIds : [],
     slotAssignments: Array.isArray(req.body?.slotAssignments) ? req.body.slotAssignments : [],
+    experienceYears: Math.max(0, toNumber(req.body?.experienceYears || 0)),
     rating: toNumber(req.body?.rating || 0),
     createdAt: new Date(),
     updatedAt: new Date()
@@ -68,6 +69,7 @@ export async function updateStaff(req, res) {
   if (patch.bio !== undefined) patch.bio = String(patch.bio || '')
   if (patch.specialties !== undefined) patch.specialties = Array.isArray(patch.specialties) ? patch.specialties : []
   if (patch.slotAssignments !== undefined) patch.slotAssignments = Array.isArray(patch.slotAssignments) ? patch.slotAssignments : []
+  if (patch.experienceYears !== undefined) patch.experienceYears = Math.max(0, toNumber(patch.experienceYears))
   if (patch.role !== undefined) patch.role = 'tech'
   patch.updatedAt = new Date()
 

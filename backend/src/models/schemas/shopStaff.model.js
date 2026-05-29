@@ -13,6 +13,7 @@ export const ShopStaff = createModel('ShopStaff', 'shop_staffs', {
   status: { type: String, index: true },
   serviceIds: [String],
   slotAssignments: [String],
+  experienceYears: Number,
   rating: Number,
   createdAt: Date,
   updatedAt: Date

@@ -35,15 +35,15 @@ export default function Footer() {
           <div>
             <h4 className="font-label-bold text-label-bold text-main mb-8 uppercase tracking-widest">Liên hệ</h4>
             <ul className="space-y-5 font-body-sm text-body-sm text-main">
-              <li className="flex gap-3"><span className="material-symbols-outlined text-primary text-[20px]">location_on</span><span>Tòa nhà LumiX, Quận 1, TP. Hồ Chí Minh</span></li>
-              <li className="flex gap-3"><span className="material-symbols-outlined text-primary text-[20px]">call</span><span>1900 1234 (Miễn phí)</span></li>
+              <li className="flex gap-3"><span className="material-symbols-outlined text-primary text-[20px]">location_on</span><span>Group LumiX</span></li>
+              <li className="flex gap-3"><span className="material-symbols-outlined text-primary text-[20px]">call</span><span>0352033029</span></li>
               <li className="flex gap-3"><span className="material-symbols-outlined text-primary text-[20px]">mail</span><span>contact@lumix.vn</span></li>
             </ul>
           </div>
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-10 border-t border-gray-200">
-          <p className="font-body-sm text-body-sm text-main">© 2024 LumiX Partner. Nền tảng quản lý Spa & Salon hàng đầu Việt Nam.</p>
+          <p className="font-body-sm text-body-sm text-main">© 2026 LumiX Partner. Nền tảng quản lý Spa & Salon hàng đầu Việt Nam.</p>
           <div className="flex gap-8">
             <a href="#" className="font-label-bold text-label-bold text-main hover:text-primary transition-colors">Điều khoản</a>
             <a href="#" className="font-label-bold text-label-bold text-main hover:text-primary transition-colors">Bảo mật</a>

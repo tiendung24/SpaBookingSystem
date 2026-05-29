@@ -16,10 +16,21 @@ export async function updateWorkingHours(req, res) {
   requireString(req.body?.closeTime, 'closeTime')
   requireTimeOrder(req.body?.openTime, req.body?.closeTime)
 
+
+  const rawWeekDays = Array.isArray(req.body?.weekDays) ? req.body.weekDays : undefined
+  const normalizedWeekDays = Array.isArray(rawWeekDays)
+    ? rawWeekDays
+        .map((day) => Number(day))
+        .map((day) => (day === 7 ? 0 : day))
+        .filter((day) => Number.isFinite(day) && day >= 0 && day <= 6)
+        .filter((day, idx, arr) => arr.indexOf(day) == idx)
+        .sort((a, b) => a - b)
+    : undefined
+
   const payload = {
     openTime: req.body?.openTime,
     closeTime: req.body?.closeTime,
-    weekDays: Array.isArray(req.body?.weekDays) ? req.body.weekDays : undefined,
+    weekDays: normalizedWeekDays,
     lunchBreakStart: req.body?.lunchBreakStart,
     lunchBreakEnd: req.body?.lunchBreakEnd,
     updatedAt: new Date()
