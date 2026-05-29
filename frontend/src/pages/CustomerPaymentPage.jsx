@@ -459,7 +459,23 @@ export default function CustomerPaymentPage() {
   }, [checkBookingStatus])
 
   const retryFetchPaymentNow = useCallback(async () => {
-    const bookingCode = String(createdBookingId || '').trim()
+    let bookingCode = String(createdBookingId || '').trim()
+    if (!bookingCode) {
+      try {
+        const attemptId = sessionStorage.getItem(`client_attempt_${slug}`)
+        if (attemptId) {
+          const attemptRes = await apiRequest(`/api/public/shops/${slug}/booking-attempts/${attemptId}`)
+          const resolved = String(attemptRes?.booking?.bookingCode || '').trim()
+          if (resolved) {
+            bookingCode = resolved
+            setCreatedBookingId(resolved)
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     if (!bookingCode) {
       setQrFetchHint('Không tìm thấy mã booking để lấy lại QR.')
       return
@@ -488,13 +504,12 @@ export default function CustomerPaymentPage() {
     } catch {
       setQrFetchHint('Không thể lấy lại mã thanh toán. Vui lòng thử lại.')
     }
-  }, [createdBookingId, fetchPaymentWithRetries, syncBookingState])
+  }, [createdBookingId, fetchPaymentWithRetries, syncBookingState, slug])
 
   // Fail-safe: if booking exists but QR/payment is still missing after a short delay, show a retry hint.
   useEffect(() => {
     if (success || expired) return
-    if (!shop?.deposit?.enabled) return
-    if (!createdBookingId) return
+    if (!isPaymentLoading) return
     if (payosData) return
     if (!depositAmount || depositAmount <= 0) return
 
@@ -502,7 +517,11 @@ export default function CustomerPaymentPage() {
       setQrFetchHint((prev) => prev || 'Đang lấy mã thanh toán cọc... Nếu chờ lâu, bấm “Thử lấy lại mã cọc”.')
     }, 3500)
     return () => clearTimeout(timer)
-  }, [success, expired, shop?.deposit?.enabled, createdBookingId, payosData, depositAmount])
+  }, [success, expired, isPaymentLoading, payosData, depositAmount])
+
+  useEffect(() => {
+    if (payosData) setQrFetchHint('')
+  }, [payosData])
 
   // Seed payosData from globals if present (helps avoid first-render race in prod)
   useEffect(() => {
@@ -1081,15 +1100,13 @@ export default function CustomerPaymentPage() {
                       {isPaymentLoading ? (
                         <div className="text-center text-main/70 space-y-3">
                           <div>{qrFetchHint || 'Đang lấy mã thanh toán cọc...'}</div>
-                          {qrFetchHint ? (
-                            <button
-                              type="button"
-                              className="px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110"
-                              onClick={retryFetchPaymentNow}
-                            >
-                              Thử lấy lại mã cọc
-                            </button>
-                          ) : null}
+                          <button
+                            type="button"
+                            className="px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110"
+                            onClick={retryFetchPaymentNow}
+                          >
+                            Thử lấy lại mã cọc
+                          </button>
                         </div>
                     ) : (payosData?.qrCodeUrl || payosData?.qrCode || payosData?.checkoutUrl) ? (
                       <img
