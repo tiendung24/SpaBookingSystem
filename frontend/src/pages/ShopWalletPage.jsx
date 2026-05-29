@@ -3,9 +3,11 @@ import ShopSidebar from '../components/shop/ShopSidebar';
 import { useShop } from '../context/ShopContext';
 import { apiRequest } from '../lib/api';
 import { useSearchParams } from 'react-router-dom';
+import { useToast } from '../components/ui/ToastProvider';
 
 export default function ShopWalletPage() {
   const { shop, walletTransactions, topupWallet, bookings, loadMeAndShop, token } = useShop();
+  const { pushToast } = useToast();
   const [searchParams] = useSearchParams();
   const [cardTransform, setCardTransform] = useState('perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)');
   const [topupAmount, setTopupAmount] = useState(200000);
@@ -14,6 +16,7 @@ export default function ShopWalletPage() {
   const walletBalance = Number(shop.wallet?.balance || 0);
   const walletMinBalance = Number(shop.wallet?.minBalance || 100000);
   const isWalletHealthy = walletBalance >= walletMinBalance;
+  const previousWalletHealthyRef = useRef(isWalletHealthy);
 
   const transactions = useMemo(() => {
     return walletTransactions.map((t) => {
@@ -97,6 +100,18 @@ export default function ShopWalletPage() {
   const topupRefreshedRef = useRef(false);
 
   useEffect(() => {
+    if (!previousWalletHealthyRef.current && isWalletHealthy) {
+      pushToast({
+        type: 'success',
+        title: 'Link đặt lịch đã hoạt động lại',
+        message: `Ví LumiX hiện có ${walletBalance.toLocaleString('vi-VN')}đ, đã đạt mức duy trì.`,
+        durationMs: 7000
+      });
+    }
+    previousWalletHealthyRef.current = isWalletHealthy;
+  }, [isWalletHealthy, pushToast, walletBalance]);
+
+  useEffect(() => {
     const incomingTopupId =
       searchParams.get('topupId') ||
       searchParams.get('orderCode') ||
@@ -129,7 +144,13 @@ export default function ShopWalletPage() {
         const refreshedStatus = String(data?.status || incomingStatus || '').toLowerCase()
         if (refreshedStatus === 'success' || refreshedStatus === 'paid' || refreshedStatus === 'completed') {
           await loadMeAndShop(token).catch(() => null)
-          setTopupStatusText('Thanh toán đã được ghi nhận. Ví đã được cập nhật.')
+          setTopupStatusText('Thanh toán đã được ghi nhận. Ví đã cập nhật và link đặt lịch đã hoạt động lại.')
+          pushToast({
+            type: 'success',
+            title: 'Nạp ví thành công',
+            message: 'Ví LumiX đã đủ mức duy trì. Link đặt lịch đã hoạt động lại.',
+            durationMs: 7000
+          })
           setPayosData(null)
           window.history.replaceState({}, '', '/shop/wallet')
           setTimeout(() => {
@@ -206,7 +227,13 @@ export default function ShopWalletPage() {
                 clearInterval(topupPollRef.current);
                 topupPollRef.current = null;
                 try { await loadMeAndShop(token) } catch {}
-                setTopupStatusText('Thanh toán đã được ghi nhận. Ví sẽ cập nhật ngay.');
+                setTopupStatusText('Thanh toán đã được ghi nhận. Ví đã cập nhật và link đặt lịch đã hoạt động lại.');
+                pushToast({
+                  type: 'success',
+                  title: 'Nạp ví thành công',
+                  message: 'Ví LumiX đã đủ mức duy trì. Link đặt lịch đã hoạt động lại.',
+                  durationMs: 7000
+                });
                 setTimeout(() => {
                   setQrVisible(false);
                   setPayosData(null);

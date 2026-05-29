@@ -224,12 +224,13 @@ export function ShopProvider({ children }) {
       setStaff((staffRes.items || []).map(mapStaff))
       setBookings((bookingRes.items || []).map(mapBooking))
       setWalletTransactions(walletTxnRes.items || [])
+      const walletData = walletRes?.wallet || walletRes || {}
       setShop((prev) => ({
         ...prev,
         wallet: {
-          balance: Number(walletRes.balance || 0),
-          escrow: Number(walletRes.escrowBalance || 0),
-          minBalance: Number(walletRes.minBalance || prev.wallet?.minBalance || 100000)
+          balance: Number(walletData.balance || 0),
+          escrow: Number(walletData.escrowBalance || 0),
+          minBalance: Number(walletData.minBalance || prev.wallet?.minBalance || 100000)
         }
       }))
       setError('')

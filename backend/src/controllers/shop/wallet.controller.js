@@ -33,6 +33,14 @@ async function applyTopupPaymentToWallet(payment, payload = {}) {
     })
   }
 
+  const minBalance = Number(wallet.minBalance || defaultMin)
+  if (Number(wallet.balance || 0) >= minBalance) {
+    await Shop.updateOne(
+      { _id: payment.shopId, status: 'inactive' },
+      { $set: { status: 'active', updatedAt: new Date() } }
+    )
+  }
+
   return wallet
 }
 

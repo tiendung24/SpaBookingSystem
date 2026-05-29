@@ -1,4 +1,4 @@
-import { Booking, Deposit, Notification, PayosPayment, Wallet, WalletTransaction } from '../models/index.js'
+import { Booking, Deposit, Notification, PayosPayment, Shop, Wallet, WalletTransaction } from '../models/index.js'
 import { PayOSService } from '../services/payos.service.js'
 import { writeAuditLog } from '../utils/audit.js'
 import { broadcastToAdmins, broadcastToShop } from '../utils/realtime.js'
@@ -83,6 +83,14 @@ export async function payosWebhook(req, res) {
         status: 'success',
         createdAt: new Date()
       })
+    }
+
+    const minBalance = Number(wallet.minBalance || defaultMin)
+    if (Number(wallet.balance || 0) >= minBalance) {
+      await Shop.updateOne(
+        { _id: payment.shopId, status: 'inactive' },
+        { $set: { status: 'active', updatedAt: new Date() } }
+      )
     }
   } else {
     const booking = await Booking.findById(payment.bookingId)
