@@ -1,5 +1,5 @@
 ﻿import bcrypt from 'bcryptjs'
-import { Booking, Shop, User, Wallet, WalletTransaction } from '../../models/index.js'
+import { Booking, Deposit, PayosPayment, PlatformFee, Service, Shop, User, Wallet, WalletTransaction } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { buildShopStatusEmailForShop, sendEmailBestEffort } from '../../utils/emailNotifications.js'
@@ -12,6 +12,7 @@ import {
   normalizeSlug,
   requireString
 } from '../../utils/validation.js'
+import { derivePaymentStatus } from '../../utils/paymentStatus.js'
 
 function generatePassword() {
   return Math.random().toString(36).slice(2, 10)
@@ -33,8 +34,44 @@ async function attachWalletStats(shops) {
   const shopIds = list.filter(Boolean).map((shop) => String(shop._id))
   if (!shopIds.length) return shops
 
-  const wallets = await Wallet.find({ shopId: { $in: shopIds } }).lean()
+  const [wallets, bookingAgg, depositAgg, feeAgg] = await Promise.all([
+    Wallet.find({ shopId: { $in: shopIds } }).lean(),
+    Booking.aggregate([
+      { $match: { shopId: { $in: shopIds } } },
+      {
+        $group: {
+          _id: '$shopId',
+          totalBookings: { $sum: 1 },
+          completedBookings: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+          noDepositBookings: { $sum: { $cond: [{ $lte: [{ $ifNull: ['$depositAmount', 0] }, 0] }, 1, 0] } },
+          depositBookings: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$depositAmount', 0] }, 0] }, 1, 0] } }
+        }
+      }
+    ]),
+    Deposit.aggregate([
+      { $match: { shopId: { $in: shopIds } } },
+      {
+        $group: {
+          _id: '$shopId',
+          depositReceived: { $sum: '$amount' },
+          depositWaitingForShop: {
+            $sum: { $cond: [{ $in: ['$status', ['holding', 'pending']] }, '$amount', 0] }
+          },
+          depositPaidToShop: {
+            $sum: { $cond: [{ $in: ['$status', ['released_to_shop', 'paid_to_shop', 'completed']] }, '$amount', 0] }
+          }
+        }
+      }
+    ]),
+    PlatformFee.aggregate([
+      { $match: { shopId: { $in: shopIds } } },
+      { $group: { _id: '$shopId', platformFeeCollected: { $sum: '$amount' } } }
+    ])
+  ])
   const walletByShopId = new Map(wallets.map((wallet) => [String(wallet.shopId), wallet]))
+  const bookingByShopId = new Map(bookingAgg.map((item) => [String(item._id), item]))
+  const depositByShopId = new Map(depositAgg.map((item) => [String(item._id), item]))
+  const feeByShopId = new Map(feeAgg.map((item) => [String(item._id), item]))
   const defaultMin = Number(process.env.SHOP_WALLET_MIN_BALANCE || 100000)
 
   const mapped = list.map((shop) => {
@@ -43,6 +80,9 @@ async function attachWalletStats(shops) {
     const walletBalance = Number(wallet?.balance || 0)
     const walletMinBalance = Number(wallet?.minBalance || defaultMin)
     const walletHealthy = walletBalance >= walletMinBalance
+    const bookingStats = bookingByShopId.get(String(shop._id)) || {}
+    const depositStats = depositByShopId.get(String(shop._id)) || {}
+    const feeStats = feeByShopId.get(String(shop._id)) || {}
     return {
       ...shop,
       wallet: wallet || { shopId: String(shop._id), balance: 0, minBalance: defaultMin, escrowBalance: 0, status: 'active' },
@@ -51,7 +91,15 @@ async function attachWalletStats(shops) {
         walletBalance,
         walletMinBalance,
         walletHealthy,
-        bookingLinkActive: shop.status === 'active' && shop.onlineBookingEnabled !== false && walletHealthy
+        bookingLinkActive: shop.status === 'active' && shop.onlineBookingEnabled !== false && walletHealthy,
+        totalBookings: Number(bookingStats.totalBookings || 0),
+        completedBookings: Number(bookingStats.completedBookings || 0),
+        noDepositBookings: Number(bookingStats.noDepositBookings || 0),
+        depositBookings: Number(bookingStats.depositBookings || 0),
+        depositReceived: Number(depositStats.depositReceived || 0),
+        depositWaitingForShop: Number(depositStats.depositWaitingForShop || 0),
+        depositPaidToShop: Number(depositStats.depositPaidToShop || 0),
+        platformFeeCollected: Number(feeStats.platformFeeCollected || 0)
       }
     }
   })
@@ -142,7 +190,49 @@ export async function getShops(req, res) {
 export async function getShopById(req, res) {
   const shop = await Shop.findById(req.params.shopId).lean()
   if (!shop) throw httpError(404, 'Không tìm thấy shop')
-  res.json({ shop: await attachWalletStats(shop) })
+  const enrichedShop = await attachWalletStats(shop)
+  const bookings = await Booking.find({ shopId: String(shop._id) }).sort({ createdAt: -1, startTime: -1 }).lean()
+  const serviceIds = [...new Set(bookings.map((booking) => String(booking.serviceId || '')).filter(Boolean))]
+  const bookingIds = bookings.map((booking) => String(booking._id))
+  const [services, deposits, payments] = await Promise.all([
+    serviceIds.length ? Service.find({ _id: { $in: serviceIds } }).lean() : [],
+    bookingIds.length ? Deposit.find({ bookingId: { $in: bookingIds } }).sort({ createdAt: -1 }).lean() : [],
+    bookingIds.length ? PayosPayment.find({ bookingId: { $in: bookingIds } }).sort({ createdAt: -1 }).lean() : []
+  ])
+  const serviceById = new Map(services.map((service) => [String(service._id), service]))
+  const depositByBookingId = new Map()
+  deposits.forEach((deposit) => {
+    const bookingId = String(deposit.bookingId || '')
+    if (!depositByBookingId.has(bookingId)) depositByBookingId.set(bookingId, deposit)
+  })
+
+  const paymentByBookingId = new Map()
+  payments.forEach((payment) => {
+    const bookingId = String(payment.bookingId || '')
+    if (!bookingId) return
+    if (!paymentByBookingId.has(bookingId)) paymentByBookingId.set(bookingId, payment)
+  })
+
+  const bookingItems = bookings.map((booking) => {
+    const service = serviceById.get(String(booking.serviceId || '')) || null
+    const deposit = depositByBookingId.get(String(booking._id)) || null
+    const payment = paymentByBookingId.get(String(booking._id)) || null
+    const totalAmount = Number(booking.totalAmount || service?.price || 0)
+    const depositAmount = Number(deposit?.amount || booking.depositAmount || 0)
+    return {
+      ...booking,
+      serviceName: service?.name || 'Dịch vụ',
+      paymentOrderCode: String(payment?.orderCode || ''),
+      paymentStatus: String(payment?.status || ''),
+      paymentStatusInfo: derivePaymentStatus({ booking, payment, deposit }),
+      depositStatus: deposit?.status || '',
+      depositAmount,
+      totalAmount,
+      remainingAmount: Math.max(0, totalAmount - depositAmount)
+    }
+  })
+
+  res.json({ shop: enrichedShop, bookings: bookingItems })
 }
 
 export async function lockShop(req, res) {

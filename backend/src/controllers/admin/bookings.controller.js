@@ -1,4 +1,4 @@
-import { Booking, Deposit, PayosPayment } from '../../models/index.js'
+import { Booking, Deposit, PayosPayment, Service, Shop } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { requireString } from '../../utils/validation.js'
 import { Wallet, WalletTransaction, Notification } from '../../models/index.js'
@@ -6,11 +6,19 @@ import { writeAuditLog } from '../../utils/audit.js'
 import { broadcastToShop } from '../../utils/realtime.js'
 import { derivePaymentStatus } from '../../utils/paymentStatus.js'
 
-async function decorateBooking(booking) {
+async function decorateBooking(booking, refs = {}) {
   if (!booking) return booking
   const payment = await PayosPayment.findOne({ bookingId: String(booking._id) }).sort({ createdAt: -1 }).lean()
   const deposit = await Deposit.findOne({ bookingId: String(booking._id) }).sort({ createdAt: -1 }).lean()
-  return { ...booking, paymentStatus: derivePaymentStatus({ booking, payment, deposit }) }
+  const shop = refs.shopById?.get(String(booking.shopId || '')) || null
+  const service = refs.serviceById?.get(String(booking.serviceId || '')) || null
+  return {
+    ...booking,
+    shopName: shop?.name || '',
+    shopSlug: shop?.slug || '',
+    serviceName: service?.name || '',
+    paymentStatus: derivePaymentStatus({ booking, payment, deposit })
+  }
 }
 
 export async function getBookings(req, res) {
@@ -18,7 +26,17 @@ export async function getBookings(req, res) {
   if (req.query.status) query.status = req.query.status
   if (req.query.shopId) query.shopId = req.query.shopId
   const raw = await Booking.find(query).sort({ createdAt: -1 }).lean()
-  const items = await Promise.all(raw.map(decorateBooking))
+  const shopIds = [...new Set(raw.map((item) => String(item.shopId || '')).filter(Boolean))]
+  const serviceIds = [...new Set(raw.map((item) => String(item.serviceId || '')).filter(Boolean))]
+  const [shops, services] = await Promise.all([
+    shopIds.length ? Shop.find({ _id: { $in: shopIds } }).lean() : [],
+    serviceIds.length ? Service.find({ _id: { $in: serviceIds } }).lean() : []
+  ])
+  const refs = {
+    shopById: new Map(shops.map((shop) => [String(shop._id), shop])),
+    serviceById: new Map(services.map((service) => [String(service._id), service]))
+  }
+  const items = await Promise.all(raw.map((item) => decorateBooking(item, refs)))
   res.json({ items })
 }
 
@@ -142,4 +160,3 @@ export async function recordPayment(req, res) {
 
   res.json({ ok: true, paymentId: String(payment._id), booking: booking })
 }
-

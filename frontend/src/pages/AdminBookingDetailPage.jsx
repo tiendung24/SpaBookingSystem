@@ -99,7 +99,7 @@ export default function AdminBookingDetailPage() {
       <section className="glass-card bg-white rounded-3xl p-6">
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
-            <Link className="text-primary hover:underline" to="/admin/bookings">← Quay lại danh sách booking</Link>
+            <Link className="text-primary hover:underline" to={booking?.shopId ? `/admin/partners/${booking.shopId}` : '/admin/partners'}>← Quay lại đối tác</Link>
             <h1 className="font-h2 text-h2 text-primary mt-2">{booking ? `Booking #${booking.bookingCode || booking._id}` : 'Chi tiết booking'}</h1>
           </div>
           <button type="button" className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50" onClick={() => navigate(-1)}>

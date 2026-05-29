@@ -3,7 +3,6 @@ import { useShop } from '../../context/ShopContext'
 
 const menus = [
   { to: '/admin/dashboard', icon: 'space_dashboard', label: 'Tổng quan hệ thống' },
-  { to: '/admin/bookings', icon: 'event_note', label: 'Booking & thanh toán' },
   { to: '/admin/partners', icon: 'handshake', label: 'Quản lý đối tác' },
   { to: '/admin/approvals', icon: 'fact_check', label: 'Duyệt onboarding' },
   { to: '/admin/finance', icon: 'account_balance', label: 'Tài chính hệ thống' },

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import AdminHeaderNav from '../components/admin/AdminHeaderNav'
 import AdminLayout from '../components/admin/AdminLayout'
 import { useToast } from '../components/ui/ToastProvider'
@@ -65,9 +65,10 @@ function formatCreatedAt(value) {
 export default function AdminBookingsPage() {
   const { token } = useShop()
   const { pushToast } = useToast()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [items, setItems] = useState([])
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => searchParams.get('shopId') || '')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
   const socketRef = useRef(null)
@@ -192,7 +193,7 @@ export default function AdminBookingsPage() {
     return items.filter((item) => {
       const paymentStatus = paymentStatusInfo(item).key
       const matchesStatus = statusFilter === 'all' || paymentStatus === statusFilter
-      const matchesQuery = !query || [item.bookingCode, item.customerName, item.customerPhone, item.shopId]
+      const matchesQuery = !query || [item.bookingCode, item.customerName, item.customerPhone, item.shopId, item.shopName, item.shopSlug, item.serviceName]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(query))
 
@@ -321,7 +322,10 @@ export default function AdminBookingsPage() {
                       <div className="font-semibold text-main">{booking.customerName || '—'}</div>
                       <div className="text-main/60">{booking.customerPhone || '—'}</div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-main/70">{booking.shopId || '—'}</td>
+                    <td className="px-4 py-4 text-sm text-main/70">
+                      <div className="font-semibold text-main">{booking.shopName || '—'}</div>
+                      {booking.shopId ? <Link className="text-xs text-primary hover:underline" to={`/admin/partners/${booking.shopId}`}>{booking.shopId}</Link> : <div className="text-xs text-main/50">—</div>}
+                    </td>
                     <td className="px-4 py-4 text-sm text-main/70">{formatAppointment(booking.startTime || booking.time, booking.endTime)}</td>
                     <td className="px-4 py-4 text-sm text-main/70">{formatCreatedAt(booking.createdAt)}</td>
                     <td className="px-4 py-4 text-sm font-semibold text-primary">{formatVnd(booking.depositAmount || 0)}</td>
