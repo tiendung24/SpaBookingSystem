@@ -306,6 +306,7 @@ export default function CustomerPaymentPage() {
   const [attemptAmounts, setAttemptAmounts] = useState(paymentSnapshot?.attemptAmounts || { depositAmount: 0, totalAmount: 0 })
   const autoBookingCalledRef = useRef(false)
   const skipExitCleanupRef = useRef(false)
+  const autoRetryRef = useRef({ attempts: 0, lastAt: 0 })
   const paymentPageUrlRef = useRef(`${window.location.pathname}${window.location.search}${window.location.hash}`)
   const shouldBlockExit = Boolean(createdBookingId && !success && !expired)
 
@@ -522,6 +523,41 @@ export default function CustomerPaymentPage() {
   useEffect(() => {
     if (payosData) setQrFetchHint('')
   }, [payosData])
+
+  // Background auto-retry: every 4s, up to 3 times, while waiting for QR/payment.
+  useEffect(() => {
+    if (success || expired) return
+    if (!isPaymentLoading) return
+    if (payosData) return
+    if (!depositAmount || depositAmount <= 0) return
+
+    autoRetryRef.current.attempts = 0
+    autoRetryRef.current.lastAt = Date.now()
+
+    let mounted = true
+    const timer = setInterval(async () => {
+      if (!mounted) return
+      if (payosData) return
+      if (!isPaymentLoading) return
+      if (autoRetryRef.current.attempts >= 3) return
+
+      const now = Date.now()
+      if (now - Number(autoRetryRef.current.lastAt || 0) < 3900) return
+      autoRetryRef.current.lastAt = now
+      autoRetryRef.current.attempts += 1
+
+      try {
+        await retryFetchPaymentNow()
+      } catch {
+        // ignore
+      }
+    }, 4000)
+
+    return () => {
+      mounted = false
+      clearInterval(timer)
+    }
+  }, [success, expired, isPaymentLoading, payosData, depositAmount, retryFetchPaymentNow])
 
   // Seed payosData from globals if present (helps avoid first-render race in prod)
   useEffect(() => {
