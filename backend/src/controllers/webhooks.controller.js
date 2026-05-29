@@ -5,11 +5,19 @@ import { broadcastToAdmins, broadcastToShop } from '../utils/realtime.js'
 
 function extractWebhookData(body = {}) {
   const data = body.data || body.payload || body
+  // PayOS webhook can signal success via `code: '00'` or `success: true`.
+  // Some payloads may omit `status`, so we normalize it here.
+  const rawStatus = String(data.status || body.status || '').toLowerCase()
+  const payosCode = String(body.code || data.code || '').toLowerCase()
+  const successByFlag = body.success === true || data.success === true
+  const successByCode = payosCode === '00' || payosCode === 'success' || payosCode === 'paid'
+  const normalizedStatus = rawStatus || (successByFlag || successByCode ? 'paid' : '')
   return {
     orderCode: String(data.orderCode || data.order_code || data.id || ''),
-    status: String(data.status || body.status || '').toLowerCase(),
+    status: normalizedStatus,
     amount: Number(data.amount || body.amount || 0),
-    raw: body
+    raw: body,
+    success: successByFlag || successByCode || ['success', 'paid', 'completed'].includes(normalizedStatus)
   }
 }
 
@@ -44,7 +52,8 @@ export async function payosWebhook(req, res) {
     meta: { status: payment.status, orderCode: payment.orderCode }
   })
 
-  const isSuccess = ['success', 'paid', 'completed'].includes(payment.status)
+  const isSuccess =
+    payload.success || ['success', 'paid', 'completed'].includes(String(payment.status || '').toLowerCase())
   if (!isSuccess) return res.json({ ok: true, paymentId: String(payment._id), status: payment.status })
 
   if (!payment.bookingId) {
