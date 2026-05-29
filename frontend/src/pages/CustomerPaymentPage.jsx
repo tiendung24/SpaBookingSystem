@@ -597,6 +597,24 @@ export default function CustomerPaymentPage() {
 
           if (res?.booking) {
             const hydratedDraft = buildDraftFromAttempt(res.booking)
+            const mergedDraft = {
+              ...bookingDraft,
+              ...(hydratedDraft || {})
+            }
+            writePaymentSnapshot(slug, {
+              createdBookingId: res.booking.bookingCode || res.booking._id,
+              bookingExpiresAt: res.booking.depositExpiresAt || bookingExpiresAt,
+              payosData: res?.payment ? normalizePaymentPayload(res.payment) : payosData,
+              attemptAmounts: {
+                depositAmount: Number(res.booking.depositAmount || 0),
+                totalAmount: Number(res.booking.totalAmount || 0)
+              },
+              draft: snapshotDraftFromBookingDraft(mergedDraft),
+              serviceId: mergedDraft.serviceId || null,
+              staffId: mergedDraft.staffId || 'random',
+              timeLeft,
+              updatedAt: Date.now()
+            })
             if (hydratedDraft) {
               setBookingDraft((prev) => ({
                 ...prev,
@@ -619,6 +637,17 @@ export default function CustomerPaymentPage() {
           if (res?.payment) {
             const normalized = normalizePaymentPayload(res.payment)
             setPayosData(normalized)
+            writePaymentSnapshot(slug, {
+              createdBookingId: res.booking?.bookingCode || res.booking?._id || createdBookingId,
+              bookingExpiresAt: res.booking?.depositExpiresAt || bookingExpiresAt,
+              payosData: normalized,
+              attemptAmounts,
+              draft: snapshotDraftFromBookingDraft(effectiveBookingDraft),
+              serviceId: effectiveBookingDraft.serviceId || null,
+              staffId: effectiveBookingDraft.staffId || 'random',
+              timeLeft,
+              updatedAt: Date.now()
+            })
             try { window.__payosData = res.payment } catch {}
             if (!normalized?.checkoutUrl && !normalized?.qrCodeUrl && !normalized?.qrCode) {
               void syncBookingState(res.booking?.bookingCode || res.booking?._id)
