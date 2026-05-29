@@ -215,7 +215,7 @@ export function ShopProvider({ children }) {
       const [serviceRes, staffRes, bookingRes, walletRes, walletTxnRes] = await Promise.all([
         apiRequest('/api/shop/services', { token: accessToken }),
         apiRequest('/api/shop/staffs', { token: accessToken }),
-        apiRequest('/api/shop/bookings', { token: accessToken }),
+        apiRequest('/api/shop/bookings?includeHistory=1', { token: accessToken }),
         apiRequest('/api/shop/wallet', { token: accessToken }),
         apiRequest('/api/shop/wallet/transactions', { token: accessToken })
       ])
@@ -251,6 +251,17 @@ export function ShopProvider({ children }) {
       setUnreadNotificationCount(items.filter((item) => !item.readAt).length)
     } catch (err) {
       console.error('[ShopContext] loadShopNotifications error', err)
+    }
+  }, [token, role])
+
+  const markAllNotificationsRead = useCallback(async (accessToken = token) => {
+    if (!accessToken || role !== 'shop') return
+    try {
+      await apiRequest('/api/shop/notifications/read-all', { method: 'PUT', token: accessToken })
+      setNotifications((prev) => prev.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() })))
+      setUnreadNotificationCount(0)
+    } catch (err) {
+      console.error('[ShopContext] markAllNotificationsRead error', err)
     }
   }, [token, role])
 
@@ -870,6 +881,7 @@ export function ShopProvider({ children }) {
     resetBookingDraft,
     createBookingFromDraft,
     loadShopNotifications,
+    markAllNotificationsRead,
     holdBookingSlot,
     getAvailableSlots,
     addService,

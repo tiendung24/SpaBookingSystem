@@ -1,9 +1,9 @@
-﻿import { useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import { useShop } from '../context/ShopContext'
 
-const statuses = ['Tất cả', 'Chờ xác nhận', 'Đã xác nhận', 'Đang phục vụ', 'Hoàn thành', 'Đã hủy']
+const statuses = ['Tất cả', 'Chờ xác nhận', 'Đã xác nhận', 'Đang phục vụ', 'Hoàn thành', 'Đã hủy', 'Không đến']
 
 const mapStatus = {
   pending: 'Chờ xác nhận',
@@ -12,7 +12,7 @@ const mapStatus = {
   completed: 'Hoàn thành',
   canceled: 'Đã hủy',
   cancelled: 'Đã hủy',
-  no_show: 'Đã hủy'
+  no_show: 'Không đến'
 }
 
 function statusClass(label) {
@@ -54,11 +54,18 @@ function formatCreatedAt(value) {
 }
 
 export default function ShopBookingsPage() {
-  const { bookings, services, staff } = useShop()
+  const { bookings, services, staff, markAllNotificationsRead, token } = useShop()
   const [selectedStatus, setSelectedStatus] = useState('Tất cả')
 
+  // When opening the booking page, mark notifications as read so the red badge disappears.
+  useEffect(() => {
+    if (!token) return
+    void markAllNotificationsRead(token)
+  }, [token, markAllNotificationsRead])
+
   const rows = useMemo(() => {
-    return bookings.map((booking) => {
+    const sorted = [...(bookings || [])].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    return sorted.map((booking) => {
       const service = services.find((s) => s.id === booking.serviceId)
       const employee = staff.find((s) => s.id === booking.staffId)
       const status = mapStatus[booking.status] ?? 'Chờ xác nhận'

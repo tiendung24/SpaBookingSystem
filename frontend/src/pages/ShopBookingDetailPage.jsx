@@ -68,6 +68,7 @@ export default function ShopBookingDetailPage() {
   const [cancelReason, setCancelReason] = useState('Có việc đột xuất')
   const [refund, setRefund] = useState({ bank: '', account: '', name: '' })
   const [nowTick, setNowTick] = useState(() => Date.now())
+  const [actionLoading, setActionLoading] = useState('')
 
   const isCancelable = booking && !['completed', 'canceled', 'cancelled', 'no_show'].includes(booking.status)
 
@@ -100,29 +101,46 @@ export default function ShopBookingDetailPage() {
     )
   }
 
-  const setStatus = (status) => updateBooking(booking.id, { status })
-  const confirmBooking = () => setStatus('confirmed')
-  const checkIn = () => setStatus('checked_in')
-  const checkOut = () => setStatus('completed')
+  const setStatus = async (status) => {
+    setActionLoading(status)
+    try {
+      await updateBooking(booking.id, { status })
+    } finally {
+      setActionLoading('')
+    }
+  }
+  const confirmBooking = () => void setStatus('confirmed')
+  const checkIn = () => void setStatus('checked_in')
+  const checkOut = () => void setStatus('completed')
 
-  const cancelBookingNow = () => {
+  const cancelBookingNow = async () => {
     const isValid = cancelDecision.type === 'valid'
     if (isValid && (!refund.bank || !refund.account || !refund.name)) {
       alert('Vui lòng nhập đủ thông tin hoàn tiền.')
       return
     }
-    updateBooking(booking.id, {
-      status: 'canceled',
+    setActionLoading('cancel')
+    try {
+      await updateBooking(booking.id, {
+        status: 'canceled',
       reason: cancelReason,
       cancellationType: isValid ? 'valid' : 'late',
       refundPercent: isValid ? 100 : 0,
       refundInfo: isValid ? refund : undefined
-    })
+      })
+    } finally {
+      setActionLoading('')
+    }
     setCancelMode(null)
   }
 
-  const markNoShow = () => {
-    updateBooking(booking.id, { status: 'no_show', cancellationType: 'no_show', refundPercent: 0, reason: cancelReason })
+  const markNoShow = async () => {
+    setActionLoading('no_show')
+    try {
+      await updateBooking(booking.id, { status: 'no_show', cancellationType: 'no_show', refundPercent: 0, reason: cancelReason })
+    } finally {
+      setActionLoading('')
+    }
     setCancelMode(null)
   }
 
@@ -199,29 +217,29 @@ export default function ShopBookingDetailPage() {
               </button>
             )}
             {booking.status === 'pending' && (
-              <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90" onClick={confirmBooking} type="button">
+              <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 disabled:opacity-60" onClick={confirmBooking} type="button" disabled={Boolean(actionLoading)}>
                 Xác nhận
               </button>
             )}
             {booking.status === 'confirmed' && (
-              <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90" onClick={checkIn} type="button">
+              <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 disabled:opacity-60" onClick={checkIn} type="button" disabled={Boolean(actionLoading)}>
                 Đánh dấu đến
               </button>
             )}
             {booking.status === 'checked_in' && (
-              <button className="px-5 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:opacity-90" onClick={checkOut} type="button">
+              <button className="px-5 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:opacity-90 disabled:opacity-60" onClick={checkOut} type="button" disabled={Boolean(actionLoading)}>
                 Hoàn thành
               </button>
             )}
 
             {isCancelable && (
-              <button className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-white font-bold" type="button" onClick={() => setCancelMode('cancel')}>
+              <button className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-white font-bold disabled:opacity-60" type="button" onClick={() => setCancelMode('cancel')} disabled={Boolean(actionLoading)}>
                 Hủy lịch
               </button>
             )}
 
             {isCancelable && (
-              <button className="px-5 py-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold" type="button" onClick={() => setCancelMode('no_show')}>
+              <button className="px-5 py-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold disabled:opacity-60" type="button" onClick={() => setCancelMode('no_show')} disabled={Boolean(actionLoading)}>
                 Không đến
               </button>
             )}
@@ -282,12 +300,12 @@ export default function ShopBookingDetailPage() {
 
                 <div className="flex gap-3">
                   {cancelMode === 'cancel' && (
-                    <button type="button" className="px-5 py-3 rounded-xl bg-primary text-white font-bold" onClick={cancelBookingNow}>
+                    <button type="button" className="px-5 py-3 rounded-xl bg-primary text-white font-bold disabled:opacity-60" onClick={cancelBookingNow} disabled={Boolean(actionLoading)}>
                       Xác nhận hủy
                     </button>
                   )}
                   {cancelMode === 'no_show' && (
-                    <button type="button" className="px-5 py-3 rounded-xl bg-red-600 text-white font-bold" onClick={markNoShow}>
+                    <button type="button" className="px-5 py-3 rounded-xl bg-red-600 text-white font-bold disabled:opacity-60" onClick={markNoShow} disabled={Boolean(actionLoading)}>
                       Xác nhận không đến
                     </button>
                   )}
