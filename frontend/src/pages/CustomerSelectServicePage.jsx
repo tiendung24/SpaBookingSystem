@@ -48,16 +48,69 @@ export default function CustomerSelectServicePage() {
     })
   }, [visibleServices, category, query])
 
-  const availableStaff = useMemo(() => staff.filter((s) => s.bookingEnabled), [staff])
   const selectedService = services.find((s) => s.id === selectedServiceId) || null
+  const availableStaff = useMemo(() => staff.filter((s) => s.bookingEnabled), [staff])
   const selectedStaff = staff.find((s) => s.id === selectedStaffId) || null
+  const showSlotCompatibility = Boolean(bookingDraft.time && !bookingDraft.holdToken)
+  const serviceStaffIds = useMemo(() => {
+    if (!selectedService) return []
+    return Array.isArray(selectedService.staffIds) ? selectedService.staffIds.filter(Boolean) : []
+  }, [selectedService])
+
+  const staffCanDoSelectedService = (member) => {
+    if (!selectedService) return true
+    if (!serviceStaffIds.length) return true
+    return serviceStaffIds.includes(member.id)
+  }
+
+  const staffWorksSelectedSlot = (member) => {
+    if (!showSlotCompatibility) return true
+    const selectedSlot = bookingDraft.time || ''
+    const slots = Array.isArray(member?.slotAssignments) ? member.slotAssignments : []
+    if (!slots.length) return true
+    return slots.includes(selectedSlot)
+  }
 
   const totalMinutes = selectedService?.durationMinutes ?? 0
   const totalPrice = selectedService?.priceVnd ?? 0
 
+  useEffect(() => {
+    if (!bookingDraft?.serviceId) return
+    const serviceChanged = String(bookingDraft.serviceId || '') !== String(selectedServiceId || '')
+    const staffChanged = String(bookingDraft.staffId || 'random') !== String(selectedStaffId || 'random')
+    if (!serviceChanged && !staffChanged) return
+    setBookingDraft((prev) => ({
+      ...prev,
+      time: '',
+      date: '',
+      holdToken: '',
+      holdExpiresAt: ''
+    }))
+  }, [selectedServiceId, selectedStaffId, bookingDraft?.serviceId, bookingDraft?.staffId, setBookingDraft])
+
+  useEffect(() => {
+    if (selectedStaffId === 'random') return
+    if (availableStaff.some((member) => member.id === selectedStaffId)) return
+    setSelectedStaffId('random')
+  }, [selectedStaffId, availableStaff])
+
   const goNext = () => {
     if (!selectedServiceId) return
-    setBookingDraft((prev) => ({ ...prev, serviceId: selectedServiceId, staffId: selectedStaffId }))
+    setBookingDraft((prev) => {
+      const serviceChanged = String(prev.serviceId || '') !== String(selectedServiceId || '')
+      const staffChanged = String(prev.staffId || 'random') !== String(selectedStaffId || 'random')
+      const mustResetSlot = serviceChanged || staffChanged
+
+      return {
+        ...prev,
+        serviceId: selectedServiceId,
+        staffId: selectedStaffId,
+        time: mustResetSlot ? '' : prev.time,
+        date: mustResetSlot ? '' : prev.date,
+        holdToken: mustResetSlot ? '' : prev.holdToken,
+        holdExpiresAt: mustResetSlot ? '' : prev.holdExpiresAt
+      }
+    })
     navigate(`/${slug || shop.slug}/book/time`)
   }
 
@@ -172,18 +225,23 @@ export default function CustomerSelectServicePage() {
 
                 {availableStaff.slice(0, 9).map((m) => {
                   const isSelected = selectedStaffId === m.id
+                  const worksThisSlot = staffWorksSelectedSlot(m)
+                  const canDoService = staffCanDoSelectedService(m)
                   return (
                     <button
                       key={m.id}
                       type="button"
-                      onClick={() => setSelectedStaffId(m.id)}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-3xl transition-transform active:scale-95 ${isSelected ? 'bg-primary/10 border-2 border-primary shadow-lg' : 'bg-white/60 border border-primary/10 hover:bg-white'}`}
+                      onClick={() => canDoService && setSelectedStaffId(m.id)}
+                      disabled={!canDoService}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-3xl transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${isSelected ? 'bg-primary/10 border-2 border-primary shadow-lg' : 'bg-white/60 border border-primary/10 hover:bg-white'}`}
                     >
                       <div className={`w-20 h-20 rounded-full overflow-hidden border p-1 bg-white ${isSelected ? 'border-primary' : 'border-transparent'}`}>
                         <img className="w-full h-full object-cover rounded-full" alt={m.name} src={m.avatar || staffFallbackImage} />
                       </div>
                       <span className="font-bold text-center text-main">{m.name}</span>
                       <span className="text-xs text-main/60 font-bold">{m.role || 'Chuyên viên'}</span>
+                      {!canDoService ? <span className="text-[11px] px-2 py-1 rounded-full bg-red-100 text-red-700 font-bold">Không phụ trách dịch vụ này</span> : null}
+                      {!worksThisSlot ? <span className="text-[11px] px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">Không làm slot này</span> : null}
                     </button>
                   )
                 })}

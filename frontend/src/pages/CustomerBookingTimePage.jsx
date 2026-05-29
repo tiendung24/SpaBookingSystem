@@ -131,6 +131,13 @@ export default function CustomerBookingTimePage() {
   }, [slug, bookingDraft.serviceId, bookingDraft.staffId, bookingDraft.holdToken, selectedDate, getAvailableSlots])
 
   useEffect(() => {
+    // Only hydrate from bookingDraft when it already has values (e.g. returning from pay page).
+    // Do NOT overwrite the user's interactive selection on this page.
+    if (bookingDraft.date && bookingDraft.date !== selectedDate) setSelectedDate(bookingDraft.date)
+    if (bookingDraft.time && bookingDraft.time !== selectedTime) setSelectedTime(bookingDraft.time)
+  }, [bookingDraft.date, bookingDraft.time])
+
+  useEffect(() => {
     const t = setInterval(() => setNowTick(Date.now()), 1000)
     return () => clearInterval(t)
   }, [])

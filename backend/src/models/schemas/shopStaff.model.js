@@ -12,8 +12,8 @@ export const ShopStaff = createModel('ShopStaff', 'shop_staffs', {
   role: { type: String, index: true },
   status: { type: String, index: true },
   serviceIds: [String],
+  slotAssignments: [String],
   rating: Number,
   createdAt: Date,
   updatedAt: Date
 })
-

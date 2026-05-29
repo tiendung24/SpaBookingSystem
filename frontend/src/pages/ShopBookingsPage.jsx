@@ -53,6 +53,28 @@ function formatCreatedAt(value) {
   return d.toLocaleString('vi-VN')
 }
 
+function formatVnd(value) {
+  return `${Number(value || 0).toLocaleString('vi-VN')}đ`
+}
+
+function downloadCsv(filename, rows) {
+  const escapeCell = (value) => {
+    const text = String(value ?? '')
+    if (text.includes(',') || text.includes('"') || text.includes('\n')) return `"${text.replace(/"/g, '""')}"`
+    return text
+  }
+  const csv = rows.map((row) => row.map(escapeCell).join(',')).join('\n')
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
 export default function ShopBookingsPage() {
   const { bookings, services, staff, markAllNotificationsRead, token } = useShop()
   const [selectedStatus, setSelectedStatus] = useState('Tất cả')
@@ -74,6 +96,9 @@ export default function ShopBookingsPage() {
         statusLabel: status,
         serviceName: service?.name ?? 'Dịch vụ',
         staffName: employee?.name ?? 'Chưa phân công',
+        depositAmount: Number(booking.deposit || 0),
+        serviceAmount: Number(booking.total || service?.priceVnd || 0),
+        remainingAmount: Math.max(Number(booking.total || service?.priceVnd || 0) - Number(booking.deposit || 0), 0),
         dateLabel: formatBookingDate(booking.time),
         timeLabelOnly: formatBookingTime(booking.time),
         timeLabel: `${new Date(booking.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - ${new Date(booking.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
@@ -86,6 +111,27 @@ export default function ShopBookingsPage() {
     return row.statusLabel === selectedStatus
   })
 
+  const handleExportBookings = () => {
+    const exportRows = [
+      ['Mã booking', 'Khách hàng', 'Số điện thoại', 'Dịch vụ', 'Nhân viên', 'Thời gian hẹn', 'Thời gian đặt', 'Tiền cọc', 'Tiền dịch vụ', 'Còn lại', 'Trạng thái'],
+      ...filtered.map((booking) => [
+        booking.bookingCode || booking.id,
+        booking.customer || '',
+        booking.phone || '',
+        booking.serviceName || '',
+        booking.staffName || '',
+        formatAppointment(booking.startTime || booking.time, booking.endTime),
+        formatCreatedAt(booking.createdAt),
+        booking.depositAmount,
+        booking.serviceAmount,
+        booking.remainingAmount,
+        booking.statusLabel
+      ])
+    ]
+    const today = new Date().toISOString().slice(0, 10)
+    downloadCsv(`lich-hen-shop-${today}.csv`, exportRows)
+  }
+
   return (
     <div className="min-h-screen bg-[linear-gradient(135deg,#f9f9ff_0%,#e7eeff_100%)] text-main">
       <ShopSidebar onNewBooking={() => console.log('Tạo lịch hẹn mới')} />
@@ -95,27 +141,37 @@ export default function ShopBookingsPage() {
           <p className="text-main/70">Theo dõi và cập nhật lịch trình dịch vụ hôm nay.</p>
         </header>
 
-        <div className="mb-6 flex flex-wrap gap-2">
-          {statuses.map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => setSelectedStatus(status)}
-              className={`px-4 py-2 rounded-full border text-sm ${
-                selectedStatus === status ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-slate-300 text-main/70'
-              }`}
-            >
-              {status}
-            </button>
-          ))}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {statuses.map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setSelectedStatus(status)}
+                className={`px-4 py-2 rounded-full border text-sm ${
+                  selectedStatus === status ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-slate-300 text-main/70'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={handleExportBookings}
+            className="px-4 py-2 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors disabled:opacity-60"
+            disabled={filtered.length === 0}
+          >
+            Xuất Excel (CSV)
+          </button>
         </div>
 
         <section className="glass-card rounded-2xl overflow-hidden bg-white/70">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px]">
+            <table className="w-full min-w-[1180px]">
               <thead className="bg-primary/5 border-b border-primary/10">
                 <tr>
-                  {['Mã', 'Khách hàng', 'Dịch vụ', 'Nhân viên', 'Thời gian hẹn', 'Thời gian đặt', 'Tiền cọc', 'Trạng thái', 'Chi tiết'].map((h) => (
+                  {['Mã', 'Khách hàng', 'Dịch vụ', 'Nhân viên', 'Thời gian hẹn', 'Thời gian đặt', 'Tiền cọc', 'Tiền dịch vụ', 'Còn lại', 'Trạng thái', 'Chi tiết'].map((h) => (
                     <th key={h} className="p-4 text-left font-label-bold text-label-bold text-primary">{h}</th>
                   ))}
                 </tr>
@@ -132,7 +188,9 @@ export default function ShopBookingsPage() {
                     <td className="p-4">{booking.staffName}</td>
                     <td className="p-4 text-sm">{formatAppointment(booking.startTime || booking.time, booking.endTime) || booking.dateLabel}</td>
                     <td className="p-4 text-sm">{formatCreatedAt(booking.createdAt)}</td>
-                    <td className="p-4">{Number(booking.deposit || 0).toLocaleString('vi-VN')}đ</td>
+                    <td className="p-4 font-semibold text-primary">{formatVnd(booking.depositAmount)}</td>
+                    <td className="p-4">{formatVnd(booking.serviceAmount)}</td>
+                    <td className="p-4 font-semibold text-emerald-700">{formatVnd(booking.remainingAmount)}</td>
                     <td className={`p-4 font-bold ${statusClass(booking.statusLabel)}`}>{booking.statusLabel}</td>
                     <td className="p-4">
                       <Link className="px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/10 text-sm" to={`/shop/bookings/${booking.id}`}>

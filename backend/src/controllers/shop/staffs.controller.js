@@ -28,9 +28,10 @@ export async function createStaff(req, res) {
     shortBio: req.body?.shortBio || '',
     bio: req.body?.bio || '',
     specialties: Array.isArray(req.body?.specialties) ? req.body.specialties : [],
-    role: req.body?.role || 'staff',
+    role: 'tech',
     status: req.body?.status || 'active',
     serviceIds: Array.isArray(req.body?.serviceIds) ? req.body.serviceIds : [],
+    slotAssignments: Array.isArray(req.body?.slotAssignments) ? req.body.slotAssignments : [],
     rating: toNumber(req.body?.rating || 0),
     createdAt: new Date(),
     updatedAt: new Date()
@@ -66,6 +67,8 @@ export async function updateStaff(req, res) {
   if (patch.shortBio !== undefined) patch.shortBio = String(patch.shortBio || '')
   if (patch.bio !== undefined) patch.bio = String(patch.bio || '')
   if (patch.specialties !== undefined) patch.specialties = Array.isArray(patch.specialties) ? patch.specialties : []
+  if (patch.slotAssignments !== undefined) patch.slotAssignments = Array.isArray(patch.slotAssignments) ? patch.slotAssignments : []
+  if (patch.role !== undefined) patch.role = 'tech'
   patch.updatedAt = new Date()
 
   const staff = await ShopStaff.findOneAndUpdate({ _id: req.params.staffId, shopId }, patch, { new: true }).lean()

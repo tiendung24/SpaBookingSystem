@@ -1,4 +1,4 @@
-import mongoose from 'mongoose'
+﻿import mongoose from 'mongoose'
 import {
   Booking,
   BookingSlotLock,
@@ -46,7 +46,7 @@ async function getNoShowPlatformCutRatio() {
 
 function ensureTransition(currentStatus, nextStatus, allowedCurrent) {
   if (!allowedCurrent.includes(currentStatus)) {
-    throw httpError(409, `Không thể chuyển trạng thái từ ${currentStatus} sang ${nextStatus}`)
+    throw httpError(409, `KhÃ´ng thá»ƒ chuyá»ƒn tráº¡ng thÃ¡i tá»« ${currentStatus} sang ${nextStatus}`)
   }
 }
 
@@ -75,22 +75,22 @@ async function decorateBooking(booking) {
   return { ...booking, paymentStatus: derivePaymentStatus({ booking, payment, deposit }) }
 }
 
-// Shop tạo booking thủ công (không qua public flow, không tạo deposit)
+// Shop táº¡o booking thá»§ cÃ´ng (khÃ´ng qua public flow, khÃ´ng táº¡o deposit)
 export async function createBooking(req, res) {
   const shopId = req.auth.shopId
   const { serviceId, staffId: requestedStaffId, customerName, phone, date, time, note } = req.body || {}
-  if (!serviceId || !customerName || !phone || !date || !time) throw httpError(400, 'Thiếu thông tin đặt lịch')
+  if (!serviceId || !customerName || !phone || !date || !time) throw httpError(400, 'Thiáº¿u thÃ´ng tin Ä‘áº·t lá»‹ch')
 
   const service = await Service.findOne({ _id: serviceId, shopId }).lean()
-  if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
-
-  const customer = await ensureCustomer({ name: customerName, phone })
-  const durationMinutes = Number(service.durationMinutes || 60)
-  const startTime = buildTimeOnDate(date, time)
-  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
+  if (!service) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y dá»‹ch vá»¥')
 
   const plan = await getWorkingPlan(shopId, date)
-  if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
+  if (plan.isClosed) throw httpError(409, 'Shop nghá»‰ vÃ o ngÃ y nÃ y')
+
+  const customer = await ensureCustomer({ name: customerName, phone })
+  const durationMinutes = Number(plan.slotMinutes || 60)
+  const startTime = buildTimeOnDate(date, time)
+  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
 
   const overlapping = await Booking.find({
     shopId,
@@ -102,16 +102,16 @@ export async function createBooking(req, res) {
   let staffId = requestedStaffId || null
   if (staffId) {
     const staff = await ShopStaff.findOne({ _id: staffId, shopId, status: 'active' }).lean()
-      if (!staff) throw httpError(404, 'Không tìm thấy nhân viên khả dụng')
+      if (!staff) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y nhÃ¢n viÃªn kháº£ dá»¥ng')
     const staffBusy = overlapping.some((booking) => String(booking.staffId || '') === String(staffId))
-      if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
+      if (staffBusy) throw httpError(409, 'NhÃ¢n viÃªn Ä‘Ã£ kÃ­n lá»‹ch trong khung giá» nÃ y')
   } else {
     const staffs = await ShopStaff.find({ shopId, status: 'active' }).lean()
     const availableStaff = staffs.find((staff) => {
       const busy = overlapping.some((booking) => String(booking.staffId || '') === String(staff._id))
       return !busy
     })
-      if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
+      if (!availableStaff) throw httpError(409, 'Hiá»‡n khÃ´ng cÃ²n nhÃ¢n viÃªn trá»‘ng trong khung giá» nÃ y')
     staffId = String(availableStaff._id)
   }
 
@@ -157,7 +157,7 @@ export async function createBooking(req, res) {
     }
   } catch (error) {
     await session.endSession()
-    if (error?.code === 11000) throw httpError(409, 'Slot vừa được đặt, vui lòng chọn giờ khác')
+    if (error?.code === 11000) throw httpError(409, 'Slot vá»«a Ä‘Æ°á»£c Ä‘áº·t, vui lÃ²ng chá»n giá» khÃ¡c')
     throw error
   }
   await session.endSession()
@@ -168,7 +168,7 @@ export async function createBooking(req, res) {
       shopName: '',
       bookingCode: booking.bookingCode,
       startTime: booking.startTime,
-      statusLabel: 'Đã xác nhận'
+      statusLabel: 'ÄÃ£ xÃ¡c nháº­n'
     })
     await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
   }
@@ -201,14 +201,14 @@ export async function getBookings(req, res) {
 export async function getBookingById(req, res) {
   const shopId = req.auth.shopId
   const booking = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
-  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  if (!booking) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
   res.json({ booking: await decorateBooking(booking) })
 }
 
 export async function confirmBooking(req, res) {
   const shopId = req.auth.shopId
   const existing = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
-  if (!existing) throw httpError(404, 'Không tìm thấy booking')
+  if (!existing) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
   ensureTransition(existing.status, 'confirmed', ['pending'])
   const booking = await Booking.findOneAndUpdate(
     { _id: req.params.bookingId, shopId },
@@ -221,7 +221,7 @@ export async function confirmBooking(req, res) {
       shopName: '',
       bookingCode: booking.bookingCode,
       startTime: booking.startTime,
-      statusLabel: 'Đã xác nhận'
+      statusLabel: 'ÄÃ£ xÃ¡c nháº­n'
     })
     await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
   }
@@ -231,7 +231,7 @@ export async function confirmBooking(req, res) {
 export async function cancelBooking(req, res) {
   const shopId = req.auth.shopId
   const existing = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
-  if (!existing) throw httpError(404, 'Không tìm thấy booking')
+  if (!existing) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
   ensureTransition(existing.status, 'cancelled', ['pending', 'confirmed'])
   const shop = await Shop.findById(shopId).lean()
   const cancelMeta = classifyShopCancel(existing, shop)
@@ -265,7 +265,7 @@ export async function cancelBooking(req, res) {
       shopName: '',
       bookingCode: booking.bookingCode,
       startTime: booking.startTime,
-      statusLabel: cancelMeta.cancelType === 'valid' ? 'Đã hủy bởi shop (hợp lệ)' : 'Đã hủy bởi shop (muộn)'
+      statusLabel: cancelMeta.cancelType === 'valid' ? 'ÄÃ£ há»§y bá»Ÿi shop (há»£p lá»‡)' : 'ÄÃ£ há»§y bá»Ÿi shop (muá»™n)'
     })
     await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
   }
@@ -281,7 +281,7 @@ export async function cancelBooking(req, res) {
 export async function checkIn(req, res) {
   const shopId = req.auth.shopId
   const existing = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
-  if (!existing) throw httpError(404, 'Không tìm thấy booking')
+  if (!existing) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
   ensureTransition(existing.status, 'checked_in', ['confirmed'])
   const booking = await Booking.findOneAndUpdate(
     { _id: req.params.bookingId, shopId },
@@ -294,7 +294,7 @@ export async function checkIn(req, res) {
       shopName: '',
       bookingCode: booking.bookingCode,
       startTime: booking.startTime,
-      statusLabel: 'Đã check-in'
+      statusLabel: 'ÄÃ£ check-in'
     })
     await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
   }
@@ -304,7 +304,7 @@ export async function checkIn(req, res) {
 export async function checkOut(req, res) {
   const shopId = req.auth.shopId
   const existing = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
-  if (!existing) throw httpError(404, 'Không tìm thấy booking')
+  if (!existing) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
   ensureTransition(existing.status, 'completed', ['checked_in'])
   const booking = await Booking.findOneAndUpdate(
     { _id: req.params.bookingId, shopId },
@@ -326,7 +326,7 @@ export async function checkOut(req, res) {
   const deposit = await Deposit.findOne({ bookingId: String(booking._id) })
   if (deposit && ['holding', 'pending', 'refund_pending'].includes(deposit.status)) {
     const depositAmount = Number(deposit.amount || 0)
-    // booking hoàn thành -> release cọc cho shop
+    // booking hoÃ n thÃ nh -> release cá»c cho shop
     wallet.escrowBalance = Math.max(0, Number(wallet.escrowBalance || 0) - depositAmount)
     wallet.balance = Number(wallet.balance || 0) + depositAmount
     deposit.status = 'released_to_shop'
@@ -338,7 +338,7 @@ export async function checkOut(req, res) {
       walletId: String(wallet._id),
       type: 'escrow_release_auto',
       amount: depositAmount,
-      description: `Tự động release cọc booking ${booking.bookingCode || booking._id}`,
+      description: `LumiX tráº£ cá»c booking ${booking.bookingCode || booking._id}`,
       refId: String(booking._id),
       status: 'success',
       createdAt: new Date()
@@ -358,7 +358,7 @@ export async function checkOut(req, res) {
     walletId: String(wallet._id),
     type: 'platform_fee',
     amount: -feeAmount,
-    description: `Trừ phí nền tảng cho booking ${booking.bookingCode || booking._id}`,
+    description: `Trá»« phÃ­ ná»n táº£ng cho booking ${booking.bookingCode || booking._id}`,
     refId: String(booking._id),
     status: 'success',
     createdAt: new Date()
@@ -370,7 +370,7 @@ export async function checkOut(req, res) {
       shopName: '',
       bookingCode: booking.bookingCode,
       startTime: booking.startTime,
-      statusLabel: 'Đã hoàn thành'
+      statusLabel: 'ÄÃ£ hoÃ n thÃ nh'
     })
     await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
   }
@@ -380,7 +380,7 @@ export async function checkOut(req, res) {
 export async function noShow(req, res) {
   const shopId = req.auth.shopId
   const existing = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
-  if (!existing) throw httpError(404, 'Không tìm thấy booking')
+  if (!existing) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
   ensureTransition(existing.status, 'no_show', ['confirmed'])
   const booking = await Booking.findOneAndUpdate(
     { _id: req.params.bookingId, shopId },
@@ -412,7 +412,7 @@ export async function noShow(req, res) {
       walletId: String(wallet._id),
       type: 'escrow_split_no_show_auto',
       amount: shopPart,
-      description: `Tự động chia cọc no-show booking ${booking.bookingCode || booking._id}`,
+      description: `Tá»± Ä‘á»™ng chia cá»c no-show booking ${booking.bookingCode || booking._id}`,
       refId: String(booking._id),
       status: 'success',
       createdAt: new Date()
@@ -439,6 +439,7 @@ export async function updateNote(req, res) {
     { note: req.body?.note || '', updatedAt: new Date() },
     { new: true }
   ).lean()
-  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  if (!booking) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking')
   res.json({ booking })
 }
+

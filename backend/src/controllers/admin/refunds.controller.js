@@ -131,7 +131,7 @@ export async function releaseToShop(req, res) {
       walletId: String(wallet._id),
       type: 'escrow_release',
       amount,
-      description: `Release cọc booking ${booking.bookingCode || booking._id}`,
+      description: `LumiX trả cọc booking ${booking.bookingCode || booking._id}`,
       refId: String(booking._id),
       status: 'success',
       createdAt: new Date()

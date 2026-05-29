@@ -65,6 +65,7 @@ function mapService(item) {
 }
 
 function mapStaff(item) {
+  const statusText = String(item.status || 'active')
   return {
     id: item._id,
     name: item.fullName || item.name || '',
@@ -72,11 +73,12 @@ function mapStaff(item) {
     bio: item.bio || '',
     specialties: item.specialties || [],
     phone: item.phone || '',
-    role: item.role || 'tech',
-    status: item.status || 'active',
+    role: 'tech',
+    status: statusText === 'inactive' ? 'off' : 'working',
     rating: Number(item.rating || 0),
-    bookingEnabled: item.status !== 'inactive',
+    bookingEnabled: statusText !== 'inactive',
     services: item.serviceIds || [],
+    slotAssignments: item.slotAssignments || [],
     avatar: item.avatarUrl || item.imageUrl || ''
   }
 }
@@ -728,8 +730,10 @@ export function ShopProvider({ children }) {
     const payload = {
       fullName: member.name || member.fullName,
       phone: member.phone,
-      role: member.role || 'tech',
+      role: 'tech',
+      status: member.status === 'off' ? 'inactive' : 'active',
       serviceIds: member.services || [],
+      slotAssignments: member.slotAssignments || [],
       avatarUrl: member.avatar || member.avatarUrl || '',
       shortBio: member.shortBio || member.short_description || '',
       bio: member.bio || member.description || '',
@@ -755,8 +759,10 @@ export function ShopProvider({ children }) {
     const payload = {
       fullName: patch.name || patch.fullName,
       phone: patch.phone,
-      role: patch.role,
+      role: 'tech',
+      status: patch.status === 'off' ? 'inactive' : 'active',
       serviceIds: patch.services || patch.serviceIds || [],
+      slotAssignments: patch.slotAssignments || [],
       avatarUrl: patch.avatar || patch.avatarUrl || undefined,
       shortBio: patch.shortBio !== undefined ? patch.shortBio : undefined,
       bio: patch.bio !== undefined ? patch.bio : undefined,

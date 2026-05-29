@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
-import ShopSidebar from '../components/shop/ShopSidebar';
-import SystemConfigTabs from '../components/shop/SystemConfigTabs';
-import { useShop } from '../context/ShopContext';
+﻿import { useState } from 'react'
+import ShopSidebar from '../components/shop/ShopSidebar'
+import SystemConfigTabs from '../components/shop/SystemConfigTabs'
+import { useShop } from '../context/ShopContext'
 
 const weekDays = [
   { key: 1, label: 'Thứ 2' },
@@ -11,89 +11,61 @@ const weekDays = [
   { key: 5, label: 'Thứ 6' },
   { key: 6, label: 'Thứ 7' },
   { key: 0, label: 'Chủ Nhật' }
-];
+]
 
 function toMinutes(timeHHmm) {
-  const [h, m] = timeHHmm.split(':').map((v) => Number(v));
-  return h * 60 + m;
-}
-
-function toHHmm(totalMinutes) {
-  const h = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
-  const m = String(totalMinutes % 60).padStart(2, '0');
-  return `${h}:${m}`;
+  const [h, m] = String(timeHHmm || '00:00').split(':').map((v) => Number(v))
+  return h * 60 + m
 }
 
 function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
+  return Math.max(min, Math.min(max, value))
 }
 
 export default function ShopSlotsConfigPage() {
-  const { shop, setShop, staff } = useShop();
-  const hours = shop.hours || {};
-  const [openTime, setOpenTime] = useState(hours.open || '09:00');
-  const [closeTime, setCloseTime] = useState(hours.close || '20:00');
-  const [daysOff, setDaysOff] = useState(new Set(hours.daysOff ?? [0]));
-  const [slotDuration, setSlotDuration] = useState(Number(hours.slotDuration || 60));
-  const [capacity, setCapacity] = useState(Number(hours.capacity || 1));
-  const [toastVisible, setToastVisible] = useState(false);
-
-  const timelineSlots = useMemo(() => {
-    const start = toMinutes(openTime);
-    const end = toMinutes(closeTime);
-    const duration = clamp(Number(slotDuration) || 45, 15, 240);
-    const safeEnd = Math.max(start, end);
-
-    const slots = [];
-    let cursor = start;
-    let index = 1;
-    while (cursor + duration <= safeEnd) {
-      slots.push({
-        index,
-        start: cursor,
-        end: cursor + duration,
-        booked: index === 2 ? 2 : index === 3 ? capacity : index === 4 ? 1 : 0
-      });
-      cursor += duration;
-      index += 1;
-      if (index > 200) break;
-    }
-    return slots;
-  }, [openTime, closeTime, slotDuration, capacity]);
-
-  const totalSlots = timelineSlots.length;
+  const { shop, setShop, staff } = useShop()
+  const hours = shop.hours || {}
+  const [openTime, setOpenTime] = useState(hours.open || '09:00')
+  const [closeTime, setCloseTime] = useState(hours.close || '20:00')
+  const [daysOff, setDaysOff] = useState(new Set(hours.daysOff ?? [0]))
+  const [slotDuration, setSlotDuration] = useState(Number(hours.slotDuration || 60))
+  const [capacity, setCapacity] = useState(Number(hours.capacity || 1))
+  const [toastVisible, setToastVisible] = useState(false)
 
   const toggleDayOff = (dayKey) => {
     setDaysOff((prev) => {
-      const next = new Set(prev);
-      if (next.has(dayKey)) next.delete(dayKey);
-      else next.add(dayKey);
-      return next;
-    });
-  };
+      const next = new Set(prev)
+      if (next.has(dayKey)) next.delete(dayKey)
+      else next.add(dayKey)
+      return next
+    })
+  }
 
   const saveConfig = () => {
+    const normalizedDuration = clamp(Number(slotDuration) || 60, 15, 240)
+    const normalizedCapacity = clamp(Number(capacity) || 1, 1, 20)
+    const open = openTime || '09:00'
+    const close = closeTime || '20:00'
+    const safeClose = toMinutes(close) <= toMinutes(open) ? open : close
+
     setShop((prev) => ({
       ...prev,
       hours: {
         ...prev.hours,
-        open: openTime,
-        close: closeTime,
+        open,
+        close: safeClose,
         daysOff: [...daysOff],
-        slotDuration,
-        capacity
+        slotDuration: normalizedDuration,
+        capacity: normalizedCapacity
       }
-    }));
-    setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 3000);
-    console.log('Lưu cấu hình slot:', { openTime, closeTime, daysOff: [...daysOff], slotDuration, capacity });
-  };
+    }))
+
+    setToastVisible(true)
+    setTimeout(() => setToastVisible(false), 3000)
+  }
 
   return (
-    <div
-      className="font-body-md text-main min-h-screen"
-      style={{ background: 'radial-gradient(circle at top left, #f0f3ff 0%, #ffffff 100%)' }}
-    >
+    <div className="font-body-md text-main min-h-screen" style={{ background: 'radial-gradient(circle at top left, #f0f3ff 0%, #ffffff 100%)' }}>
       <ShopSidebar onNewBooking={() => console.log('Tạo lịch hẹn mới')} />
 
       <main className="ml-64 p-6 md:p-10">
@@ -115,10 +87,11 @@ export default function ShopSlotsConfigPage() {
             Lưu cấu hình
           </button>
         </header>
+
         <SystemConfigTabs />
 
         <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 lg:col-span-5 space-y-6">
+          <div className="col-span-12 lg:col-span-7 space-y-6">
             <section className="glass-card p-6 rounded-3xl bg-white/70">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-primary">
@@ -153,7 +126,7 @@ export default function ShopSlotsConfigPage() {
                   <label className="font-label-bold text-main/70 mb-3 block">Ngày nghỉ định kỳ</label>
                   <div className="flex flex-wrap gap-2">
                     {weekDays.map((d) => {
-                      const off = daysOff.has(d.key);
+                      const off = daysOff.has(d.key)
                       return (
                         <button
                           key={d.key}
@@ -165,7 +138,7 @@ export default function ShopSlotsConfigPage() {
                         >
                           {d.label}
                         </button>
-                      );
+                      )
                     })}
                   </div>
                 </div>
@@ -231,83 +204,6 @@ export default function ShopSlotsConfigPage() {
               </div>
             </section>
           </div>
-
-          <div className="col-span-12 lg:col-span-7">
-            <section className="glass-card p-6 rounded-3xl bg-white/70 h-full border border-primary/10">
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700">
-                    <span className="material-symbols-outlined">timeline</span>
-                  </div>
-                  <h3 className="font-h3 text-h3 text-primary">Xem trước timeline</h3>
-                </div>
-                <div className="flex gap-2 items-center">
-                  <button type="button" className="p-2 rounded-full hover:bg-slate-100 transition-colors">
-                    <span className="material-symbols-outlined">chevron_left</span>
-                  </button>
-                  <span className="font-bold text-main">Hôm nay</span>
-                  <button type="button" className="p-2 rounded-full hover:bg-slate-100 transition-colors">
-                    <span className="material-symbols-outlined">chevron_right</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative overflow-y-auto pr-2" style={{ maxHeight: 580 }}>
-                <div className="space-y-4">
-                  {timelineSlots.slice(0, 8).map((slot) => (
-                    <div key={slot.index} className="flex gap-6 items-start">
-                      <div className="w-16 pt-2 text-right">
-                        <span className="text-sm font-bold text-main/70">{toHHmm(slot.start)}</span>
-                      </div>
-                      <div className="flex-1 grid grid-cols-2 gap-4">
-                        {[0, 1].map((col) => {
-                          const idx = slot.index + col;
-                          const s = timelineSlots.find((x) => x.index === idx);
-                          if (!s) return <div key={col} />;
-                          const full = s.booked >= capacity;
-                          return (
-                            <div
-                              key={col}
-                              className={`p-4 rounded-2xl border shadow-sm flex justify-between items-center cursor-pointer transition-all hover:-translate-y-1 ${
-                                full ? 'bg-primary/10 border-primary/20' : 'bg-white border-primary/10'
-                              }`}
-                            >
-                              <div>
-                                <p className="font-bold text-primary">{`Slot ${s.index}`}</p>
-                                <p className="text-xs text-main/60">{`${toHHmm(s.start)} - ${toHHmm(s.end)}`}</p>
-                              </div>
-                              <div className={`flex items-center gap-1 ${full ? 'text-primary' : 'text-main/60'}`}>
-                                <span className="material-symbols-outlined text-[18px]">group</span>
-                                <span className="font-bold">{`${s.booked}/${capacity}`}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-
-                  {timelineSlots.length > 10 && (
-                    <div className="flex gap-6 items-start opacity-40">
-                      <div className="w-16 pt-2 text-right">
-                        <span className="text-sm font-bold text-main/70">...</span>
-                      </div>
-                      <div className="flex-1 text-center py-4 border-2 border-dashed border-slate-300 rounded-2xl">
-                        <span className="text-xs text-main/60">Tải thêm các khung giờ tiếp theo</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-6 p-4 bg-cyan-50 rounded-2xl border border-cyan-200 flex gap-4 items-center">
-                <span className="material-symbols-outlined text-secondary">info</span>
-                <p className="text-xs text-cyan-900">
-                  Tổng cộng có <b>{totalSlots} slot</b> khả dụng mỗi ngày với cấu hình hiện tại. Khách hàng sẽ thấy các slot này khi đặt lịch.
-                </p>
-              </div>
-            </section>
-          </div>
         </div>
       </main>
 
@@ -320,5 +216,5 @@ export default function ShopSlotsConfigPage() {
         <p className="font-label-bold">Đã lưu cấu hình slot thành công!</p>
       </div>
     </div>
-  );
+  )
 }

@@ -132,7 +132,7 @@ export async function payosWebhook(req, res) {
           walletId: String(wallet._id),
           type: 'escrow_hold',
           amount,
-          description: `Giữ cọc (escrow) cho booking ${booking.bookingCode || booking._id}`,
+          description: `LumiX giữ cọc (escrow) cho booking ${booking.bookingCode || booking._id}`,
           refId: String(payment._id),
           status: 'success',
           createdAt: new Date()

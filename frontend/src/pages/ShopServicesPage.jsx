@@ -180,7 +180,7 @@ export default function ShopServicesPage() {
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-2xl">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start">
               <h3 className="font-h3 text-h3 text-primary">{editingId ? 'Sửa dịch vụ' : 'Thêm dịch vụ mới'}</h3>
               <button type="button" onClick={() => setModalOpen(false)} className="text-main/60 hover:text-main">✕</button>

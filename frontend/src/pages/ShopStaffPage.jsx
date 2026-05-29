@@ -4,18 +4,13 @@ import { useShop } from '../context/ShopContext'
 
 const roles = [
   { key: 'all', label: 'Tất cả' },
-  { key: 'tech', label: 'Kỹ thuật viên' },
-  { key: 'reception', label: 'Lễ tân' },
-  { key: 'manager', label: 'Quản lý' }
+  { key: 'tech', label: 'Kỹ thuật viên' }
 ]
 
-const shiftsMaster = ['Sáng', 'Chiều', 'Tối']
 const avatarFallback = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=500&auto=format&fit=crop'
 
-function roleLabel(roleKey) {
-  if (roleKey === 'tech') return 'Kỹ thuật viên'
-  if (roleKey === 'reception') return 'Lễ tân'
-  return 'Quản lý'
+function roleLabel() {
+  return 'Kỹ thuật viên'
 }
 
 function statusBadge(status) {
@@ -33,7 +28,7 @@ function isValidPhone(input) {
 }
 
 export default function ShopStaffPage() {
-  const { staff, addStaff, updateStaff, deleteStaff, services, bookings, uploadImage } = useShop()
+  const { staff, addStaff, updateStaff, deleteStaff, bookings, uploadImage, shop } = useShop()
 
   const [query, setQuery] = useState('')
   const [activeRole, setActiveRole] = useState('all')
@@ -47,10 +42,29 @@ export default function ShopStaffPage() {
     status: 'working',
     rating: 5,
     bookingEnabled: true,
-    services: [],
-    shifts: ['Sáng'],
+    shortBio: '',
+    bio: '',
+    specialties: [],
+    slotAssignments: [],
     avatar: avatarFallback
   })
+
+  const shopSlots = useMemo(() => {
+    const open = shop?.hours?.open || '09:00'
+    const close = shop?.hours?.close || '20:00'
+    const slotDuration = Number(shop?.hours?.slotDuration || 60)
+    const [openHour, openMinute] = String(open).split(':').map(Number)
+    const [closeHour, closeMinute] = String(close).split(':').map(Number)
+    const start = openHour * 60 + openMinute
+    const end = closeHour * 60 + closeMinute
+    const slots = []
+    for (let current = start; current < end; current += slotDuration) {
+      const hour = String(Math.floor(current / 60)).padStart(2, '0')
+      const minute = String(current % 60).padStart(2, '0')
+      slots.push(`${hour}:${minute}`)
+    }
+    return slots
+  }, [shop?.hours?.open, shop?.hours?.close, shop?.hours?.slotDuration])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -85,11 +99,10 @@ export default function ShopStaffPage() {
       status: 'working',
       rating: 5,
       bookingEnabled: true,
-      services: [],
       shortBio: '',
       bio: '',
       specialties: [],
-      shifts: ['Sáng'],
+      slotAssignments: [],
       avatar: avatarFallback
     })
     setModalOpen(true)
@@ -101,15 +114,14 @@ export default function ShopStaffPage() {
     setForm({
       name: member.name || '',
       phone: member.phone || '',
-      role: member.role || 'tech',
+      role: 'tech',
       status: member.status || 'working',
       rating: Number(member.rating || 5),
       bookingEnabled: Boolean(member.bookingEnabled),
-      services: member.services || [],
       shortBio: member.shortBio || '',
       bio: member.bio || '',
       specialties: member.specialties || [],
-      shifts: member.shifts || ['Sáng'],
+      slotAssignments: member.slotAssignments || [],
       avatar: member.avatar || avatarFallback
     })
     setModalOpen(true)
@@ -123,6 +135,7 @@ export default function ShopStaffPage() {
 
     const payload = {
       ...form,
+      role: 'tech',
       name,
       phone: phoneNormalized,
       avatar: form.avatar || avatarFallback
@@ -147,37 +160,36 @@ export default function ShopStaffPage() {
       setForm((prev) => ({ ...prev, avatar: uploadedUrl }))
     } catch (err) {
       console.error('Lỗi upload avatar:', err)
-      alert('Lỗi tải ảnh lên server, vui lòng thử lại.')
+      alert('Lỗi tải ảnh lên server.')
     }
   }
 
   const toggleBookingEnabled = (id) => {
-    const member = staff.find((s) => s.id === id)
+    const member = staff.find((item) => item.id === id)
     if (!member) return
     updateStaff(id, { bookingEnabled: !member.bookingEnabled })
   }
 
   return (
     <div className="min-h-screen bg-slate-50 text-main overflow-x-hidden">
-      <ShopSidebar onNewBooking={() => console.log('Tạo lịch hẹn mới')} />
-
-      <main className="ml-64 p-6 md:p-10 min-h-screen">
-        <header className="flex justify-between items-center mb-10">
-          <div>
-            <h2 className="font-h2 text-h2 text-main">Quản lý nhân sự</h2>
-            <p className="text-main/70">Quản lý danh sách kỹ thuật viên, lễ tân và quản lý.</p>
+      <ShopSidebar onNewBooking={() => {}} />
+      <main className="ml-64 p-6 md:p-10">
+        <section className="glass-card bg-white/70 rounded-3xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-h2 text-h2 text-primary">Quản lý nhân sự</h2>
+              <p className="text-main/70">Theo dõi trạng thái làm việc và dịch vụ phụ trách của kỹ thuật viên.</p>
+            </div>
+            <button type="button" className="px-4 py-2 rounded-xl bg-primary text-white font-bold" onClick={openCreate}>+ Thêm nhân sự</button>
           </div>
-          <button type="button" onClick={openCreate} className="bg-primary text-white px-6 py-3 rounded-xl font-bold">+ Thêm nhân viên</button>
-        </header>
 
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-4"><p className="text-main/60 text-sm">Tổng nhân sự</p><p className="text-2xl font-bold">{stats.total}</p></div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-4"><p className="text-main/60 text-sm">Đang làm</p><p className="text-2xl font-bold">{stats.working}</p></div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-4"><p className="text-main/60 text-sm">Lịch hôm nay</p><p className="text-2xl font-bold">{stats.bookingsToday}</p></div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-4"><p className="text-main/60 text-sm">Điểm trung bình</p><p className="text-2xl font-bold">{stats.ratingAvg}</p></div>
-        </section>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4"><p className="text-main/60 text-sm">Tổng nhân sự</p><p className="text-2xl font-bold">{stats.total}</p></div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-4"><p className="text-main/60 text-sm">Đang làm</p><p className="text-2xl font-bold text-emerald-600">{stats.working}</p></div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-4"><p className="text-main/60 text-sm">Booking hôm nay</p><p className="text-2xl font-bold text-primary">{stats.bookingsToday}</p></div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-4"><p className="text-main/60 text-sm">Rating trung bình</p><p className="text-2xl font-bold text-amber-500">{stats.ratingAvg}</p></div>
+          </div>
 
-        <section className="bg-white border border-slate-200 rounded-3xl p-5">
           <div className="flex gap-2 flex-wrap mb-4">
             {roles.map((r) => (
               <button key={r.key} type="button" onClick={() => setActiveRole(r.key)} className={`px-4 py-2 rounded-full border ${activeRole === r.key ? 'border-primary bg-primary/10 text-primary' : 'border-slate-300 text-main/70'}`}>{r.label}</button>
@@ -195,8 +207,8 @@ export default function ShopStaffPage() {
                     <img src={member.avatar || avatarFallback} alt={member.name} className="h-14 w-14 rounded-xl object-cover" />
                     <div>
                       <h3 className="font-bold">{member.name}</h3>
-                        <p className="text-sm text-main/70">{roleLabel(member.role)}</p>
-                        {member.shortBio ? <p className="text-sm text-main/60">{member.shortBio}</p> : null}
+                      <p className="text-sm text-main/70">{roleLabel(member.role)}</p>
+                      {member.shortBio ? <p className="text-sm text-main/60">{member.shortBio}</p> : null}
                     </div>
                   </div>
                   <p className="mt-3 text-sm text-main/70">{member.phone || 'Chưa có số điện thoại'}</p>
@@ -215,19 +227,17 @@ export default function ShopStaffPage() {
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-2xl">
-            <div className="flex justify-between items-start">
-              <h3 className="font-h3 text-h3 text-primary">{editingId ? 'Sửa nhân sự' : 'Thêm nhân sự mới'}</h3>
-              <button type="button" onClick={() => setModalOpen(false)} className="text-main/60 hover:text-main">✕</button>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-h3 text-h3 text-primary">{editingId ? 'Cập nhật nhân sự' : 'Thêm nhân sự'}</h3>
+              <button type="button" className="text-main/60 hover:text-main" onClick={() => setModalOpen(false)}>Đóng</button>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <input className="p-3 rounded-xl border border-slate-300" placeholder="Họ tên" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
               <input className="p-3 rounded-xl border border-slate-300" placeholder="Số điện thoại" value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} />
-              <select className="p-3 rounded-xl border border-slate-300" value={form.role} onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}>
+              <select className="p-3 rounded-xl border border-slate-300" value="tech" onChange={() => {}} disabled>
                 <option value="tech">Kỹ thuật viên</option>
-                <option value="reception">Lễ tân</option>
-                <option value="manager">Quản lý</option>
               </select>
               <select className="p-3 rounded-xl border border-slate-300" value={form.status} onChange={(e) => setForm((prev) => ({ ...prev, status: e.target.value }))}>
                 <option value="working">Đang làm</option>
@@ -251,46 +261,24 @@ export default function ShopStaffPage() {
             </div>
 
             <div className="mt-4">
-              <p className="text-sm font-bold text-main/70 mb-2">Phân quyền ca làm</p>
-              <div className="flex gap-2 flex-wrap">
-                {shiftsMaster.map((shift) => {
-                  const checked = form.shifts.includes(shift)
+              <p className="text-sm font-bold text-main/70 mb-2">Phân quyền theo slot giờ</p>
+              <p className="text-xs text-main/60 mb-2">Nếu không chọn slot nào, nhân viên được hiểu là làm tất cả slot.</p>
+              <div className="flex gap-2 flex-wrap max-h-40 overflow-y-auto rounded-2xl border border-slate-200 p-3">
+                {shopSlots.map((slot) => {
+                  const checked = form.slotAssignments.includes(slot)
                   return (
                     <button
-                      key={shift}
+                      key={slot}
                       type="button"
                       className={`px-4 py-2 rounded-full border ${checked ? 'border-primary bg-primary/10 text-primary' : 'border-slate-300 text-main/70'}`}
                       onClick={() =>
                         checked
-                          ? setForm((prev) => ({ ...prev, shifts: prev.shifts.filter((s) => s !== shift) }))
-                          : setForm((prev) => ({ ...prev, shifts: [...prev.shifts, shift] }))
+                          ? setForm((prev) => ({ ...prev, slotAssignments: prev.slotAssignments.filter((s) => s !== slot) }))
+                          : setForm((prev) => ({ ...prev, slotAssignments: [...prev.slotAssignments, slot] }))
                       }
                     >
-                      {shift}
+                      {slot}
                     </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-sm font-bold text-main/70 mb-2">Dịch vụ phụ trách</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {services.map((svc) => {
-                  const checked = form.services.includes(svc.id)
-                  return (
-                    <label key={svc.id} className={`p-3 rounded-xl border cursor-pointer ${checked ? 'border-primary bg-primary/10' : 'border-slate-300'}`}>
-                      <input
-                        type="checkbox"
-                        className="mr-2"
-                        checked={checked}
-                        onChange={(e) => {
-                          if (e.target.checked) setForm((prev) => ({ ...prev, services: [...prev.services, svc.id] }))
-                          else setForm((prev) => ({ ...prev, services: prev.services.filter((x) => x !== svc.id) }))
-                        }}
-                      />
-                      {svc.name}
-                    </label>
                   )
                 })}
               </div>

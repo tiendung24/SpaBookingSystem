@@ -20,11 +20,19 @@ export default function ShopWalletPage() {
 
   const transactions = useMemo(() => {
     return walletTransactions.map((t) => {
+      const txType = String(t.type || '')
+      const isFee = txType === 'platform_fee' || txType === 'fee'
+      const isEscrow = txType.startsWith('escrow_')
+      const isPenalty = txType === 'penalty'
       const typeMeta =
-        t.type === 'topup'
+        txType === 'topup'
           ? { label: 'Nạp tiền', icon: 'add', cls: 'bg-emerald-100 text-emerald-800', amtCls: 'text-emerald-600 font-bold', sign: '+' }
-          : t.type === 'fee'
+          : isFee
             ? { label: 'Phí dịch vụ', icon: 'receipt_long', cls: 'bg-blue-100 text-blue-800', amtCls: 'text-main', sign: '' }
+            : isEscrow
+              ? { label: 'Cọc ký quỹ', icon: 'shield', cls: 'bg-amber-100 text-amber-800', amtCls: 'text-main', sign: '' }
+              : isPenalty
+                ? { label: 'Phạt', icon: 'gpp_bad', cls: 'bg-rose-100 text-rose-700', amtCls: 'text-red-600 font-bold', sign: '' }
             : { label: 'Khác', icon: 'receipt_long', cls: 'bg-slate-100 text-slate-700', amtCls: 'text-main', sign: '' };
       const amountText = `${t.amount > 0 ? '+' : ''}${Math.abs(Number(t.amount || 0)).toLocaleString('vi-VN')}`;
       return {
@@ -61,9 +69,14 @@ export default function ShopWalletPage() {
     let fee = 0;
     let penalty = 0;
     walletTransactions.forEach(t => {
-      if (t.type === 'topup') topup += Number(t.amount || 0);
-      else if (t.type === 'fee') fee += Math.abs(Number(t.amount || 0));
-      else penalty += Math.abs(Number(t.amount || 0));
+      const txType = String(t.type || '')
+      if (txType === 'topup') {
+        topup += Number(t.amount || 0)
+      } else if (txType === 'platform_fee' || txType === 'fee') {
+        fee += Math.abs(Number(t.amount || 0))
+      } else if (txType === 'penalty') {
+        penalty += Math.abs(Number(t.amount || 0))
+      }
     });
     return { topup, fee, penalty };
   }, [walletTransactions]);

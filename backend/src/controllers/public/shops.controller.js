@@ -1,4 +1,4 @@
-import { PayOSService } from '../../services/payos.service.js'
+﻿import { PayOSService } from '../../services/payos.service.js'
 import mongoose from 'mongoose'
 import { Booking, BookingSlotLock, Deposit, PayosPayment, Service, ServiceCategory, ShopStaff } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
@@ -60,6 +60,20 @@ function calcDepositAmount({ shop, service }) {
   return Math.max(0, value)
 }
 
+function isStaffAvailableForSlot(staff, slotHm) {
+  const slots = Array.isArray(staff?.slotAssignments) ? staff.slotAssignments : []
+  if (!slots.length) return true
+  return slots.includes(String(slotHm || ''))
+}
+
+function getSlotCapacity(plan) {
+  return Math.max(1, Number(plan?.maxConcurrent || 1))
+}
+
+function countSlotOccupied({ overlapBookings = [], overlapLocks = [] }) {
+  return Number(overlapBookings.length || 0) + Number(overlapLocks.length || 0)
+}
+
 export async function getShopBySlug(req, res) {
   const shop = await findShopBySlug(req.params.slug)
   res.json({ shop })
@@ -90,7 +104,7 @@ export async function getServices(req, res) {
 
 export async function getServiceDetail(req, res) {
   const service = await Service.findById(req.params.serviceId).lean()
-  if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
+  if (!service) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y dá»‹ch vá»¥')
   res.json({ service })
 }
 
@@ -104,13 +118,13 @@ export async function getStaffs(req, res) {
 
 export async function getAvailableSlots(req, res) {
   const { date, serviceId, staffId, holdToken } = req.query
-  if (!date || !serviceId) throw httpError(400, 'Thiếu date hoặc serviceId')
+  if (!date || !serviceId) throw httpError(400, 'Thiáº¿u date hoáº·c serviceId')
 
   const shop = await findShopBySlug(req.params.slug)
   const shopId = String(shop._id)
   const service = await Service.findById(serviceId).lean()
   await cleanupExpiredAwaitingDeposits(shopId)
-  if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
+  if (!service) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y dá»‹ch vá»¥')
 
   const plan = await getWorkingPlan(shopId, date)
   if (plan.isClosed) return res.json({ date, slots: [] })
@@ -130,7 +144,7 @@ export async function getAvailableSlots(req, res) {
   const candidateStaffs = Array.isArray(service.availableStaffIds) && service.availableStaffIds.length
     ? activeStaffs.filter((s) => service.availableStaffIds.includes(String(s._id)))
     : activeStaffs
-  const duration = Number(service.durationMinutes || 60)
+  const duration = Number(plan.slotMinutes || 60)
   const slots = []
 
   let cursor = buildTimeOnDate(date, plan.openTime)
@@ -139,6 +153,7 @@ export async function getAvailableSlots(req, res) {
     const slotStart = new Date(cursor)
     const slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000)
     if (slotEnd > close) break
+    const slotHm = formatHm(slotStart)
 
     const overlapBookings = bookings.filter((booking) => {
       const bookingStart = new Date(booking.startTime)
@@ -152,20 +167,31 @@ export async function getAvailableSlots(req, res) {
       return slotStart < lockEnd && slotEnd > lockStart
     })
 
+    const slotCapacity = getSlotCapacity(plan)
+    const occupiedCount = countSlotOccupied({ overlapBookings, overlapLocks })
+    if (occupiedCount >= slotCapacity) {
+      cursor = new Date(cursor.getTime() + plan.slotMinutes * 60 * 1000)
+      continue
+    }
+
     if (staffId) {
+      const selected = candidateStaffs.find((s) => String(s._id) === String(staffId))
+      if (!selected || !isStaffAvailableForSlot(selected, slotHm)) {
+        cursor = new Date(cursor.getTime() + plan.slotMinutes * 60 * 1000)
+        continue
+      }
       const isStaffBusy =
         overlapBookings.some((booking) => String(booking.staffId || '') === String(staffId)) ||
         overlapLocks.some((lock) => String(lock.staffId || '') === String(staffId))
-      if (!isStaffBusy) slots.push(formatHm(slotStart))
+      if (!isStaffBusy) slots.push(slotHm)
     } else {
       const availableCount = candidateStaffs.filter((s) => {
+        if (!isStaffAvailableForSlot(s, slotHm)) return false
         const busyByBooking = overlapBookings.some((b) => String(b.staffId || '') === String(s._id))
         const busyByHold = overlapLocks.some((l) => String(l.staffId || '') === String(s._id))
         return !busyByBooking && !busyByHold
       }).length
-      const capacity = Math.min(Number(plan.maxConcurrent || 1), Math.max(candidateStaffs.length, 1))
-      const occupiedCount = overlapBookings.length + overlapLocks.length
-      if (availableCount > 0 && occupiedCount < capacity) slots.push(formatHm(slotStart))
+      if (availableCount > 0) slots.push(slotHm)
     }
     cursor = new Date(cursor.getTime() + plan.slotMinutes * 60 * 1000)
   }
@@ -175,21 +201,21 @@ export async function getAvailableSlots(req, res) {
 
 export async function holdSlot(req, res) {
   const { serviceId, staffId: requestedStaffId, date, time, holdToken: clientHoldToken, clientAttemptId } = req.body || {}
-  if (!serviceId || !date || !time) throw httpError(400, 'Thiếu serviceId/date/time')
+  if (!serviceId || !date || !time) throw httpError(400, 'Thiáº¿u serviceId/date/time')
 
   const shop = await findShopBySlug(req.params.slug)
   await cleanupExpiredAwaitingDeposits(String(shop._id))
-  if (!(await isShopBookable(shop))) throw httpError(409, 'Shop hiện không nhận lịch')
+  if (!(await isShopBookable(shop))) throw httpError(409, 'Shop hiá»‡n khÃ´ng nháº­n lá»‹ch')
 
     const service = await Service.findById(serviceId).lean()
-    if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
-
-  const durationMinutes = Number(service.durationMinutes || 60)
-  const startTime = buildTimeOnDate(date, time)
-  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
+    if (!service) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y dá»‹ch vá»¥')
 
   const plan = await getWorkingPlan(String(shop._id), date)
-  if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
+  if (plan.isClosed) throw httpError(409, 'Shop nghá»‰ vÃ o ngÃ y nÃ y')
+
+  const durationMinutes = Number(plan.slotMinutes || 60)
+  const startTime = buildTimeOnDate(date, time)
+  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
 
   const now = new Date()
 
@@ -227,24 +253,34 @@ export async function holdSlot(req, res) {
 
   const activeLocks = await BookingSlotLock.find({
     shopId: String(shop._id),
+    lockType: 'temp_hold',
     expiresAt: { $gt: now },
     startTime: { $lt: endTime },
     endTime: { $gt: startTime }
   }).lean()
 
+  const capacity = getSlotCapacity(plan)
+  if (countSlotOccupied({ overlapBookings: overlapping, overlapLocks: activeLocks }) >= capacity) {
+    throw httpError(409, 'Khung giá» nÃ y Ä‘Ã£ Ä‘áº§y theo sá»©c chá»©a tá»‘i Ä‘a, vui lÃ²ng chá»n giá» khÃ¡c')
+  }
+
   let staffId = requestedStaffId || null
+  const requestedSlotHm = String(time || '')
   if (staffId) {
     const staffExists = candidateStaffs.some((s) => String(s._id) === String(staffId))
-      if (!staffExists) throw httpError(409, 'Nhân viên không khả dụng cho dịch vụ hoặc đang tạm nghỉ')
+      if (!staffExists) throw httpError(409, 'NhÃ¢n viÃªn khÃ´ng kháº£ dá»¥ng cho dá»‹ch vá»¥ hoáº·c Ä‘ang táº¡m nghá»‰')
+    const selected = candidateStaffs.find((s) => String(s._id) === String(staffId))
+    if (!isStaffAvailableForSlot(selected, requestedSlotHm)) throw httpError(409, 'NhÃ¢n viÃªn khÃ´ng lÃ m viá»‡c á»Ÿ slot giá» nÃ y')
     const staffBusy = overlapping.some((b) => String(b.staffId || '') === String(staffId)) || activeLocks.some((l) => String(l.staffId || '') === String(staffId))
-      if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
+      if (staffBusy) throw httpError(409, 'NhÃ¢n viÃªn Ä‘Ã£ kÃ­n lá»‹ch trong khung giá» nÃ y')
   } else {
     const availableStaff = candidateStaffs.find((s) => {
+      if (!isStaffAvailableForSlot(s, requestedSlotHm)) return false
       const busyByBooking = overlapping.some((b) => String(b.staffId || '') === String(s._id))
       const busyByHold = activeLocks.some((l) => String(l.staffId || '') === String(s._id))
       return !busyByBooking && !busyByHold
     })
-      if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
+      if (!availableStaff) throw httpError(409, 'Hiá»‡n khÃ´ng cÃ²n nhÃ¢n viÃªn trá»‘ng trong khung giá» nÃ y')
     staffId = String(availableStaff._id)
   }
 
@@ -266,7 +302,7 @@ export async function holdSlot(req, res) {
       createdAt: new Date()
     })
   } catch (error) {
-    if (error?.code === 11000) throw httpError(409, 'Slot vừa được người khác giữ, vui lòng chọn giờ khác')
+    if (error?.code === 11000) throw httpError(409, 'Slot vá»«a Ä‘Æ°á»£c ngÆ°á»i khÃ¡c giá»¯, vui lÃ²ng chá»n giá» khÃ¡c')
     throw error
   }
 
@@ -274,22 +310,22 @@ export async function holdSlot(req, res) {
 }
 export async function createBooking(req, res) {
   const { serviceId, staffId: requestedStaffId, customerName, phone, email, date, time, note, holdToken, clientBookingAttemptId } = req.body || {}
-  if (!serviceId || !customerName || !phone || !date || !time) throw httpError(400, 'Thiếu thông tin đặt lịch')
+  if (!serviceId || !customerName || !phone || !date || !time) throw httpError(400, 'Thiáº¿u thÃ´ng tin Ä‘áº·t lá»‹ch')
 
   const shop = await findShopBySlug(req.params.slug)
   await cleanupExpiredAwaitingDeposits(String(shop._id))
-  if (!(await isShopBookable(shop))) throw httpError(409, 'Shop hiện không nhận lịch')
+  if (!(await isShopBookable(shop))) throw httpError(409, 'Shop hiá»‡n khÃ´ng nháº­n lá»‹ch')
 
     const service = await Service.findById(serviceId).lean()
-    if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
+    if (!service) throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y dá»‹ch vá»¥')
 
   const customer = await ensureCustomer({ name: customerName, phone })
-  const durationMinutes = Number(service.durationMinutes || 60)
+  const plan = await getWorkingPlan(String(shop._id), date)
+  if (plan.isClosed) throw httpError(409, 'Shop nghá»‰ vÃ o ngÃ y nÃ y')
+
+  const durationMinutes = Number(plan.slotMinutes || 60)
   const startTime = buildTimeOnDate(date, time)
   const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
-
-  const plan = await getWorkingPlan(String(shop._id), date)
-  if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
 
   const now = new Date()
   // Idempotency: if client sent an attempt id and booking already exists, return it
@@ -341,7 +377,7 @@ export async function createBooking(req, res) {
     : null
 
   if (holdToken && !holdLock) {
-    throw httpError(409, 'Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+    throw httpError(409, 'Giá»¯ chá»— táº¡m Ä‘Ã£ háº¿t háº¡n. Vui lÃ²ng chá»n láº¡i khung giá».')
   }
 
   const overlapping = await Booking.find({
@@ -351,34 +387,54 @@ export async function createBooking(req, res) {
     endTime: { $gt: startTime }
   }).lean()
 
+  const activeHoldsRaw = await BookingSlotLock.find({
+    shopId: String(shop._id),
+    lockType: 'temp_hold',
+    expiresAt: { $gt: now },
+    startTime: { $lt: endTime },
+    endTime: { $gt: startTime }
+  }).lean()
+  const activeHolds = holdLock
+    ? activeHoldsRaw.filter((lock) => String(lock._id) !== String(holdLock._id))
+    : activeHoldsRaw
+
+  const capacity = getSlotCapacity(plan)
+  if (countSlotOccupied({ overlapBookings: overlapping, overlapLocks: activeHolds }) >= capacity) {
+    throw httpError(409, 'Khung giá» nÃ y Ä‘Ã£ Ä‘áº§y theo sá»©c chá»©a tá»‘i Ä‘a, vui lÃ²ng chá»n giá» khÃ¡c')
+  }
+
   const activeStaffsForBooking = await ShopStaff.find({ shopId: String(shop._id), status: 'active' }).lean()
   const candidateStaffsForBooking = Array.isArray(service.availableStaffIds) && service.availableStaffIds.length
     ? activeStaffsForBooking.filter((s) => service.availableStaffIds.includes(String(s._id)))
     : activeStaffsForBooking
 
   let staffId = requestedStaffId || null
+  const requestedSlotHm = String(time || '')
 
   if (holdLock) {
     const lockStart = new Date(holdLock.startTime).getTime()
     const lockEnd = new Date(holdLock.endTime).getTime()
     if (lockStart !== startTime.getTime() || lockEnd !== endTime.getTime()) {
-      throw httpError(409, 'Thông tin giữ chỗ không khớp. Vui lòng chọn lại giờ.')
+      throw httpError(409, 'ThÃ´ng tin giá»¯ chá»— khÃ´ng khá»›p. Vui lÃ²ng chá»n láº¡i giá».')
     }
     staffId = String(holdLock.staffId)
   }
 
   if (staffId) {
     const staffExists = candidateStaffsForBooking.some((s) => String(s._id) === String(staffId))
-      if (!staffExists) throw httpError(409, 'Nhân viên không khả dụng cho dịch vụ hoặc đang tạm nghỉ')
+      if (!staffExists) throw httpError(409, 'NhÃ¢n viÃªn khÃ´ng kháº£ dá»¥ng cho dá»‹ch vá»¥ hoáº·c Ä‘ang táº¡m nghá»‰')
+    const selected = candidateStaffsForBooking.find((s) => String(s._id) === String(staffId))
+    if (!isStaffAvailableForSlot(selected, requestedSlotHm)) throw httpError(409, 'NhÃ¢n viÃªn khÃ´ng lÃ m viá»‡c á»Ÿ slot giá» nÃ y')
     const staffBusy = overlapping.some((booking) => String(booking.staffId || '') === String(staffId))
-      if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
+      if (staffBusy) throw httpError(409, 'NhÃ¢n viÃªn Ä‘Ã£ kÃ­n lá»‹ch trong khung giá» nÃ y')
   } else {
     const availableStaff = candidateStaffsForBooking.find((staff) => {
+      if (!isStaffAvailableForSlot(staff, requestedSlotHm)) return false
       const busy = overlapping.some((booking) => String(booking.staffId || '') === String(staff._id))
       return !busy
     })
-    if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
-      if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
+    if (!availableStaff) throw httpError(409, 'Hiá»‡n khÃ´ng cÃ²n nhÃ¢n viÃªn trá»‘ng trong khung giá» nÃ y')
+      if (!availableStaff) throw httpError(409, 'Hiá»‡n khÃ´ng cÃ²n nhÃ¢n viÃªn trá»‘ng trong khung giá» nÃ y')
     staffId = String(availableStaff._id)
   }
 
@@ -462,7 +518,7 @@ export async function createBooking(req, res) {
     }
   } catch (error) {
     await session.endSession()
-    if (error?.code === 11000) throw httpError(409, 'Slot đã được người khác vừa đặt, vui lòng chọn giờ khác')
+    if (error?.code === 11000) throw httpError(409, 'Slot Ä‘Ã£ Ä‘Æ°á»£c ngÆ°á»i khÃ¡c vá»«a Ä‘áº·t, vui lÃ²ng chá»n giá» khÃ¡c')
     throw error
   }
   await session.endSession()
@@ -480,7 +536,7 @@ export async function createBooking(req, res) {
       console.log('[createBooking] deposit payment created', { bookingCode, payosOrderId: payment.payosOrderId, checkoutUrl: payment.checkoutUrl })
     } catch (err) {
       console.error('[createBooking] createDepositPayment failed', err && err.message)
-      throw httpError(500, 'Không thể tạo link thanh toán cọc lúc này, vui lòng thử lại sau')
+      throw httpError(500, 'KhÃ´ng thá»ƒ táº¡o link thanh toÃ¡n cá»c lÃºc nÃ y, vui lÃ²ng thá»­ láº¡i sau')
     }
 
     await PayosPayment.create({
@@ -553,7 +609,7 @@ export async function createBooking(req, res) {
 
 export async function getBookingsByPhone(req, res) {
   const phone = String(req.query?.phone || '').trim()
-  if (!phone) throw httpError(400, 'Thiếu phone')
+  if (!phone) throw httpError(400, 'Thiáº¿u phone')
 
   const shop = await findShopBySlug(req.params.slug)
   const normalized = phone.replace(/\s+/g, '')
@@ -569,7 +625,7 @@ export async function getBookingsByPhone(req, res) {
 
 export async function getBookingAttempt(req, res) {
   const attemptId = String(req.params.attemptId || '').trim()
-  if (!attemptId) throw httpError(400, 'Thiếu attemptId')
+  if (!attemptId) throw httpError(400, 'Thiáº¿u attemptId')
 
   const shop = await findShopBySlug(req.params.slug)
   const shopId = String(shop._id)
@@ -584,8 +640,10 @@ export async function getBookingAttempt(req, res) {
   const hold = await BookingSlotLock.findOne({ shopId, clientAttemptId: attemptId, lockType: 'temp_hold', expiresAt: { $gt: now } }).lean()
   if (hold) return res.json({ hold })
 
-  throw httpError(404, 'Không tìm thấy booking/hold cho attemptId này')
+  throw httpError(404, 'KhÃ´ng tÃ¬m tháº¥y booking/hold cho attemptId nÃ y')
 }
+
+
 
 
 
