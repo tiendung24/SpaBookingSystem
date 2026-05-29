@@ -447,45 +447,8 @@ export default function CustomerPaymentPage() {
     let mounted = true
     const restore = async () => {
       try {
-        let restoredFromAttempt = false
-        let attemptError = null
-        // hydrate from server using client attempt id if available
-        try {
-          const attemptKey = `client_attempt_${slug}`
-          const attemptId = sessionStorage.getItem(attemptKey)
-          if (attemptId) {
-            const attemptRes = await apiRequest(`/api/public/shops/${slug}/booking-attempts/${attemptId}`)
-            if (attemptRes?.booking) {
-              restoredFromAttempt = true
-              const hydratedDraft = buildDraftFromAttempt(attemptRes.booking)
-              if (hydratedDraft) {
-                setBookingDraft((prev) => ({
-                  ...prev,
-                  ...hydratedDraft,
-                  holdToken: prev.holdToken || hydratedDraft.holdToken,
-                  holdExpiresAt: prev.holdExpiresAt || hydratedDraft.holdExpiresAt
-                }))
-              }
-              setBookingDraft((prev) => clearHoldFromDraft(prev))
-              setAttemptAmounts({
-                depositAmount: Number(attemptRes.booking.depositAmount || 0),
-                totalAmount: Number(attemptRes.booking.totalAmount || 0)
-              })
-              setCreatedBookingId(attemptRes.booking.bookingCode || attemptRes.booking._id)
-              if (attemptRes.booking.depositExpiresAt) {
-                setBookingExpiresAt(attemptRes.booking.depositExpiresAt)
-              }
-            }
-            if (attemptRes?.payment) {
-              setPayosData(normalizePaymentPayload(attemptRes.payment))
-            }
-          }
-        } catch (err) {
-          attemptError = err
-        }
-
-        if (!restoredFromAttempt && (attemptError || paymentSnapshot?.draft?.serviceId || paymentSnapshot?.serviceId)) {
-          const snapshotDraft = paymentSnapshot?.draft || paymentSnapshot || {}
+        const snapshotDraft = paymentSnapshot?.draft || paymentSnapshot || {}
+        if (snapshotDraft?.serviceId || snapshotDraft?.staffId || snapshotDraft?.date || snapshotDraft?.time) {
           setBookingDraft((prev) => ({
             ...prev,
             serviceId: prev.serviceId || snapshotDraft.serviceId || null,
@@ -588,34 +551,29 @@ export default function CustomerPaymentPage() {
     if (!readyToEvaluate) return
 
     const evalAndMaybeAutoCreate = async () => {
-      const phoneNormalized = normalizePhone(bookingDraft.customerPhone)
+      const phoneNormalized = normalizePhone(effectiveBookingDraft.customerPhone)
       const phoneOk = isValidPhone(phoneNormalized)
+      const hasRestoredDraft = Boolean(
+        effectiveBookingDraft?.serviceId ||
+        effectiveBookingDraft?.holdToken ||
+        paymentSnapshot?.draft?.serviceId ||
+        paymentSnapshot?.serviceId
+      )
 
       // If the hold is missing or expired, don't try to create booking again.
       // This prevents repeated API calls when user reloads the page many times.
-      const attemptKey = `client_attempt_${slug}`
-      let attemptRes = null
-      try {
-        const attemptId = sessionStorage.getItem(attemptKey)
-        if (attemptId) {
-          attemptRes = await apiRequest(`/api/public/shops/${slug}/booking-attempts/${attemptId}`)
-        }
-      } catch {
-        attemptRes = null
-      }
+      const attemptRes = null
 
       const attemptHold = attemptRes?.hold || null
-      const holdExpiresAt = bookingDraft?.holdExpiresAt
-        ? new Date(bookingDraft.holdExpiresAt)
+      const holdExpiresAt = effectiveBookingDraft?.holdExpiresAt
+        ? new Date(effectiveBookingDraft.holdExpiresAt)
         : bookingExpiresAt
         ? new Date(bookingExpiresAt)
-        : attemptHold?.expiresAt
-        ? new Date(attemptHold.expiresAt)
         : null
-      const hasHold = Boolean(bookingDraft?.holdToken) || Boolean(attemptHold)
+      const hasHold = Boolean(effectiveBookingDraft?.holdToken)
       const holdExpired = !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
 
-      const effectiveBookingCode = createdBookingId || attemptRes?.booking?.bookingCode || null
+      const effectiveBookingCode = createdBookingId || null
 
       if (!service || !phoneOk || effectiveBookingCode) return
 
@@ -739,9 +697,9 @@ export default function CustomerPaymentPage() {
   }, [
     expired,
     service,
-    bookingDraft.customerPhone,
-    bookingDraft.holdToken,
-    bookingDraft.holdExpiresAt,
+    effectiveBookingDraft.customerPhone,
+    effectiveBookingDraft.holdToken,
+    effectiveBookingDraft.holdExpiresAt,
     slug,
     createdBookingId,
     restoreChecked,
