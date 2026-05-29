@@ -420,7 +420,7 @@ export default function CustomerPaymentPage() {
   }, [checkBookingStatus, slug])
 
   // Try to fetch payment info a few times when backend needs a moment to persist
-  const fetchPaymentWithRetries = useCallback(async (bookingCode, attempts = 6, delayMs = 1000) => {
+  const fetchPaymentWithRetries = useCallback(async (bookingCode, attempts = 12, delayMs = 500) => {
     if (!bookingCode) return null
     for (let i = 0; i < attempts; i += 1) {
       try {
@@ -440,6 +440,20 @@ export default function CustomerPaymentPage() {
     }
     return null
   }, [checkBookingStatus])
+
+  // Seed payosData from globals if present (helps avoid first-render race in prod)
+  useEffect(() => {
+    if (payosData) return
+    try {
+      const win = window || {}
+      const candidate = win.__payosData || (win.__lastBookingRes && win.__lastBookingRes.payment) || null
+      if (candidate) {
+        setPayosData(normalizePaymentPayload(candidate))
+      }
+    } catch {
+      // ignore
+    }
+  }, [payosData])
 
   // Restore booking info on hard reload (bookingDraft may be empty)
   useEffect(() => {
@@ -593,6 +607,7 @@ export default function CustomerPaymentPage() {
         if (mounted) setCreating(true)
         try {
           const res = await createBookingFromDraft(slug)
+          try { window.__lastBookingRes = res } catch {}
           if (!mounted) return
 
           if (res?.booking) {
@@ -656,7 +671,7 @@ export default function CustomerPaymentPage() {
             // Booking was created but payment object may not be persisted yet in prod.
             // Try to hydrate payment info for a few seconds to avoid forcing user reload.
             if (!res?.payment && res?.booking?.bookingCode) {
-              void fetchPaymentWithRetries(res.booking.bookingCode, 6, 1000)
+              void fetchPaymentWithRetries(res.booking.bookingCode, 12, 500)
             }
             // Booking exists but no immediate payment payload; sync authoritative state from server.
             void syncBookingState(res.booking.bookingCode || res.booking._id)
