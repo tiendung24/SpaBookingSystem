@@ -28,6 +28,37 @@ async function ensureUniqueSlug(baseSlug) {
   throw httpError(409, 'Không thể tạo slug duy nhất')
 }
 
+async function attachWalletStats(shops) {
+  const list = Array.isArray(shops) ? shops : [shops]
+  const shopIds = list.filter(Boolean).map((shop) => String(shop._id))
+  if (!shopIds.length) return shops
+
+  const wallets = await Wallet.find({ shopId: { $in: shopIds } }).lean()
+  const walletByShopId = new Map(wallets.map((wallet) => [String(wallet.shopId), wallet]))
+  const defaultMin = Number(process.env.SHOP_WALLET_MIN_BALANCE || 100000)
+
+  const mapped = list.map((shop) => {
+    if (!shop) return shop
+    const wallet = walletByShopId.get(String(shop._id)) || null
+    const walletBalance = Number(wallet?.balance || 0)
+    const walletMinBalance = Number(wallet?.minBalance || defaultMin)
+    const walletHealthy = walletBalance >= walletMinBalance
+    return {
+      ...shop,
+      wallet: wallet || { shopId: String(shop._id), balance: 0, minBalance: defaultMin, escrowBalance: 0, status: 'active' },
+      stats: {
+        ...(shop.stats || {}),
+        walletBalance,
+        walletMinBalance,
+        walletHealthy,
+        bookingLinkActive: shop.status === 'active' && shop.onlineBookingEnabled !== false && walletHealthy
+      }
+    }
+  })
+
+  return Array.isArray(shops) ? mapped : mapped[0]
+}
+
 export async function createShop(req, res) {
   const body = req.body || {}
   const shopName = requireString(body.shopName || body.name, 'shopName')
@@ -104,13 +135,14 @@ export async function getShops(req, res) {
     query.$or = [{ name: new RegExp(req.query.keyword, 'i') }, { slug: new RegExp(req.query.keyword, 'i') }]
   }
   const items = await Shop.find(query).sort({ createdAt: -1 }).lean()
-  res.json({ items })
+  const enrichedItems = await attachWalletStats(items)
+  res.json({ items: enrichedItems })
 }
 
 export async function getShopById(req, res) {
   const shop = await Shop.findById(req.params.shopId).lean()
   if (!shop) throw httpError(404, 'Không tìm thấy shop')
-  res.json({ shop })
+  res.json({ shop: await attachWalletStats(shop) })
 }
 
 export async function lockShop(req, res) {

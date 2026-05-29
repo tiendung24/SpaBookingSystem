@@ -11,6 +11,11 @@ function formatVnd(value) {
 }
 
 function mapShopToPartner(shop) {
+  const wallet = shop?.wallet || {}
+  const walletBalance = Number(shop?.stats?.walletBalance ?? wallet.balance ?? 0)
+  const walletMinBalance = Number(shop?.stats?.walletMinBalance ?? wallet.minBalance ?? 100000)
+  const walletHealthy = Boolean(shop?.stats?.walletHealthy ?? walletBalance >= walletMinBalance)
+  const linkActive = Boolean(shop?.stats?.bookingLinkActive ?? (shop?.status === 'active' && shop?.onlineBookingEnabled !== false && walletHealthy))
   return {
     id: shop?._id || shop?.id || '',
     shopName: shop?.name || '—',
@@ -22,7 +27,10 @@ function mapShopToPartner(shop) {
     status: shop?.status || 'pending',
     rating: Number(shop?.stats?.rating || 0),
     monthlyBookings: Number(shop?.stats?.monthlyBookings || 0),
-    wallet: Number(shop?.stats?.walletBalance || 0)
+    wallet: walletBalance,
+    walletMinBalance,
+    walletHealthy,
+    linkActive
   }
 }
 
@@ -55,6 +63,17 @@ export default function AdminPartnerDetailPage() {
     run()
     return () => { mounted = false }
   }, [id, token, pushToast])
+
+  useEffect(() => {
+    if (!partner) return
+    if (partner.linkActive && status === 'active' && partner.walletHealthy) {
+      pushToast({
+        type: 'success',
+        title: 'Shop đã hoạt động lại',
+        message: `${partner.shopName} đã đủ mức ví duy trì và link đặt lịch đang hoạt động.`
+      })
+    }
+  }, [partner, status, pushToast])
 
   if (loading) {
     return <AdminLayout><p className="text-sm text-main/60">Đang tải đối tác...</p></AdminLayout>
@@ -124,6 +143,8 @@ export default function AdminPartnerDetailPage() {
           <p className="text-sm text-main/70">Đánh giá: <b className="text-primary">{partner.rating ? `${partner.rating}/5` : '—'}</b></p>
           <p className="text-sm text-main/70">Booking/tháng: <b className="text-primary">{partner.monthlyBookings}</b></p>
           <p className="text-sm text-main/70">Ví LumiX: <b className="text-primary">{formatVnd(partner.wallet)}</b></p>
+          <p className="text-sm text-main/70">Ngưỡng duy trì: <b className="text-primary">{formatVnd(partner.walletMinBalance)}</b></p>
+          <p className="text-sm text-main/70">Link đặt lịch: <b className={partner.linkActive ? 'text-emerald-600' : 'text-amber-700'}>{partner.linkActive ? 'Đang hoạt động' : (partner.walletHealthy ? 'Tạm ngưng' : 'Ví dưới mức duy trì')}</b></p>
           <p className="text-sm text-main/70">Trạng thái hiện tại: <b className="text-primary">{status}</b></p>
           <div className="pt-2 flex gap-2">
             <button type="button" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-white font-bold disabled:opacity-60" onClick={activate}>Kích hoạt</button>

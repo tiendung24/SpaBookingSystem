@@ -24,6 +24,21 @@ function statusClass(status) {
   return 'bg-slate-200 text-slate-700'
 }
 
+function linkStatusLabel(partner) {
+  if (partner.status === 'locked') return 'Đã khóa thủ công'
+  if (partner.status === 'pending') return 'Chờ duyệt'
+  if (partner.linkActive) return 'Link đang hoạt động'
+  if (!partner.walletHealthy) return 'Ví dưới mức duy trì'
+  return 'Tạm ngưng'
+}
+
+function linkStatusClass(partner) {
+  if (partner.linkActive) return 'bg-emerald-100 text-emerald-700'
+  if (!partner.walletHealthy) return 'bg-amber-100 text-amber-700'
+  if (partner.status === 'locked') return 'bg-rose-100 text-rose-700'
+  return 'bg-slate-200 text-slate-700'
+}
+
 const emptyForm = {
   shopName: '',
   owner: '',
@@ -61,6 +76,10 @@ function isValidEmail(input) {
 }
 
 function mapShopToPartner(shop) {
+  const wallet = shop?.wallet || {}
+  const walletBalance = Number(shop?.stats?.walletBalance ?? wallet.balance ?? 0)
+  const walletMinBalance = Number(shop?.stats?.walletMinBalance ?? wallet.minBalance ?? 100000)
+  const walletHealthy = Boolean(shop?.stats?.walletHealthy ?? walletBalance >= walletMinBalance)
   return {
     id: shop?._id || shop?.id || '',
     shopName: shop?.name || '—',
@@ -72,7 +91,10 @@ function mapShopToPartner(shop) {
     status: shop?.status || 'pending',
     rating: Number(shop?.stats?.rating || 0),
     monthlyBookings: Number(shop?.stats?.monthlyBookings || 0),
-    wallet: Number(shop?.stats?.walletBalance || 0)
+    wallet: walletBalance,
+    walletMinBalance,
+    walletHealthy,
+    linkActive: Boolean(shop?.stats?.bookingLinkActive ?? (shop?.status === 'active' && shop?.onlineBookingEnabled !== false && walletHealthy))
   }
 }
 
@@ -124,10 +146,11 @@ export default function AdminPartnersPage() {
 
   const stats = useMemo(() => {
     const total = partners.length
-    const active = partners.filter((item) => item.status === 'active').length
+    const active = partners.filter((item) => item.linkActive).length
     const pending = partners.filter((item) => item.status === 'pending').length
+    const walletPaused = partners.filter((item) => !item.walletHealthy && item.status === 'active').length
     const totalBookings = partners.reduce((sum, item) => sum + item.monthlyBookings, 0)
-    return { total, active, pending, totalBookings }
+    return { total, active, pending, walletPaused, totalBookings }
   }, [partners])
 
   const openCreateForm = () => setSearchParams({ create: '1' })
@@ -240,8 +263,8 @@ export default function AdminPartnersPage() {
 
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-main/60 text-sm">Tổng shop</p><p className="text-3xl font-bold text-primary mt-1">{stats.total}</p></article>
-        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-main/60 text-sm">Đang hoạt động</p><p className="text-3xl font-bold text-emerald-600 mt-1">{stats.active}</p></article>
-        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-main/60 text-sm">Chờ duyệt</p><p className="text-3xl font-bold text-amber-600 mt-1">{stats.pending}</p></article>
+        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-main/60 text-sm">Link đang hoạt động</p><p className="text-3xl font-bold text-emerald-600 mt-1">{stats.active}</p></article>
+        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-main/60 text-sm">Ví dưới mức duy trì</p><p className="text-3xl font-bold text-amber-600 mt-1">{stats.walletPaused}</p></article>
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-main/60 text-sm">Booking tháng này</p><p className="text-3xl font-bold text-primary mt-1">{stats.totalBookings}</p></article>
       </section>
 
@@ -262,7 +285,7 @@ export default function AdminPartnersPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left border-collapse">
-            <thead><tr className="bg-slate-50"><th className="px-4 py-3 text-main/60 text-sm uppercase">Shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Chủ shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Khu vực</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Gói</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Trạng thái</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Booking / tháng</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Ví</th><th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi tiết</th></tr></thead>
+            <thead><tr className="bg-slate-50"><th className="px-4 py-3 text-main/60 text-sm uppercase">Shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Chủ shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Khu vực</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Gói</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Trạng thái shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Link đặt lịch</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Booking / tháng</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Ví</th><th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi tiết</th></tr></thead>
             <tbody className="divide-y divide-slate-200">
               {filtered.map((partner) => (
                 <tr key={partner.id} className="hover:bg-slate-50 transition-colors">
@@ -271,8 +294,9 @@ export default function AdminPartnersPage() {
                   <td className="px-4 py-4 text-sm text-main/70">{partner.district}</td>
                   <td className="px-4 py-4 text-sm text-main/70">{partner.plan}</td>
                   <td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-xs font-bold ${statusClass(partner.status)}`}>{statusLabel(partner.status)}</span></td>
+                  <td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-xs font-bold ${linkStatusClass(partner)}`}>{linkStatusLabel(partner)}</span></td>
                   <td className="px-4 py-4 text-sm text-main/70">{partner.monthlyBookings}</td>
-                  <td className="px-4 py-4 text-sm font-semibold text-primary">{formatVnd(partner.wallet)}</td>
+                  <td className="px-4 py-4 text-sm font-semibold text-primary"><p>{formatVnd(partner.wallet)}</p><p className="text-xs text-main/50">Ngưỡng {formatVnd(partner.walletMinBalance)}</p></td>
                   <td className="px-4 py-4 text-right"><Link className="px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-bold" to={`/admin/partners/${partner.id}`}>Xem chi tiết</Link></td>
                 </tr>
               ))}
