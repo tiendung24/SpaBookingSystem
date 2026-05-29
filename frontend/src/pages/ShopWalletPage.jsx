@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ShopSidebar from '../components/shop/ShopSidebar';
 import { useShop } from '../context/ShopContext';
 import { apiRequest } from '../lib/api';
+import { useSearchParams } from 'react-router-dom';
 
 export default function ShopWalletPage() {
   const { shop, walletTransactions, topupWallet, bookings, loadMeAndShop, token } = useShop();
+  const [searchParams] = useSearchParams();
   const [cardTransform, setCardTransform] = useState('perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)');
   const [topupAmount, setTopupAmount] = useState(200000);
   const [qrVisible, setQrVisible] = useState(false);
@@ -93,6 +95,60 @@ export default function ShopWalletPage() {
   const [topupStatusText, setTopupStatusText] = useState('');
   const topupPollRef = useRef(null);
   const topupRefreshedRef = useRef(false);
+
+  useEffect(() => {
+    const incomingTopupId =
+      searchParams.get('topupId') ||
+      searchParams.get('orderCode') ||
+      searchParams.get('order_code') ||
+      searchParams.get('id') ||
+      ''
+
+    const incomingStatus = String(
+      searchParams.get('status') ||
+      searchParams.get('code') ||
+      ''
+    ).toLowerCase()
+
+    if (!incomingTopupId) return
+
+    let mounted = true
+    ;(async () => {
+      try {
+        setQrVisible(true)
+        setTopupStatusText('PayOS đã quay lại. Đang đồng bộ số dư...')
+        const data = await apiRequest(`/api/shop/wallet/topup/${encodeURIComponent(incomingTopupId)}/refresh`, {
+          method: 'POST',
+          token
+        }).catch(async (err) => {
+          if (err?.status === 404) return { refreshed: false, status: incomingStatus || 'unknown' }
+          throw err
+        })
+
+        if (!mounted) return
+        const refreshedStatus = String(data?.status || incomingStatus || '').toLowerCase()
+        if (refreshedStatus === 'success' || refreshedStatus === 'paid' || refreshedStatus === 'completed') {
+          await loadMeAndShop(token).catch(() => null)
+          setTopupStatusText('Thanh toán đã được ghi nhận. Ví đã được cập nhật.')
+          setPayosData(null)
+          window.history.replaceState({}, '', '/shop/wallet')
+          setTimeout(() => {
+            if (!mounted) return
+            setQrVisible(false)
+            setTopupStatusText('')
+          }, 1500)
+        } else {
+          setTopupStatusText(`Trạng thái thanh toán: ${refreshedStatus || 'pending'}`)
+        }
+      } catch {
+        if (mounted) setTopupStatusText('Không thể đồng bộ thanh toán từ PayOS.')
+      }
+    })()
+
+    return () => {
+      mounted = false
+    }
+  }, [searchParams, token, loadMeAndShop])
 
   const createPayosQr = async () => {
     setLoadingQr(true);

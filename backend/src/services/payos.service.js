@@ -18,6 +18,36 @@ async function loadPayOSSdk() {
   return mod.default || mod.PayOS || mod
 }
 
+function getFrontendOrigin() {
+  const candidates = [
+    process.env.PAYOS_RETURN_URL,
+    process.env.FRONTEND_URL,
+    process.env.PUBLIC_FRONTEND_URL,
+    process.env.SHOP_FRONTEND_URL
+  ]
+
+  for (const value of candidates) {
+    if (value) return String(value).replace(/\/$/, '')
+  }
+
+  const corsOrigin = process.env.CORS_ORIGIN || ''
+  if (corsOrigin && corsOrigin !== '*') return corsOrigin.replace(/\/$/, '')
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Missing frontend URL env for PayOS return/cancel URL')
+  }
+
+  return 'http://localhost:5173'
+}
+
+function buildTopupReturnUrl() {
+  return `${getFrontendOrigin()}/shop/wallet`
+}
+
+function buildTopupCancelUrl() {
+  return `${getFrontendOrigin()}/shop/wallet`
+}
+
 export class PayOSService {
   constructor() {
     this.clientId = process.env.PAYOS_CLIENT_ID || ''
@@ -125,6 +155,8 @@ export class PayOSService {
     const resp = await this.createPaymentLink({
       amount,
       description: description || 'TOPUP',
+      returnUrl: buildTopupReturnUrl(),
+      cancelUrl: buildTopupCancelUrl(),
       items: [{ name: 'Topup', quantity: 1, price: Number(amount) }]
     })
 
