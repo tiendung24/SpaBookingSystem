@@ -7,7 +7,7 @@ const navItems = [
   { key: 'services', label: 'Dịch vụ', hash: '#services' },
   { key: 'staff', label: 'Nhân sự', hash: '#staff' },
   { key: 'contact', label: 'Liên hệ', hash: '#contact' },
-  { key: 'appointments', label: 'Lịch hẹn của tôi', path: '/customer/bookings' }
+  { key: 'bookings', label: 'Lịch hẹn của tôi', path: '/customer/bookings' }
 ]
 
 export default function CustomerHeader({

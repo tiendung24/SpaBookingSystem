@@ -127,7 +127,7 @@ export default function CustomerAccountBookingsPage() {
       <CustomerHeader
         shopName={shop.name || 'LumiX'}
         shopSlug={slug || shop.slug}
-        activeTab="appointments"
+        activeTab="bookings"
         greeting={`Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.`}
         address={shop.address || ''}
       />

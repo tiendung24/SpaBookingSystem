@@ -6,8 +6,8 @@ export default function TopNavBar() {
   const { isAuthenticated, role, user, logout } = useShop()
   const currentPath = typeof window !== 'undefined' ? window.location.pathname || '' : ''
   // Treat public shop pages (including main shop page) as customer-facing
-  // Match: /shop-slug, /shop-slug/book, /shop-slug/appointments, etc
-  const isPublicShopPath = /^\/[^/]+(\/book(\/time|\/pay)?|\/appointments)?$/.test(currentPath)
+  // Match: /shop-slug, /shop-slug/book, /shop-slug/book/time, /shop-slug/book/pay
+  const isPublicShopPath = /^\/[^/]+(\/book(\/time|\/pay)?)?$/.test(currentPath)
 
   return (
     <header className="fixed top-0 w-full z-50 glass-card !border-x-0 !border-t-0 rounded-none">

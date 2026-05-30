@@ -489,7 +489,7 @@ export function ShopProvider({ children }) {
         currentPath.startsWith('/login') ||
         currentPath.startsWith('/register') ||
         currentPath.startsWith('/forgot-password') ||
-        /^\/[^/]+(\/book(\/time|\/pay)?|\/appointments)?$/.test(currentPath)
+        /^\/[^/]+(\/book(\/time|\/pay)?)?$/.test(currentPath)
       if (!isPublicPath) {
         sessionStorage.setItem('lumix_flash_message', 'Phiên đã hết hạn. Vui lòng đăng nhập lại.')
         window.location.href = '/login'
