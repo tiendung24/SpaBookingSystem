@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
+import CustomerHeader from '../components/customer/CustomerHeader'
 import { apiRequest } from '../lib/api'
 
 export default function CustomerProfilePage({ isModal = false, onClose } = {}) {
@@ -84,6 +85,7 @@ export default function CustomerProfilePage({ isModal = false, onClose } = {}) {
 
   return (
     <div className="min-h-screen bg-slate-50 text-main p-6 md:p-10">
+      <CustomerHeader />
       <div className="max-w-3xl mx-auto space-y-6">{content}</div>
     </div>
   )

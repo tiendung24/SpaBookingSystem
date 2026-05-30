@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
+import CustomerHeader from '../components/customer/CustomerHeader'
 import { apiRequest } from '../lib/api'
 
 function formatVnd(value) {
@@ -1097,11 +1098,7 @@ export default function CustomerPaymentPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 text-main">
       <ConfettiLayer active={confetti} />
 
-      <header className="px-4 md:px-10 py-6 flex items-center justify-between">
-        <Link to={`/${shop.slug || slug || ''}`} className="font-bold text-primary text-lg">
-          {shop.name || 'LumiX'}
-        </Link>
-      </header>
+      <CustomerHeader />
 
       <main className="px-4 md:px-10 pb-12">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">

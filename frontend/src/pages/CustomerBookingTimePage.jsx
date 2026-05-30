@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import CustomerHeader from '../components/customer/CustomerHeader'
 import { useShop } from '../context/ShopContext'
 
 function formatVnd(v) {
@@ -379,14 +380,7 @@ export default function CustomerBookingTimePage() {
 
   return (
     <div className="bg-slate-50 min-h-screen text-main">
-      <header className="bg-white/80 backdrop-blur-xl border-b border-primary/20 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-10 flex justify-between items-center h-20">
-          <div className="font-h3 text-h3 tracking-tight text-primary">{shop.name}</div>
-          <button className="bg-primary text-white px-6 py-2 rounded-full font-bold" type="button">
-            Đặt lịch
-          </button>
-        </div>
-      </header>
+      <CustomerHeader />
 
       <main className="max-w-[1440px] mx-auto px-6 md:px-10 py-8">
         <div className="flex flex-col lg:flex-row gap-6">

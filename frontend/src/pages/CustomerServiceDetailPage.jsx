@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
+import CustomerHeader from '../components/customer/CustomerHeader'
 
 export default function CustomerServiceDetailPage() {
   const { slug, serviceId } = useParams()
@@ -30,6 +31,7 @@ export default function CustomerServiceDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-6 md:p-10">
+      <CustomerHeader />
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow p-6">
         <div className="grid md:grid-cols-2 gap-6">
           <img src={service.imageUrl} alt={service.name} className="w-full h-64 object-cover rounded-xl" />

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
+import CustomerHeader from '../components/customer/CustomerHeader'
 
 function formatVnd(v) {
   return `${Number(v || 0).toLocaleString('vi-VN')}đ`
@@ -122,28 +123,14 @@ export default function CustomerSelectServicePage({ isModal = false, onClose, on
 
   const content = (
     <div className="min-h-screen bg-slate-50 text-main">
+      <CustomerHeader />
       {!isCorrectSlug && (
         <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-sm text-center">
           Bạn đang mở slug <b>{slug}</b> không khớp shop hiện tại. Demo đang hiển thị dữ liệu của <b>{shop.name}</b>.
         </div>
       )}
 
-      <nav className="bg-white/80 backdrop-blur-xl border-b border-primary/20 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-10 flex justify-between items-center h-20">
-          <div className="font-h3 text-h3 tracking-tight text-primary">{shop.name}</div>
-          <div className="hidden md:flex items-center gap-6">
-            <Link className="text-primary font-bold border-b-2 border-primary pb-1" to={`/${slug || shop.slug}#services`}>Dịch vụ</Link>
-            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#staff`}>Nhân sự</Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex bg-slate-100 border border-slate-200 rounded-full px-4 py-2 items-center gap-2">
-              <span className="material-symbols-outlined text-primary">search</span>
-              <input className="bg-transparent border-none outline-none w-32 md:w-48" placeholder="Tìm dịch vụ..." type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
-            </div>
-            <Link className="bg-primary text-white px-6 py-2.5 rounded-full font-bold shadow-lg active:scale-95 transition-transform" to={`/${slug || shop.slug}/book`}>Đặt lịch</Link>
-          </div>
-        </div>
-      </nav>
+      {/* header replaced by CustomerHeader */}
 
       <main className="max-w-[1440px] mx-auto px-6 md:px-10 py-12">
         <div className="flex flex-col lg:flex-row gap-6 relative">
