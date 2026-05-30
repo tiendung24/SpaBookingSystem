@@ -1,116 +1,183 @@
-import nodemailer from 'nodemailer'
+﻿import nodemailer from 'nodemailer'
 import { AuditLog } from '../models/index.js'
 
-let transporterPromise = null
+let smtpTransporterPromise = null
 
-function buildTransporter() {
-  const provider = process.env.EMAIL_PROVIDER || ''
-  const host = process.env.EMAIL_SMTP_HOST || ''
-  const port = Number(process.env.EMAIL_SMTP_PORT || 465)
-  const secure = String(process.env.EMAIL_SMTP_SECURE || 'true').toLowerCase() === 'true'
-  const user = process.env.EMAIL_SMTP_USER || ''
-  const pass = process.env.EMAIL_API_KEY || ''
-
-  if (provider !== 'smtp' || !host || !user || !pass) {
-    return null
+function getEnv(...keys) {
+  for (const key of keys) {
+    const value = process.env[key]
+    if (value !== undefined && value !== null && String(value).trim() !== '') return String(value)
   }
+  return ''
+}
+
+function buildSmtpTransporter() {
+  const host = getEnv('EMAIL_SMTP_HOST', 'SMTP_HOST')
+  const port = Number(getEnv('EMAIL_SMTP_PORT', 'SMTP_PORT') || 465)
+  const secure = String(getEnv('EMAIL_SMTP_SECURE', 'SMTP_SECURE') || 'true').toLowerCase() === 'true'
+  const user = getEnv('EMAIL_SMTP_USER', 'SMTP_USER')
+  const pass = getEnv('EMAIL_API_KEY', 'EMAIL_SMTP_PASS', 'SMTP_PASS')
+
+  if (!host || !user || !pass) return null
 
   return nodemailer.createTransport({
     host,
     port,
     secure,
-    auth: {
-      user,
-      pass
-    }
+    auth: { user, pass },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
   })
 }
 
-async function getTransporter() {
-  if (!transporterPromise) {
-    const transporter = buildTransporter()
-    transporterPromise = transporter ? Promise.resolve(transporter) : Promise.resolve(null)
+async function getSmtpTransporter() {
+  if (!smtpTransporterPromise) {
+    const transporter = buildSmtpTransporter()
+    smtpTransporterPromise = transporter ? Promise.resolve(transporter) : Promise.resolve(null)
   }
-  return transporterPromise
+  return smtpTransporterPromise
+}
+
+async function writeAudit(payload) {
+  try {
+    await AuditLog.create(payload)
+  } catch {
+    // ignore audit failures
+  }
+}
+
+async function sendViaSmtp({ from, to, subject, html, text }) {
+  const transporter = await getSmtpTransporter()
+  if (!transporter) {
+    return { sent: false, skipped: true, provider: 'smtp', reason: 'missing_provider_config' }
+  }
+
+  const info = await transporter.sendMail({
+    from,
+    to,
+    subject,
+    text: text || '',
+    html: html || text || ''
+  })
+
+  return {
+    sent: true,
+    provider: 'smtp',
+    messageId: info?.messageId,
+    accepted: info?.accepted || []
+  }
+}
+
+async function sendViaResend({ from, to, subject, html, text }) {
+  const apiKey = getEnv('RESEND_API_KEY', 'EMAIL_API_KEY')
+  if (!apiKey) {
+    return { sent: false, skipped: true, provider: 'resend', reason: 'missing_provider_config' }
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 15000)
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject,
+        text: text || '',
+        html: html || text || ''
+      }),
+      signal: controller.signal
+    })
+
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      const message = data?.message || data?.error || `HTTP ${response.status}`
+      throw new Error(`Resend API error: ${message}`)
+    }
+
+    return {
+      sent: true,
+      provider: 'resend',
+      messageId: data?.id || ''
+    }
+  } finally {
+    clearTimeout(timeoutId)
+  }
 }
 
 export class EmailService {
   constructor() {
-    this.provider = process.env.EMAIL_PROVIDER || ''
-    this.from = process.env.EMAIL_FROM || ''
+    this.provider = String(getEnv('EMAIL_PROVIDER') || '').toLowerCase()
+    this.from = getEnv('EMAIL_FROM', 'MAIL_FROM')
   }
 
   async send({ to, subject, html, text }) {
-    const transporter = await getTransporter()
-
-    if (!transporter || !this.from) {
-      try { console.warn('[EmailService] skipped', { to, subject, reason: 'missing_provider_config', provider: this.provider }) } catch {}
-      await AuditLog.create({
-        actorUserId: '',
-        action: 'email.skipped',
-        entity: 'notification',
-        entityId: '',
-        meta: { to, subject, reason: 'missing_provider_config' },
-        createdAt: new Date()
-      })
-      return {
-        sent: false,
-        skipped: true,
-        provider: this.provider || 'none',
-        reason: 'Email provider chưa cấu hình đầy đủ'
-      }
+    if (!this.from) {
+      const result = { sent: false, skipped: true, provider: this.provider || 'none', reason: 'missing_from' }
+      try { console.warn('[EmailService] skipped', { to, subject, provider: this.provider || 'none', reason: result.reason }) } catch {}
+      await writeAudit({ actorUserId: '', action: 'email.skipped', entity: 'notification', entityId: '', meta: { to, subject, provider: this.provider || 'none', reason: result.reason }, createdAt: new Date() })
+      return result
     }
 
     try {
-      const info = await transporter.sendMail({
-        from: this.from,
-        to,
-        subject,
-        text: text || '',
-        html: html || text || ''
-      })
+      let result = null
+      if (this.provider === 'resend') {
+        result = await sendViaResend({ from: this.from, to, subject, html, text })
+      } else if (this.provider === 'smtp') {
+        result = await sendViaSmtp({ from: this.from, to, subject, html, text })
+      } else {
+        result = { sent: false, skipped: true, provider: this.provider || 'none', reason: 'unsupported_provider' }
+      }
 
-      try { console.warn('[EmailService] skipped', { to, subject, reason: 'missing_provider_config', provider: this.provider }) } catch {}
-      try { console.log('[EmailService] sent', { to, subject, provider: this.provider, messageId: info.messageId, accepted: info.accepted || [] }) } catch {}
-      await AuditLog.create({
+      const level = result?.sent ? 'log' : 'warn'
+      try {
+        console[level]('[EmailService] result', {
+          to,
+          subject,
+          provider: result?.provider || this.provider || 'none',
+          sent: Boolean(result?.sent),
+          skipped: Boolean(result?.skipped),
+          reason: result?.reason || '',
+          messageId: result?.messageId || '',
+          accepted: result?.accepted || []
+        })
+      } catch {}
+
+      await writeAudit({
         actorUserId: '',
-        action: 'email.sent',
+        action: result?.sent ? 'email.sent' : 'email.skipped',
         entity: 'notification',
         entityId: '',
         meta: {
           to,
           subject,
-          provider: this.provider,
-          messageId: info.messageId,
-          accepted: info.accepted || []
+          provider: result?.provider || this.provider || 'none',
+          reason: result?.reason || '',
+          messageId: result?.messageId || '',
+          accepted: result?.accepted || []
         },
         createdAt: new Date()
       })
 
-      return {
-        sent: true,
-        provider: this.provider,
-        messageId: info.messageId,
-        accepted: info.accepted || []
-      }
+      return result
     } catch (error) {
-      try { console.warn('[EmailService] skipped', { to, subject, reason: 'missing_provider_config', provider: this.provider }) } catch {}
-      try { console.error('[EmailService] failed', { to, subject, provider: this.provider, error: error?.message || 'unknown_error' }) } catch {}
-      await AuditLog.create({
+      const reason = error?.message || 'unknown_error'
+      try { console.error('[EmailService] failed', { to, subject, provider: this.provider || 'none', error: reason }) } catch {}
+      await writeAudit({
         actorUserId: '',
         action: 'email.failed',
         entity: 'notification',
         entityId: '',
-        meta: {
-          to,
-          subject,
-          provider: this.provider,
-          error: error?.message || 'unknown_error'
-        },
+        meta: { to, subject, provider: this.provider || 'none', error: reason },
         createdAt: new Date()
       })
       throw error
     }
   }
 }
-
