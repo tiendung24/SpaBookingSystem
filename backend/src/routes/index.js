@@ -2,6 +2,7 @@ import { Router } from 'express'
 
 import { publicRouter } from './public/index.js'
 import { authRouter } from './auth.js'
+import { customerRouter } from './customer/index.js'
 import { shopRouter } from './shop/index.js'
 import { adminRouter } from './admin/index.js'
 import { uploadsRouter } from './uploads.js'

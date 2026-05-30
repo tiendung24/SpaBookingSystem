@@ -1,6 +1,6 @@
 ﻿import { PayOSService } from '../../services/payos.service.js'
 import mongoose from 'mongoose'
-import { Booking, BookingSlotLock, Deposit, PayosPayment, Service, ServiceCategory, ShopStaff, ShopWorkingHour } from '../../models/index.js'
+import { Booking, BookingSlotLock, Customer, Deposit, PayosPayment, Service, ServiceCategory, ShopStaff, ShopWorkingHour } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import {
@@ -324,8 +324,16 @@ export async function holdSlot(req, res) {
   res.status(201).json({ holdToken, staffId: String(staffId), expiresAt })
 }
 export async function createBooking(req, res) {
-  const { serviceId, staffId: requestedStaffId, customerName, phone, email, date, time, note, holdToken, clientBookingAttemptId } = req.body || {}
-  if (!serviceId || !customerName || !phone || !date || !time) throw httpError(400, 'Thiếu thông tin đặt lịch')
+  const { serviceId, staffId: requestedStaffId, date, time, note, holdToken, clientBookingAttemptId } = req.body || {}
+  if (!req.auth?.userId || req.auth?.role !== 'customer' || !req.auth?.customerId) throw httpError(401, 'Vui l?ng ??ng nh?p t?i kho?n kh?ch h?ng ?? ??t l?ch')
+  if (!serviceId || !date || !time) throw httpError(400, 'Thi?u th?ng tin ??t l?ch')
+
+  const customerAccount = await Customer.findById(String(req.auth.customerId)).lean()
+  if (!customerAccount) throw httpError(401, 'Kh?ng t?m th?y t?i kho?n kh?ch h?ng')
+  const customerName = String(customerAccount.name || '').trim()
+  const phone = String(customerAccount.phone || '').trim()
+  const email = String(customerAccount.email || '').trim().toLowerCase()
+  if (!customerName || !phone || !email) throw httpError(400, 'T?i kho?n kh?ch h?ng thi?u th?ng tin li?n h?')
 
   const shop = await findShopBySlug(req.params.slug)
   await cleanupExpiredAwaitingDeposits(String(shop._id))
@@ -334,7 +342,7 @@ export async function createBooking(req, res) {
     const service = await Service.findById(serviceId).lean()
     if (!service) throw httpError(404, 'Không tìm thấy dịch vụ')
 
-  const customer = await ensureCustomer({ name: customerName, phone })
+  const customer = await ensureCustomer({ name: customerName, phone, email })
   const plan = await getWorkingPlan(String(shop._id), date)
   if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
 

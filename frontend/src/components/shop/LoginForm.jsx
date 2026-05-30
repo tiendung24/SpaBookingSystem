@@ -32,6 +32,8 @@ export default function LoginForm() {
       const result = await loginUnified({ identity: normalizedIdentity, password: formData.password })
       if (result.role === 'admin') {
         navigate('/admin/dashboard')
+      } else if (result.role === 'customer') {
+        navigate('/customer/bookings')
       } else {
         const from = location.state?.from
         let dest = from || '/shop/dashboard'

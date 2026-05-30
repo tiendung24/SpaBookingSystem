@@ -160,6 +160,7 @@ export function ShopProvider({ children }) {
   const [staff, setStaff] = useState([])
   const [bookings, setBookings] = useState([])
   const [walletTransactions, setWalletTransactions] = useState([])
+  const [customerBookings, setCustomerBookings] = useState([])
   const [notifications, setNotifications] = useState([])
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
   const [bookingDraft, setBookingDraft] = useState(loadStoredBookingDraft)
@@ -372,7 +373,8 @@ export function ShopProvider({ children }) {
     if (!token || role === 'admin') return
     // load current user/shop immediately
     const t = setTimeout(() => {
-      loadMeAndShop(token)
+      loadMeAndShop,
+    loadCustomerBookings(token)
     }, 0)
 
     // schedule token expiry handling
@@ -402,6 +404,12 @@ export function ShopProvider({ children }) {
       if (expiryTimer) clearTimeout(expiryTimer)
     }
   }, [token, role, loadMeAndShop])
+
+
+  useEffect(() => {
+    if (!token || role !== 'customer') return
+    void loadCustomerBookings(token)
+  }, [token, role, loadCustomerBookings])
 
   useEffect(() => {
     if (!token || role !== 'shop') return
@@ -490,19 +498,29 @@ export function ShopProvider({ children }) {
     return res
   }
 
+  const loginCustomer = async ({ identity, password }) => {
+    const payload = { email: identity, password }
+    const res = await apiRequest('/api/auth/customer/login', { method: 'POST', body: payload })
+    setStoredAuth(res.token, 'customer')
+    setToken(res.token)
+    setRole('customer')
+    await loadMeAndShop(res.token)
+    return res
+  }
+
   const loginUnified = async ({ identity, password }) => {
     try {
       const res = await loginShop({ identity, password })
       return { ...res, role: 'shop' }
     } catch (shopErr) {
-      if (shopErr?.status !== 401 && shopErr?.status !== 403) {
-        throw shopErr
-      }
+      if (shopErr?.status !== 401 && shopErr?.status !== 403) throw shopErr
       try {
         const res = await loginAdmin({ identity, password })
         return { ...res, role: 'admin' }
       } catch (adminErr) {
-        throw adminErr?.status ? adminErr : shopErr
+        if (adminErr?.status !== 401 && adminErr?.status !== 403) throw adminErr
+        const res = await loginCustomer({ identity, password })
+        return { ...res, role: 'customer' }
       }
     }
   }
@@ -510,6 +528,15 @@ export function ShopProvider({ children }) {
   const registerShop = async (payload) => {
     return apiRequest('/api/auth/shop/register', { method: 'POST', body: payload })
   }
+
+
+  const loadCustomerBookings = useCallback(async (accessToken = token) => {
+    if (!accessToken) return []
+    const res = await apiRequest('/api/customer/bookings', { token: accessToken })
+    const items = Array.isArray(res?.items) ? res.items : []
+    setCustomerBookings(items)
+    return items
+  }, [token])
 
   const logout = () => {
     clearStoredAuth()
@@ -600,7 +627,7 @@ export function ShopProvider({ children }) {
       // expose payload for easier debugging in deployed site
       try { window.__lastBookingPayload = payload } catch { /* ignore */ }
       console.log('[ShopContext] createBookingFromDraft payload', payload)
-      res = await apiRequest(`/api/public/shops/${slug}/bookings`, { method: 'POST', body: payload })
+      res = await apiRequest(`/api/public/shops/${slug}/bookings`, { method: 'POST', token, body: payload })
         try { window.__lastBookingRes = res } catch { /* ignore */ }
       console.log('[ShopContext] createBookingFromDraft res', res)
     } catch (err) {
@@ -922,11 +949,13 @@ export function ShopProvider({ children }) {
     expireUnpaidBooking,
     loginShop,
     loginAdmin,
+    loginCustomer,
     loginUnified,
     registerShop,
     logout,
     loadPublicShop,
-    loadMeAndShop
+    loadMeAndShop,
+    loadCustomerBookings
   }
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>

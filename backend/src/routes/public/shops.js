@@ -1,5 +1,6 @@
 ﻿import { Router } from 'express'
 import { asyncHandler } from '../../utils/asyncHandler.js'
+import { requireAuth, requireRole } from '../../middlewares/auth.js'
 import * as PublicShopsController from '../../controllers/public/shops.controller.js'
 
 export const publicShopsRouter = Router()
@@ -180,7 +181,7 @@ publicShopsRouter.get('/:slug/available-slots', asyncHandler(PublicShopsControll
  *       409: { $ref: '#/components/responses/Conflict' }
  */
 publicShopsRouter.get('/:slug/bookings', asyncHandler(PublicShopsController.getBookingsByPhone))
-publicShopsRouter.post('/:slug/bookings', asyncHandler(PublicShopsController.createBooking))
+publicShopsRouter.post('/:slug/bookings', requireAuth, requireRole(['customer']), asyncHandler(PublicShopsController.createBooking))
 publicShopsRouter.get('/:slug/booking-attempts/:attemptId', asyncHandler(PublicShopsController.getBookingAttempt))
 /**
  * @openapi

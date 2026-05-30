@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import { Shop, User } from '../models/index.js'
+import { Booking, Customer, Shop, User } from '../models/index.js'
 import { signAccessToken } from '../utils/auth.js'
 import { httpError } from '../utils/httpError.js'
 import { writeAuditLog } from '../utils/audit.js'
@@ -63,7 +63,7 @@ async function loginByRole(req, role) {
   if (!user) throw httpError(401, 'Sai tài khoản hoặc mật khẩu')
 
   const userRole = normalizeRole(user.role)
-  const acceptedRoles = role === 'admin' ? ['admin', 'super_admin'] : ['shop', 'owner', 'shop_owner']
+  const acceptedRoles = role === 'admin' ? ['admin', 'super_admin'] : role === 'customer' ? ['customer'] : ['shop', 'owner', 'shop_owner']
   if (!acceptedRoles.includes(userRole)) throw httpError(403, 'Không đúng vai trò đăng nhập')
 
   const hash = user.passwordHash || user.password || ''
@@ -76,7 +76,8 @@ async function loginByRole(req, role) {
   const token = signAccessToken({
     sub: String(user._id),
     role: user.role,
-    shopId: user.shopId ? String(user.shopId) : null
+    shopId: user.shopId ? String(user.shopId) : null,
+    customerId: user.customerId ? String(user.customerId) : null
   })
 
   return { token, user }
@@ -175,6 +176,84 @@ export async function adminLogin(req, res) {
     entityId: String(result.user._id),
     meta: { phone: result.user.phone, role: result.user.role }
   })
+  res.json({ token: result.token, user: result.user })
+}
+
+export async function customerRegister(req, res) {
+  const { fullName, phone, email, password } = req.body || {}
+  const normalizedPhone = normalizePhone(phone)
+  const normalizedEmail = normalizeEmail(email)
+  const passwordText = String(password || '')
+  const fullNameText = String(fullName || '').trim()
+
+  if (!normalizedEmail || !passwordText) throw httpError(400, 'Thiếu thông tin đăng ký')
+  if (!isValidEmail(normalizedEmail)) throw httpError(400, 'Email không hợp lệ')
+  if (passwordText.length < 6) throw httpError(400, 'Mật khẩu phải từ 6 ký tự trở lên')
+  if (normalizedPhone && !isValidPhone(normalizedPhone)) throw httpError(400, 'Số điện thoại không hợp lệ')
+
+  const existed = await User.findOne({ email: normalizedEmail }).lean()
+  if (existed) throw httpError(409, 'Email đã tồn tại')
+
+  let customer = await Customer.findOne({ email: normalizedEmail })
+  if (!customer) {
+    customer = await Customer.create({
+      fullName: fullNameText || normalizedEmail,
+      phone: normalizedPhone || '',
+      email: normalizedEmail,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    })
+  }
+
+  const passwordHash = await bcrypt.hash(passwordText, 10)
+  const user = await User.create({
+    fullName: fullNameText || customer.fullName || normalizedEmail,
+    phone: normalizedPhone || customer.phone || '',
+    email: normalizedEmail,
+    passwordHash,
+    role: 'customer',
+    status: 'active',
+    customerId: String(customer._id),
+    createdAt: new Date(),
+    updatedAt: new Date()
+  })
+
+  await Booking.updateMany(
+    {
+      $or: [
+        { customerEmail: normalizedEmail },
+        { customerEmail: String(normalizedEmail).toLowerCase() }
+      ]
+    },
+    { $set: { customerId: String(customer._id), updatedAt: new Date() } }
+  )
+
+  await writeAuditLog({ actorUserId: String(user._id), action: 'auth.customer_register', entity: 'customer', entityId: String(customer._id), meta: { email: normalizedEmail } })
+  res.status(201).json({ userId: String(user._id), customerId: String(customer._id) })
+}
+
+export async function customerLogin(req, res) {
+  const result = await loginByRole(req, 'customer')
+  const email = normalizeEmail(result.user.email || req.body?.email || '')
+  if (email) {
+    const customer = await Customer.findOneAndUpdate(
+      { email },
+      {
+        $set: {
+          fullName: result.user.fullName || '',
+          phone: result.user.phone || '',
+          updatedAt: new Date()
+        },
+        $setOnInsert: { createdAt: new Date() }
+      },
+      { upsert: true, new: true }
+    )
+    if (customer) {
+      await User.updateOne({ _id: result.user._id }, { $set: { customerId: String(customer._id), updatedAt: new Date() } })
+      await Booking.updateMany({ customerEmail: email }, { $set: { customerId: String(customer._id), updatedAt: new Date() } })
+    }
+  }
+  await writeAuditLog({ actorUserId: String(result.user._id), action: 'auth.customer_login', entity: 'user', entityId: String(result.user._id), meta: { email: result.user.email || '' } })
   res.json({ token: result.token, user: result.user })
 }
 

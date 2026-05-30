@@ -21,7 +21,8 @@ export async function requireAuth(req, _res, next) {
     req.auth = {
       userId: String(user._id),
       role: user.role,
-      shopId: user.shopId ? String(user.shopId) : null
+      shopId: user.shopId ? String(user.shopId) : null,
+      customerId: user.customerId ? String(user.customerId) : null
     }
     next()
   } catch {

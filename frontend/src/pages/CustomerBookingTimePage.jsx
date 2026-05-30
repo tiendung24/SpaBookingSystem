@@ -46,7 +46,7 @@ function isValidPhone(input) {
 export default function CustomerBookingTimePage() {
   const navigate = useNavigate()
   const { slug } = useParams()
-  const { shop, services, staff, bookings, bookingDraft, setBookingDraft, loadPublicShop, holdBookingSlot, getAvailableSlots } = useShop()
+  const { shop, services, staff, bookings, bookingDraft, setBookingDraft, loadPublicShop, holdBookingSlot, getAvailableSlots, user } = useShop()
   const hours = shop.hours || {}
   const openTime = hours.open || '09:00'
   const closeTime = hours.close || '20:00'
@@ -173,13 +173,20 @@ export default function CustomerBookingTimePage() {
 
   // No localStorage restore for holdToken; session-scoped attempt is used instead when available
 
-  const [name, setName] = useState(bookingDraft.customerName || '')
-  const [phone, setPhone] = useState(bookingDraft.customerPhone || '')
+  const [name, setName] = useState(bookingDraft.customerName || user?.name || '')
+  const [phone, setPhone] = useState(bookingDraft.customerPhone || user?.phone || '')
   const phoneTrimmed = normalizePhone(phone)
   const phoneOk = phoneTrimmed ? isValidPhone(phoneTrimmed) : false
-  const [email, setEmail] = useState(bookingDraft.customerEmail || '')
+  const [email, setEmail] = useState(bookingDraft.customerEmail || user?.email || '')
   const [note, setNote] = useState(bookingDraft.note || '')
   const [holding, setHolding] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    setName((prev) => prev || user.name || '')
+    setPhone((prev) => prev || user.phone || '')
+    setEmail((prev) => prev || user.email || '')
+  }, [user])
 
   const emailTrimmed = email.trim()
   const emailOk = isValidEmail(emailTrimmed)
@@ -522,7 +529,7 @@ export default function CustomerBookingTimePage() {
                       className="w-full p-4 mt-1 bg-slate-100 rounded-xl border border-primary/10 outline-none"
                       placeholder="Nguyễn Văn A"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      readOnly
                     />
                   </div>
                   <div>
@@ -531,7 +538,7 @@ export default function CustomerBookingTimePage() {
                       className="w-full p-4 mt-1 bg-slate-100 rounded-xl border border-primary/10 outline-none"
                       placeholder="090 123 4567"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      readOnly
                     />
                     {!phoneTrimmed ? (
                       <p className="text-xs text-red-600 mt-2">Vui lòng nhập số điện thoại.</p>
@@ -548,7 +555,7 @@ export default function CustomerBookingTimePage() {
                     className="w-full p-4 mt-1 bg-slate-100 rounded-xl border border-primary/10 outline-none"
                     placeholder="ban@email.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    readOnly
                   />
                   {!emailTrimmed ? (
                     <p className="text-xs text-red-600 mt-2">Vui lòng nhập email.</p>

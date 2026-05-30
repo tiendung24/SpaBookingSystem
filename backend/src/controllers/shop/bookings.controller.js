@@ -76,8 +76,9 @@ function getFrontendOrigin() {
   return String(value || 'http://localhost:5173').replace(/\/$/, '')
 }
 
-function buildRefundLink(token) {
-  return `${getFrontendOrigin()}/refund/${encodeURIComponent(token)}`
+function buildRefundLink(bookingCode) {
+  const base = process.env.PUBLIC_FRONTEND_URL || process.env.FRONTEND_URL || process.env.PAYOS_RETURN_URL || 'http://localhost:5173'
+  return `${base.replace(/\/$/, '')}/customer/bookings?bookingCode=${encodeURIComponent(bookingCode)}`
 }
 
 function createRefundToken() {
@@ -302,7 +303,7 @@ export async function cancelBooking(req, res) {
       },
       { upsert: true, new: true }
     ).lean()
-    refundLink = buildRefundLink(token)
+    refundLink = buildRefundLink(booking.bookingCode)
 
     if (booking.customerEmail) {
       const payload = buildRefundInfoRequestEmailForCustomer({
