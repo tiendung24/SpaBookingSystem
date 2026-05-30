@@ -19,6 +19,7 @@ import AdminFinancePage from './pages/AdminFinancePage'
 import AdminRiskPage from './pages/AdminRiskPage'
 import AdminSupportPage from './pages/AdminSupportPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
+import AdminRefundsPage from './pages/AdminRefundsPage'
 import AdminPartnerDetailPage from './pages/AdminPartnerDetailPage'
 import AdminApprovalDetailPage from './pages/AdminApprovalDetailPage'
 import AdminTicketDetailPage from './pages/AdminTicketDetailPage'
@@ -33,6 +34,7 @@ import CustomerSelectServicePage from './pages/CustomerSelectServicePage'
 import CustomerBookingTimePage from './pages/CustomerBookingTimePage'
 import CustomerPaymentPage from './pages/CustomerPaymentPage'
 import CustomerAppointmentsPage from './pages/CustomerAppointmentsPage'
+import CustomerRefundInfoPage from './pages/CustomerRefundInfoPage'
 import { GuestOnly, RequireRole } from './components/auth/RouteGuards'
 import { ToastProvider } from './components/ui/ToastProvider'
 
@@ -70,9 +72,11 @@ function App() {
             <Route path="/admin/support" element={<RequireRole allow={['admin']}><AdminSupportPage /></RequireRole>} />
             <Route path="/admin/support/:id" element={<RequireRole allow={['admin']}><AdminTicketDetailPage /></RequireRole>} />
             <Route path="/admin/settings" element={<RequireRole allow={['admin']}><AdminSettingsPage /></RequireRole>} />
+            <Route path="/admin/refunds" element={<RequireRole allow={['admin']}><AdminRefundsPage /></RequireRole>} />
             <Route path="/:slug/book" element={<CustomerSelectServicePage />} />
             <Route path="/:slug/book/time" element={<CustomerBookingTimePage />} />
             <Route path="/:slug/book/pay" element={<CustomerPaymentPage />} />
+            <Route path="/refund/:token" element={<CustomerRefundInfoPage />} />
             <Route path="/:slug/appointments" element={<CustomerAppointmentsPage />} />
             <Route path="/:slug" element={<CustomerHomePage />} />
           </Routes>

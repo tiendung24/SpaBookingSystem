@@ -7,6 +7,7 @@ export const Booking = createModel('Booking', 'bookings', {
   customerId: { type: String, index: true },
   customerName: String,
   customerPhone: { type: String, index: true },
+  customerEmail: { type: String, index: true },
   serviceId: { type: String, index: true },
   staffId: { type: String, index: true },
   startTime: { type: Date, index: true },
@@ -17,6 +18,9 @@ export const Booking = createModel('Booking', 'bookings', {
   depositAmount: Number,
   totalAmount: Number,
   cancelReasonId: String,
+  cancelReason: String,
+  cancelledBy: String,
+  cancellationType: String,
   createdAt: Date,
   updatedAt: Date
 })

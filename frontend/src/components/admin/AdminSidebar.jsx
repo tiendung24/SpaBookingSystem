@@ -9,7 +9,8 @@ const menus = [
   { to: '/admin/finance', icon: 'account_balance', label: 'Tài chính hệ thống' },
   { to: '/admin/risk', icon: 'gpp_maybe', label: 'Rủi ro & gian lận' },
   { to: '/admin/support', icon: 'support_agent', label: 'Hỗ trợ đối tác' },
-  { to: '/admin/settings', icon: 'tune', label: 'Cấu hình hệ thống' }
+  { to: '/admin/settings', icon: 'tune', label: 'Cấu hình hệ thống' },
+  { to: '/admin/refunds', icon: 'currency_exchange', label: 'Quản lý hoàn tiền' }
 ]
 
 export default function AdminSidebar() {

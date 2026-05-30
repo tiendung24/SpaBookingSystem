@@ -6,6 +6,7 @@ import {
   Deposit,
   PayosPayment,
   PlatformFee,
+  RefundRequest,
   Service,
   Shop,
   ShopStaff,
@@ -17,6 +18,8 @@ import { httpError } from '../../utils/httpError.js'
 import { getSettingNumber } from '../../utils/settings.js'
 import { buildTimeOnDate, ensureCustomer, getWorkingPlan } from '../../utils/shop.js'
 import { derivePaymentStatus } from '../../utils/paymentStatus.js'
+import { buildRefundInfoRequestEmailForCustomer, sendEmailBestEffort } from '../../utils/emailNotifications.js'
+import crypto from 'crypto'
 
 function normalizeDateRange(date) {
   const start = new Date(`${date}T00:00:00`)
@@ -66,6 +69,21 @@ function classifyShopCancel(booking, shop, now = new Date()) {
     diffHours
   }
 }
+
+function getFrontendOrigin() {
+  const candidates = [process.env.FRONTEND_URL, process.env.PUBLIC_FRONTEND_URL, process.env.SHOP_FRONTEND_URL, process.env.PAYOS_RETURN_URL]
+  const value = candidates.find(Boolean) || (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== '*' ? process.env.CORS_ORIGIN : '')
+  return String(value || 'http://localhost:5173').replace(/\/$/, '')
+}
+
+function buildRefundLink(token) {
+  return `${getFrontendOrigin()}/refund/${encodeURIComponent(token)}`
+}
+
+function createRefundToken() {
+  return crypto.randomBytes(32).toString('hex')
+}
+
 
 async function decorateBooking(booking) {
   if (!booking) return booking
@@ -218,10 +236,16 @@ export async function cancelBooking(req, res) {
   ensureTransition(existing.status, 'cancelled', ['pending', 'confirmed'])
   const shop = await Shop.findById(shopId).lean()
   const cancelMeta = classifyShopCancel(existing, shop)
+  const depositAmount = Number(existing.depositAmount || 0)
+  const hasDeposit = depositAmount > 0
+  const nextStatus = hasDeposit ? 'cancelled_waiting_refund_info' : 'cancelled'
+
   const booking = await Booking.findOneAndUpdate(
     { _id: req.params.bookingId, shopId },
     {
-      status: 'cancelled',
+      status: nextStatus,
+      cancelledBy: 'shop',
+      cancellationType: `shop_cancel_${cancelMeta.cancelType}`,
       cancelReason: req.body?.reason || '',
       cancelReasonId: req.body?.cancelReasonId || '',
       updatedAt: new Date()
@@ -231,9 +255,58 @@ export async function cancelBooking(req, res) {
 
   const deposit = await Deposit.findOne({ bookingId: String(booking._id) })
   if (deposit && ['pending', 'holding', 'refund_pending'].includes(deposit.status)) {
-    deposit.status = cancelMeta.cancelType === 'valid' ? 'refund_pending' : 'forfeited'
+    deposit.status = hasDeposit ? 'refund_waiting_customer_info' : 'cancelled_no_deposit'
     deposit.updatedAt = new Date()
     await deposit.save()
+  }
+
+  let refund = null
+  let refundLink = ''
+  let emailResult = { sent: false, skipped: true, reason: 'no_deposit' }
+
+  if (hasDeposit) {
+    const now = new Date()
+    const token = createRefundToken()
+    const tokenExpiresAt = new Date(now.getTime() + Number(process.env.REFUND_TOKEN_TTL_HOURS || 72) * 60 * 60 * 1000)
+    refund = await RefundRequest.findOneAndUpdate(
+      { bookingId: String(booking._id), status: { $in: ['pending_customer_info', 'pending_payout', 'processing'] } },
+      {
+        $set: {
+          bookingId: String(booking._id),
+          bookingCode: booking.bookingCode,
+          shopId: String(shopId),
+          customerEmail: booking.customerEmail || '',
+          customerPhone: booking.customerPhone || '',
+          amount: depositAmount,
+          status: 'pending_customer_info',
+          token,
+          tokenExpiresAt,
+          note: req.body?.reason || '',
+          updatedAt: now
+        },
+        $setOnInsert: { createdAt: now }
+      },
+      { upsert: true, new: true }
+    ).lean()
+    refundLink = buildRefundLink(token)
+
+    if (booking.customerEmail) {
+      const payload = buildRefundInfoRequestEmailForCustomer({
+        shopName: shop?.name || '',
+        bookingCode: booking.bookingCode,
+        startTime: booking.startTime,
+        amount: depositAmount,
+        refundUrl: refundLink,
+        expiresAt: tokenExpiresAt
+      })
+      emailResult = await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
+      await RefundRequest.updateOne(
+        { _id: refund._id },
+        { $set: { emailSent: Boolean(emailResult?.sent), emailSentAt: emailResult?.sent ? new Date() : null } }
+      )
+    } else {
+      emailResult = { sent: false, skipped: true, reason: 'missing_customer_email' }
+    }
   }
 
   await BookingSlotLock.deleteMany({
@@ -242,14 +315,18 @@ export async function cancelBooking(req, res) {
     startTime: booking.startTime
   })
 
-  await appendStatusLog(booking._id, 'cancelled', req.auth.userId, existing.status || '')
+  await appendStatusLog(booking._id, nextStatus, req.auth.userId, existing.status || '')
 
-res.json({
+  res.json({
     booking,
     depositStatus: deposit?.status || null,
-    cancellationType: cancelMeta.cancelType,
-    refundPercent: cancelMeta.refundPercent,
-    cancelPolicyHours: cancelMeta.thresholdHours
+    cancellationType: `shop_cancel_${cancelMeta.cancelType}`,
+    refundPercent: hasDeposit ? 100 : 0,
+    cancelPolicyHours: cancelMeta.thresholdHours,
+    refund,
+    refundLink: process.env.NODE_ENV === 'production' ? undefined : refundLink,
+    emailSent: Boolean(emailResult?.sent),
+    emailResult
   })
 }
 

@@ -142,6 +142,10 @@ export default function AdminPartnerDetailPage() {
       depositReceived: Number(stats.depositReceived || 0),
       depositWaitingForShop: Number(stats.depositWaitingForShop || 0),
       depositPaidToShop: Number(stats.depositPaidToShop || 0),
+      depositRefundedToCustomer: Number(stats.depositRefundedToCustomer || 0),
+      depositPendingReconcile: Number(stats.depositPendingReconcile || 0),
+      totalServiceAmount: Number(stats.totalServiceAmount || 0),
+      customerRemainingAmount: Number(stats.customerRemainingAmount || 0),
       platformFeeCollected: Number(stats.platformFeeCollected || 0),
       walletBalance: Number(stats.walletBalance ?? partner?.wallet ?? 0),
       completedBookings: Number(stats.completedBookings || 0),
@@ -310,6 +314,11 @@ export default function AdminPartnerDetailPage() {
 
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Tiền cọc đã nhận</p><p className="text-2xl font-bold text-primary mt-1">{formatVnd(kpis.depositReceived)}</p></article>
+        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Tổng cọc đã hoàn khách</p><p className="text-2xl font-bold text-rose-600 mt-1">{formatVnd(kpis.depositRefundedToCustomer)}</p></article>
+        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Cọc chờ đối soát</p><p className="text-2xl font-bold text-amber-700 mt-1">{formatVnd(kpis.depositPendingReconcile)}</p></article>
+        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Tổng tiền dịch vụ</p><p className="text-2xl font-bold text-primary mt-1">{formatVnd(kpis.totalServiceAmount)}</p></article>
+        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Khách còn phải trả</p><p className="text-2xl font-bold text-primary mt-1">{formatVnd(kpis.customerRemainingAmount)}</p></article>
+
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Cọc chờ trả shop</p><p className="text-2xl font-bold text-amber-700 mt-1">{formatVnd(kpis.depositWaitingForShop)}</p></article>
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Cọc đã trả shop</p><p className="text-2xl font-bold text-emerald-600 mt-1">{formatVnd(kpis.depositPaidToShop)}</p></article>
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Phí nền tảng đã thu</p><p className="text-2xl font-bold text-primary mt-1">{formatVnd(kpis.platformFeeCollected)}</p></article>

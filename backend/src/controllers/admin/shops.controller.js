@@ -1,5 +1,5 @@
 ﻿import bcrypt from 'bcryptjs'
-import { Booking, Deposit, PayosPayment, PlatformFee, Service, Shop, User, Wallet, WalletTransaction } from '../../models/index.js'
+import { Booking, Deposit, PayosPayment, PlatformFee, RefundRequest, Service, Shop, User, Wallet, WalletTransaction } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { buildShopStatusEmailForShop, sendEmailBestEffort } from '../../utils/emailNotifications.js'
@@ -34,7 +34,7 @@ async function attachWalletStats(shops) {
   const shopIds = list.filter(Boolean).map((shop) => String(shop._id))
   if (!shopIds.length) return shops
 
-  const [wallets, bookingAgg, depositAgg, feeAgg] = await Promise.all([
+  const [wallets, bookingAgg, depositAgg, feeAgg, refundAgg] = await Promise.all([
     Wallet.find({ shopId: { $in: shopIds } }).lean(),
     Booking.aggregate([
       { $match: { shopId: { $in: shopIds } } },
@@ -44,7 +44,9 @@ async function attachWalletStats(shops) {
           totalBookings: { $sum: 1 },
           completedBookings: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
           noDepositBookings: { $sum: { $cond: [{ $lte: [{ $ifNull: ['$depositAmount', 0] }, 0] }, 1, 0] } },
-          depositBookings: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$depositAmount', 0] }, 0] }, 1, 0] } }
+          depositBookings: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$depositAmount', 0] }, 0] }, 1, 0] } },
+          totalServiceAmount: { $sum: { $ifNull: ['$totalAmount', 0] } },
+          customerRemainingAmount: { $sum: { $max: [{ $subtract: [{ $ifNull: ['$totalAmount', 0] }, { $ifNull: ['$depositAmount', 0] }] }, 0] } }
         }
       }
     ]),
@@ -66,12 +68,17 @@ async function attachWalletStats(shops) {
     PlatformFee.aggregate([
       { $match: { shopId: { $in: shopIds } } },
       { $group: { _id: '$shopId', platformFeeCollected: { $sum: '$amount' } } }
+    ]),
+    RefundRequest.aggregate([
+      { $match: { shopId: { $in: shopIds }, status: { $in: ['success', 'paid'] } } },
+      { $group: { _id: '$shopId', depositRefundedToCustomer: { $sum: '$amount' } } }
     ])
   ])
   const walletByShopId = new Map(wallets.map((wallet) => [String(wallet.shopId), wallet]))
   const bookingByShopId = new Map(bookingAgg.map((item) => [String(item._id), item]))
   const depositByShopId = new Map(depositAgg.map((item) => [String(item._id), item]))
   const feeByShopId = new Map(feeAgg.map((item) => [String(item._id), item]))
+  const refundByShopId = new Map(refundAgg.map((item) => [String(item._id), item]))
   const defaultMin = Number(process.env.SHOP_WALLET_MIN_BALANCE || 100000)
 
   const mapped = list.map((shop) => {
@@ -83,6 +90,7 @@ async function attachWalletStats(shops) {
     const bookingStats = bookingByShopId.get(String(shop._id)) || {}
     const depositStats = depositByShopId.get(String(shop._id)) || {}
     const feeStats = feeByShopId.get(String(shop._id)) || {}
+    const refundStats = refundByShopId.get(String(shop._id)) || {}
     return {
       ...shop,
       wallet: wallet || { shopId: String(shop._id), balance: 0, minBalance: defaultMin, escrowBalance: 0, status: 'active' },
@@ -99,7 +107,11 @@ async function attachWalletStats(shops) {
         depositReceived: Number(depositStats.depositReceived || 0),
         depositWaitingForShop: Number(depositStats.depositWaitingForShop || 0),
         depositPaidToShop: Number(depositStats.depositPaidToShop || 0),
-        platformFeeCollected: Number(feeStats.platformFeeCollected || 0)
+        platformFeeCollected: Number(feeStats.platformFeeCollected || 0),
+        depositRefundedToCustomer: Number(refundStats.depositRefundedToCustomer || 0),
+        depositPendingReconcile: Math.max(0, Number(depositStats.depositReceived || 0) - Number(depositStats.depositPaidToShop || 0) - Number(refundStats.depositRefundedToCustomer || 0)),
+        totalServiceAmount: Number(bookingStats.totalServiceAmount || 0),
+        customerRemainingAmount: Number(bookingStats.customerRemainingAmount || 0)
       }
     }
   })

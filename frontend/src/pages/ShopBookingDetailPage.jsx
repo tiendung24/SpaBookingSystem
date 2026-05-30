@@ -66,7 +66,6 @@ export default function ShopBookingDetailPage() {
 
   const [cancelMode, setCancelMode] = useState(null)
   const [cancelReason, setCancelReason] = useState('Có việc đột xuất')
-  const [refund, setRefund] = useState({ bank: '', account: '', name: '' })
   const [nowTick, setNowTick] = useState(() => Date.now())
   const [actionLoading, setActionLoading] = useState('')
 
@@ -115,18 +114,13 @@ export default function ShopBookingDetailPage() {
 
   const cancelBookingNow = async () => {
     const isValid = cancelDecision.type === 'valid'
-    if (isValid && (!refund.bank || !refund.account || !refund.name)) {
-      alert('Vui lòng nhập đủ thông tin hoàn tiền.')
-      return
-    }
     setActionLoading('cancel')
     try {
       await updateBooking(booking.id, {
         status: 'canceled',
-      reason: cancelReason,
-      cancellationType: isValid ? 'valid' : 'late',
-      refundPercent: isValid ? 100 : 0,
-      refundInfo: isValid ? refund : undefined
+        reason: cancelReason,
+        cancellationType: isValid ? 'valid' : 'late',
+        refundPercent: isValid ? 100 : 0
       })
     } finally {
       setActionLoading('')
@@ -280,23 +274,6 @@ export default function ShopBookingDetailPage() {
                     <option>Lý do khác</option>
                   </select>
                 </div>
-
-                {cancelMode === 'cancel' && cancelDecision.type === 'valid' && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-sm font-bold text-main/70">Ngân hàng</label>
-                      <input className="w-full mt-1 p-3 rounded-xl border border-slate-300" value={refund.bank} onChange={(e) => setRefund((p) => ({ ...p, bank: e.target.value }))} placeholder="VD: Vietcombank" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-bold text-main/70">Số tài khoản</label>
-                      <input className="w-full mt-1 p-3 rounded-xl border border-slate-300" value={refund.account} onChange={(e) => setRefund((p) => ({ ...p, account: e.target.value }))} placeholder="0123456789" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-bold text-main/70">Chủ tài khoản</label>
-                      <input className="w-full mt-1 p-3 rounded-xl border border-slate-300" value={refund.name} onChange={(e) => setRefund((p) => ({ ...p, name: e.target.value }))} placeholder="NGUYEN VAN A" />
-                    </div>
-                  </div>
-                )}
 
                 <div className="flex gap-3">
                   {cancelMode === 'cancel' && (

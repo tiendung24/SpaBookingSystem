@@ -159,3 +159,34 @@ export function buildShopStatusEmailForShop({ shopName, statusLabel }) {
   return { subject, text, html }
 }
 
+
+
+export function buildRefundInfoRequestEmailForCustomer({ shopName, bookingCode, startTime, amount, refundUrl, expiresAt }) {
+  const when = fmtDateTimeVi(startTime)
+  const amountText = Number(amount || 0).toLocaleString('vi-VN')
+  const expiresText = expiresAt ? fmtDateTimeVi(expiresAt) : ''
+  const subject = `[LumiX] Nhập thông tin nhận hoàn cọc ${bookingCode}`
+  const text = [
+    `Cửa hàng ${shopName || ''} đã hủy lịch hẹn ${bookingCode}.`,
+    `Thời gian hẹn: ${when}`,
+    `Số tiền cọc dự kiến hoàn: ${amountText}đ`,
+    `Vui lòng nhập thông tin ngân hàng để LumiX hoàn tiền: ${refundUrl}`,
+    expiresText ? `Link có hiệu lực đến: ${expiresText}` : null
+  ].filter(Boolean).join('\n')
+  const html = `
+    <div style="font-family:Arial,sans-serif;line-height:1.5;color:#0f172a">
+      <h2 style="margin:0 0 8px">Thông tin nhận hoàn cọc</h2>
+      <p style="margin:0 0 12px">Cửa hàng <b>${shopName || ''}</b> đã hủy lịch hẹn <b>${bookingCode}</b>.</p>
+      <ul>
+        <li><b>Thời gian hẹn:</b> ${when}</li>
+        <li><b>Số tiền cọc dự kiến hoàn:</b> ${amountText}đ</li>
+      </ul>
+      <p style="margin:16px 0">Vui lòng bấm nút bên dưới để nhập thông tin ngân hàng nhận hoàn tiền.</p>
+      <p style="margin:20px 0">
+        <a href="${refundUrl}" style="background:#2563eb;color:#fff;text-decoration:none;padding:12px 18px;border-radius:12px;font-weight:bold;display:inline-block">Nhập thông tin nhận hoàn tiền</a>
+      </p>
+      <p style="font-size:13px;color:#64748b;margin:0">${expiresText ? `Link có hiệu lực đến: ${expiresText}. ` : ''}Nếu nút không hoạt động, hãy copy link: ${refundUrl}</p>
+    </div>
+  `
+  return { subject, text, html }
+}
