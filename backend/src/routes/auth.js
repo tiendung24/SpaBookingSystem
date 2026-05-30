@@ -139,3 +139,6 @@ authRouter.put('/change-password', requireAuth, asyncHandler(AuthController.chan
 
 authRouter.post('/customer/register', asyncHandler(AuthController.customerRegister))
 authRouter.post('/customer/login', asyncHandler(AuthController.customerLogin))
+
+authRouter.post('/forgot-password', asyncHandler(AuthController.forgotPassword))
+authRouter.post('/reset-password', asyncHandler(AuthController.resetPassword))

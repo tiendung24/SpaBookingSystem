@@ -537,6 +537,10 @@ export function ShopProvider({ children }) {
     return apiRequest('/api/auth/shop/register', { method: 'POST', body: payload })
   }
 
+  const registerCustomer = async (payload) => {
+    return apiRequest('/api/auth/customer/register', { method: 'POST', body: payload })
+  }
+
 
   const logout = () => {
     clearStoredAuth()
@@ -952,6 +956,7 @@ export function ShopProvider({ children }) {
     loginCustomer,
     loginUnified,
     registerShop,
+    registerCustomer,
     logout,
     loadPublicShop,
     loadMeAndShop,

@@ -94,7 +94,7 @@ export default function CustomerHomePage() {
                 <Link className="hidden sm:inline-flex px-5 py-3 rounded-full border border-slate-200 text-main font-bold hover:bg-slate-50" to="/login">
                   {'\u0110\u0103ng nh\u1eadp'}
                 </Link>
-                <Link className="hidden sm:inline-flex px-5 py-3 rounded-full border border-primary/20 text-primary font-bold hover:bg-primary/5" to="/register">
+                <Link className="hidden sm:inline-flex px-5 py-3 rounded-full border border-primary/20 text-primary font-bold hover:bg-primary/5" to="/customer/register">
                   {'\u0110\u0103ng k\u00fd'}
                 </Link>
               </>
@@ -158,7 +158,7 @@ export default function CustomerHomePage() {
                     <Link className="bg-white border border-slate-200 text-main px-7 py-3 rounded-full font-bold hover:bg-slate-50" to="/login">
                       {'\u0110\u0103ng nh\u1eadp'}
                     </Link>
-                    <Link className="bg-white border border-primary/20 text-primary px-7 py-3 rounded-full font-bold hover:bg-primary/5" to="/register">
+                    <Link className="bg-white border border-primary/20 text-primary px-7 py-3 rounded-full font-bold hover:bg-primary/5" to="/customer/register">
                       {'\u0110\u0103ng k\u00fd'}
                     </Link>
                   </>

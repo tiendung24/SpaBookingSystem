@@ -52,7 +52,7 @@ export default function LoginPage() {
             </a>
           </div>
           <div className="font-body-md text-body-md text-main text-center md:text-right">
-            © 2024 LumiX Partner. Elevating the beauty ecosystem.
+            © 2026 LumiX Partner. Elevating the beauty ecosystem.
           </div>
         </div>
       </footer>

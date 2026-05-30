@@ -10,6 +10,8 @@ export const User = createModel('User', 'users', {
   shopId: { type: String, index: true },
   avatarUrl: String,
   lastLoginAt: Date,
+  passwordResetTokenHash: String,
+  passwordResetExpiresAt: Date,
   createdAt: Date,
   updatedAt: Date
 })

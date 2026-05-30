@@ -2,6 +2,7 @@
 import ShopLandingPage from './pages/ShopLandingPage'
 import LoginPage from './pages/LoginPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import RegisterPage from './pages/RegisterPage'
 import ShopDashboardPage from './pages/ShopDashboardPage'
 import ShopBookingsPage from './pages/ShopBookingsPage'
@@ -35,6 +36,7 @@ import CustomerBookingTimePage from './pages/CustomerBookingTimePage'
 import CustomerPaymentPage from './pages/CustomerPaymentPage'
 import CustomerAppointmentsPage from './pages/CustomerAppointmentsPage'
 import CustomerAccountBookingsPage from './pages/CustomerAccountBookingsPage'
+import CustomerRegisterPage from './pages/CustomerRegisterPage'
 import { GuestOnly, RequireRole } from './components/auth/RouteGuards'
 import { ToastProvider } from './components/ui/ToastProvider'
 
@@ -47,7 +49,9 @@ function App() {
             <Route path="/" element={<ShopLandingPage />} />
             <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
             <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
+            <Route path="/customer/register" element={<GuestOnly><CustomerRegisterPage /></GuestOnly>} />
             <Route path="/forgot-password" element={<GuestOnly><ForgotPasswordPage /></GuestOnly>} />
+            <Route path="/reset-password/:token" element={<GuestOnly><ResetPasswordPage /></GuestOnly>} />
             <Route path="/shop/dashboard" element={<RequireRole allow={['shop']}><ShopDashboardPage /></RequireRole>} />
             <Route path="/shop/onboarding" element={<RequireRole allow={['shop']}><ShopOnboardingPage /></RequireRole>} />
             <Route path="/shop/bookings" element={<RequireRole allow={['shop']}><ShopBookingsPage /></RequireRole>} />

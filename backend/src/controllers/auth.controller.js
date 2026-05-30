@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { Booking, Customer, Shop, User } from '../models/index.js'
 import { signAccessToken } from '../utils/auth.js'
 import { httpError } from '../utils/httpError.js'
 import { writeAuditLog } from '../utils/audit.js'
+import { sendEmailBestEffort } from '../utils/emailNotifications.js'
 
 function normalizeRole(role) {
   return String(role || '').toLowerCase()
@@ -284,5 +286,62 @@ export async function changePassword(req, res) {
     entityId: String(user._id),
     meta: {}
   })
+  res.json({ success: true })
+}
+
+export async function forgotPassword(req, res) {
+  const email = normalizeEmail(req.body?.email || '')
+  // Always return success to avoid email enumeration
+  const generic = { success: true, message: 'N?u email t?n t?i, h? th?ng ?? g?i h??ng d?n ??t l?i m?t kh?u.' }
+  if (!email || !isValidEmail(email)) return res.json(generic)
+
+  const user = await User.findOne({ email })
+  if (!user) return res.json(generic)
+
+  const rawToken = crypto.randomBytes(32).toString('hex')
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex')
+  const ttlMinutes = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30)
+  const expiresAt = new Date(Date.now() + Math.max(5, ttlMinutes) * 60 * 1000)
+
+  user.passwordResetTokenHash = tokenHash
+  user.passwordResetExpiresAt = expiresAt
+  user.updatedAt = new Date()
+  await user.save()
+
+  const base = String(process.env.PUBLIC_FRONTEND_URL || process.env.FRONTEND_URL || process.env.PAYOS_RETURN_URL || 'http://localhost:5173').replace(/\/$/, '')
+  const resetUrl = `${base}/reset-password/${rawToken}`
+
+  const subject = '[LumiX] ??t l?i m?t kh?u'
+  const text = `B?n v?a y?u c?u ??t l?i m?t kh?u. Truy c?p link sau ?? ti?p t?c: ${resetUrl} (h?t h?n l?c ${expiresAt.toLocaleString('vi-VN')})`
+  const html = `<p>B?n v?a y?u c?u ??t l?i m?t kh?u LumiX.</p><p><a href="${resetUrl}">B?m v?o ??y ?? ??t l?i m?t kh?u</a></p><p>Link h?t h?n l?c <strong>${expiresAt.toLocaleString('vi-VN')}</strong>.</p>`
+
+  await sendEmailBestEffort({ to: email, subject, text, html, meta: { userId: String(user._id), event: 'auth.forgot_password' } })
+  await writeAuditLog({ actorUserId: String(user._id), action: 'auth.forgot_password', entity: 'user', entityId: String(user._id), meta: { email } })
+
+  res.json(generic)
+}
+
+export async function resetPassword(req, res) {
+  const token = String(req.body?.token || '').trim()
+  const newPassword = String(req.body?.newPassword || '')
+  if (!token || !newPassword) throw httpError(400, 'Thi?u token ho?c m?t kh?u m?i')
+  if (newPassword.length < 6) throw httpError(400, 'M?t kh?u ph?i t? 6 k? t? tr? l?n')
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
+  const now = new Date()
+  const user = await User.findOne({
+    passwordResetTokenHash: tokenHash,
+    passwordResetExpiresAt: { $gt: now }
+  })
+
+  if (!user) throw httpError(400, 'Link ??t l?i m?t kh?u kh?ng h?p l? ho?c ?? h?t h?n')
+
+  user.passwordHash = await bcrypt.hash(newPassword, 10)
+  user.passwordResetTokenHash = ''
+  user.passwordResetExpiresAt = null
+  user.updatedAt = new Date()
+  await user.save()
+
+  await writeAuditLog({ actorUserId: String(user._id), action: 'auth.reset_password', entity: 'user', entityId: String(user._id), meta: {} })
   res.json({ success: true })
 }
