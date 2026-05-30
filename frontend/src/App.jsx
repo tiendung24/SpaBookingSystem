@@ -31,6 +31,7 @@ import ShopOnboardingPage from './pages/ShopOnboardingPage'
 import ShopBookingDetailPage from './pages/ShopBookingDetailPage'
 import ShopConfigPage from './pages/ShopConfigPage'
 import CustomerHomePage from './pages/CustomerHomePage'
+import CustomerServiceDetailPage from './pages/CustomerServiceDetailPage'
 import CustomerSelectServicePage from './pages/CustomerSelectServicePage'
 import CustomerBookingTimePage from './pages/CustomerBookingTimePage'
 import CustomerPaymentPage from './pages/CustomerPaymentPage'
@@ -77,6 +78,7 @@ function App() {
             <Route path="/admin/support/:id" element={<RequireRole allow={['admin']}><AdminTicketDetailPage /></RequireRole>} />
             <Route path="/admin/settings" element={<RequireRole allow={['admin']}><AdminSettingsPage /></RequireRole>} />
             <Route path="/customer/bookings" element={<RequireRole allow={['customer']}><CustomerAccountBookingsPage /></RequireRole>} />
+            <Route path="/:slug/service/:serviceId" element={<CustomerServiceDetailPage />} />
             <Route path="/admin/refunds" element={<RequireRole allow={['admin']}><AdminRefundsPage /></RequireRole>} />
             <Route path="/:slug/book" element={<RequireRole allow={['customer']}><CustomerSelectServicePage /></RequireRole>} />
             <Route path="/:slug/book/time" element={<RequireRole allow={['customer']}><CustomerBookingTimePage /></RequireRole>} />

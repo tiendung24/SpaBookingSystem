@@ -245,13 +245,12 @@ export default function CustomerHomePage() {
                   <p className="text-sm text-main/70 line-clamp-2 break-words">{service.shortDescription || service.description || 'Shop chưa cập nhật mô tả ngắn.'}</p>
 
                   <div className="flex gap-2 pt-1 mt-auto">
-                    <button
-                      type="button"
-                      onClick={() => setServiceDetail(service)}
-                      className="flex-1 py-2 rounded-xl border border-primary/20 text-primary font-label-bold hover:bg-primary/5 transition-colors"
+                    <Link
+                      className="flex-1 py-2 rounded-xl border border-primary/20 text-primary font-label-bold hover:bg-primary/5 transition-colors text-center"
+                      to={`/${slug || shop.slug}/service/${service.id || service._id}`}
                     >
                       Xem chi tiết
-                    </button>
+                    </Link>
                     <Link
                       className="flex-1 py-2 rounded-xl bg-primary text-white font-label-bold hover:brightness-110 transition-all text-center"
                       to={bookUrl}

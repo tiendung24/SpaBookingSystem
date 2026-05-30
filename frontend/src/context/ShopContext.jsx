@@ -199,6 +199,12 @@ export function ShopProvider({ children }) {
       const me = await apiRequest('/api/auth/me', { token: accessToken })
       setUser(me.user || null)
 
+      const resolvedRole = String(me.user?.role || '')
+      if (resolvedRole === 'customer') {
+        setError('')
+        return
+      }
+
       const meShop = await apiRequest('/api/shop/me', { token: accessToken })
       const [workingHoursRes, slotSettingsRes] = await Promise.all([
         apiRequest('/api/shop/working-hours', { token: accessToken }).catch(() => ({})),
