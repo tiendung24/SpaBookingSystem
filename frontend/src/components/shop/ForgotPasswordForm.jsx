@@ -24,7 +24,7 @@ export default function ForgotPasswordForm() {
         setEmail('')
       }, 3500)
     } catch (err) {
-      setError(err?.message || 'Kh?ng g?i ???c h??ng d?n ??t l?i m?t kh?u')
+      setError(err?.message || 'Không gửi được hướng dẫn đặt lại mật khẩu')
     } finally {
       setSubmitting(false)
     }
@@ -34,14 +34,14 @@ export default function ForgotPasswordForm() {
     return (
       <div className="w-full space-y-6 text-center">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-primary">Ki?m tra email c?a b?n</h2>
-          <p className="text-main">N?u email t?n t?i, LumiX ?? g?i h??ng d?n ??t l?i m?t kh?u.</p>
+          <h2 className="text-2xl font-bold text-primary">Kiểm tra email của bạn</h2>
+          <p className="text-main">Nếu email tồn tại, LumiX sẽ gửi hướng dẫn đặt lại mật khẩu.</p>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-          <p className="text-green-700 font-medium">Vui l?ng ki?m tra h?p th? (v? c? Spam).</p>
+          <p className="text-green-700 font-medium">Vui lòng kiểm tra hộp thư (và cả Spam).</p>
         </div>
         <Link to="/login" className="inline-block text-primary hover:text-primary/80 font-semibold transition-colors">
-          ? Quay l?i ??ng nh?p
+          Quay lại đăng nhập
         </Link>
       </div>
     )
@@ -50,8 +50,8 @@ export default function ForgotPasswordForm() {
   return (
     <div className="w-full space-y-6">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-primary">??t l?i m?t kh?u</h1>
-        <p className="text-main">Nh?p email ?? nh?n h??ng d?n ??t l?i m?t kh?u.</p>
+        <h1 className="text-3xl font-bold text-primary">Đặt lại mật khẩu</h1>
+        <p className="text-main">Nhập email để nhận hướng dẫn đặt lại mật khẩu.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -79,7 +79,7 @@ export default function ForgotPasswordForm() {
           disabled={submitting}
           className="w-full py-3 px-4 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 cta-3d disabled:opacity-60"
         >
-          {submitting ? '?ang g?i...' : 'G?i h??ng d?n'}
+          {submitting ? 'Đang gửi...' : 'Gửi hướng dẫn'}
           <span className="material-symbols-outlined text-xl">arrow_forward</span>
         </button>
       </form>
@@ -87,7 +87,7 @@ export default function ForgotPasswordForm() {
       <div className="text-center">
         <Link to="/login" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-semibold transition-colors">
           <ArrowLeft size={18} />
-          Quay l?i ??ng nh?p
+          Quay lại đăng nhập
         </Link>
       </div>
     </div>

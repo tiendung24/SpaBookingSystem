@@ -325,15 +325,15 @@ export async function holdSlot(req, res) {
 }
 export async function createBooking(req, res) {
   const { serviceId, staffId: requestedStaffId, date, time, note, holdToken, clientBookingAttemptId } = req.body || {}
-  if (!req.auth?.userId || req.auth?.role !== 'customer' || !req.auth?.customerId) throw httpError(401, 'Vui l?ng ??ng nh?p t?i kho?n kh?ch h?ng ?? ??t l?ch')
-  if (!serviceId || !date || !time) throw httpError(400, 'Thi?u th?ng tin ??t l?ch')
+  if (!req.auth?.userId || req.auth?.role !== 'customer' || !req.auth?.customerId) throw httpError(401, 'Vui lòng đăng nhập tài khoản khách hàng để đặt lịch')
+  if (!serviceId || !date || !time) throw httpError(400, 'Thiếu thông tin đặt lịch')
 
   const customerAccount = await Customer.findById(String(req.auth.customerId)).lean()
-  if (!customerAccount) throw httpError(401, 'Kh?ng t?m th?y t?i kho?n kh?ch h?ng')
+  if (!customerAccount) throw httpError(401, 'Không tìm thấy tài khoản khách hàng')
   const customerName = String(customerAccount.name || '').trim()
   const phone = String(customerAccount.phone || '').trim()
   const email = String(customerAccount.email || '').trim().toLowerCase()
-  if (!customerName || !phone || !email) throw httpError(400, 'T?i kho?n kh?ch h?ng thi?u th?ng tin li?n h?')
+  if (!customerName || !phone || !email) throw httpError(400, 'Tài khoản khách hàng thiếu thông tin liên hệ')
 
   const shop = await findShopBySlug(req.params.slug)
   await cleanupExpiredAwaitingDeposits(String(shop._id))
@@ -634,7 +634,7 @@ export async function getBookingAttempt(req, res) {
   const hold = await BookingSlotLock.findOne({ shopId, clientAttemptId: attemptId, lockType: 'temp_hold', expiresAt: { $gt: now } }).lean()
   if (hold) return res.json({ hold })
 
-  throw httpError(404, 'Không tìm thấy booking/hold cho attemptId nÃ y')
+  throw httpError(404, 'Không tìm thấy booking/hold cho attemptId này')
 }
 
 

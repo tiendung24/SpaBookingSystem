@@ -71,9 +71,9 @@ export async function myBookings(req, res) {
 
 
 export async function submitRefundBankInfo(req, res) {
-  if (!req.auth?.userId || req.auth.role !== 'customer') throw httpError(403, 'Kh?ng c? quy?n truy c?p')
+  if (!req.auth?.userId || req.auth.role !== 'customer') throw httpError(403, 'Không có quyền truy cập')
   const customerId = String(req.auth.customerId || '')
-  if (!customerId) throw httpError(403, 'Kh?ng c? quy?n truy c?p')
+  if (!customerId) throw httpError(403, 'Không có quyền truy cập')
 
   const bookingCode = String(req.params.bookingCode || '').trim().toUpperCase()
   const { bankName, accountNumber, accountName } = req.body || {}
@@ -82,13 +82,13 @@ export async function submitRefundBankInfo(req, res) {
     accountNumber: String(accountNumber || '').trim(),
     accountName: String(accountName || '').trim()
   }
-  if (!bookingCode || !bankInfo.bankName || !bankInfo.accountNumber || !bankInfo.accountName) {
-    throw httpError(400, 'Thi?u th?ng tin t?i kho?n nh?n ho?n ti?n')
+    if (!bookingCode || !bankInfo.bankName || !bankInfo.accountNumber || !bankInfo.accountName) {
+      throw httpError(400, 'Thiếu thông tin tài khoản nhận hoàn tiền')
   }
 
   const booking = await Booking.findOne({ bookingCode, customerId }).lean()
-  if (!booking) throw httpError(404, 'Kh?ng t?m th?y booking')
-  if (booking.status !== 'cancelled_waiting_refund_info') throw httpError(409, `Kh?ng th? chuy?n tr?ng th?i t? ${booking.status || 'unknown'} sang cancelled`)
+  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  if (booking.status !== 'cancelled_waiting_refund_info') throw httpError(409, `Không thể chuyển trạng thái từ ${booking.status || 'unknown'} sang cancelled`)
 
   const now = new Date()
   const refund = await RefundRequest.findOneAndUpdate(
@@ -118,17 +118,17 @@ export async function submitRefundBankInfo(req, res) {
 
 
 export async function cancelMyBooking(req, res) {
-  if (!req.auth?.userId || req.auth.role !== 'customer') throw httpError(403, 'Kh?ng c? quy?n truy c?p')
+  if (!req.auth?.userId || req.auth.role !== 'customer') throw httpError(403, 'Không có quyền truy cập')
   const customerId = String(req.auth.customerId || '')
-  if (!customerId) throw httpError(403, 'Kh?ng c? quy?n truy c?p')
+  if (!customerId) throw httpError(403, 'Không có quyền truy cập')
 
   const bookingCode = String(req.params.bookingCode || '').trim().toUpperCase()
-  if (!bookingCode) throw httpError(400, 'Thi?u m? booking')
+    if (!bookingCode) throw httpError(400, 'Thiếu mã booking')
 
   const booking = await Booking.findOne({ bookingCode, customerId })
-  if (!booking) throw httpError(404, 'Kh?ng t?m th?y booking')
+    if (!booking) throw httpError(404, 'Không tìm thấy booking')
   if (!['pending', 'confirmed'].includes(String(booking.status || ''))) {
-    throw httpError(409, `Kh?ng th? h?y booking ? tr?ng th?i: ${booking.status}`)
+     throw httpError(409, `Không thể hủy booking ở trạng thái: ${booking.status}`)
   }
 
   const shop = await Shop.findById(String(booking.shopId || '')).lean()
@@ -185,7 +185,7 @@ export async function cancelMyBooking(req, res) {
       walletId: String(wallet._id),
       type: 'escrow_split_late_cancel_auto',
       amount: shopReceive,
-      description: `Kh?ch h?y mu?n booking ${booking.bookingCode || booking._id} - tr? c?c cho shop`,
+      description: `Khách hủy muộn booking ${booking.bookingCode || booking._id} - trả cọc cho shop`,
       refId: String(booking._id),
       status: 'success',
       createdAt: new Date()
@@ -196,7 +196,7 @@ export async function cancelMyBooking(req, res) {
       walletId: String(wallet._id),
       type: 'platform_fee_from_deposit',
       amount: -feeAmount,
-      description: `Thu ph? n?n t?ng t? c?c booking ${booking.bookingCode || booking._id}`,
+      description: `Thu phí nền tảng từ cọc booking ${booking.bookingCode || booking._id}`,
       refId: String(booking._id),
       status: 'success',
       createdAt: new Date()
@@ -234,10 +234,10 @@ export async function cancelMyBooking(req, res) {
 
 
 export async function updateMe(req, res) {
-  if (!req.auth?.userId || req.auth.role !== 'customer') throw httpError(403, 'Kh?ng c? quy?n truy c?p')
+  if (!req.auth?.userId || req.auth.role !== 'customer') throw httpError(403, 'Không có quyền truy cập')
   const fullName = String(req.body?.fullName || '').trim()
   const phone = String(req.body?.phone || '').trim()
-  if (!fullName) throw httpError(400, 'Vui l?ng nh?p h? v? t?n')
+    if (!fullName) throw httpError(400, 'Vui lòng nhập họ và tên')
 
   await User.updateOne({ _id: String(req.auth.userId) }, { $set: { fullName, phone, updatedAt: new Date() } })
   if (req.auth.customerId) {

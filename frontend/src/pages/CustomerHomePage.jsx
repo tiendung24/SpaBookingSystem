@@ -88,15 +88,15 @@ export default function CustomerHomePage() {
           </nav>
           <div className="flex items-center gap-3 relative">
             <Link className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:brightness-110 transition-all" to={bookUrl}>
-              ??t l?ch ngay
+              Đặt lịch ngay
             </Link>
             {(!isAuthenticated || role !== 'customer') ? (
               <>
                 <Link className="hidden sm:inline-flex px-5 py-3 rounded-full border border-slate-200 text-main font-bold hover:bg-slate-50" to="/login">
-                  {'Đăng nhập'}
+                  Đăng nhập
                 </Link>
                 <Link className="hidden sm:inline-flex px-5 py-3 rounded-full border border-primary/20 text-primary font-bold hover:bg-primary/5" to="/customer/register">
-                  {'Đăng ký'}
+                  Đăng ký
                 </Link>
               </>
             ) : null}
@@ -109,11 +109,11 @@ export default function CustomerHomePage() {
                   <span className="max-w-[140px] truncate text-sm font-semibold text-main">{user?.fullName || user?.email}</span>
                 </button>
                 {profileOpen ? (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg p-2 z-50">
-                    <Link to="/customer/bookings" className="block px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">L?ch h?n c?a t?i</Link>
-                    <Link to="/customer/profile" className="block px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Ch?nh s?a h? s?</Link>
-                    <button type="button" onClick={logout} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm text-rose-600">??ng xu?t</button>
-                  </div>
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg p-2 z-50">
+                      <Link to="/customer/bookings" className="block px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Lịch hẹn của tôi</Link>
+                      <Link to="/customer/profile" className="block px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Chỉnh sửa hồ sơ</Link>
+                      <button type="button" onClick={logout} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm text-rose-600">Đăng xuất</button>
+                    </div>
                 ) : null}
               </div>
             ) : null}
@@ -122,7 +122,7 @@ export default function CustomerHomePage() {
                 <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
                   {user?.fullName?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
-                <button onClick={logout} className="text-main/70 hover:text-primary">??ng xu?t</button>
+                <button onClick={logout} className="text-main/70 hover:text-primary">Đăng xuất</button>
               </div>
             ) : null}
           </div>        </div>
@@ -172,12 +172,12 @@ export default function CustomerHomePage() {
                 </Link>
                 {(!isAuthenticated || role !== 'customer') ? (
                   <>
-                    <Link className="bg-white border border-slate-200 text-main px-7 py-3 rounded-full font-bold hover:bg-slate-50" to="/login">
-                      {'\u0110\u0103ng nh\u1eadp'}
-                    </Link>
-                    <Link className="bg-white border border-primary/20 text-primary px-7 py-3 rounded-full font-bold hover:bg-primary/5" to="/customer/register">
-                      {'\u0110\u0103ng k\u00fd'}
-                    </Link>
+                        <Link className="bg-white border border-slate-200 text-main px-7 py-3 rounded-full font-bold hover:bg-slate-50" to="/login">
+                          Đăng nhập
+                        </Link>
+                        <Link className="bg-white border border-primary/20 text-primary px-7 py-3 rounded-full font-bold hover:bg-primary/5" to="/customer/register">
+                          Đăng ký
+                        </Link>
                   </>
                 ) : null}
                 <a className="bg-white border border-primary/20 text-primary px-7 py-3 rounded-full font-bold hover:bg-primary/5" href="#services">
