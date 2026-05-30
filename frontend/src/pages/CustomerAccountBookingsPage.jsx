@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 import { apiRequest } from '../lib/api'
 
@@ -24,7 +24,8 @@ function statusText(status) {
 }
 
 export default function CustomerAccountBookingsPage() {
-  const { customerBookings, user, token, logout, loadCustomerBookings } = useShop()
+  const { slug } = useParams()
+  const { shop, customerBookings, user, token, loadCustomerBookings, isAuthenticated, role } = useShop()
   const [searchParams] = useSearchParams()
   const focusCode = String(searchParams.get('bookingCode') || '').trim().toUpperCase()
   const [activeCode, setActiveCode] = useState('')
@@ -121,18 +122,36 @@ export default function CustomerAccountBookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-main p-6 md:p-10">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <header className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen bg-slate-50 text-main">
+      <header className="bg-white/80 backdrop-blur-xl border-b border-primary/20 sticky top-0 z-50 h-20 shadow-sm">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-10 flex justify-between items-center h-full gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-primary">Lịch hẹn của tôi</h1>
-            <p className="text-sm text-main/70">Xin chào {user?.fullName || user?.email || 'Khách hàng'}.</p>
+            <h1 className="font-h3 text-h3 tracking-tight text-primary">{shop.name || 'LumiX'}</h1>
+            <p className="text-xs text-main/60">Xin chào {user?.fullName || user?.email || 'Khách hàng'}.</p>
           </div>
-          <div className="flex gap-2">
-            <Link to="/" className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Trang chủ</Link>
-            <button type="button" onClick={logout} className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200">Đăng xuất</button>
+          <nav className="hidden md:flex gap-6">
+            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#services`}>
+              Dịch vụ
+            </Link>
+            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#staff`}>
+              Nhân sự
+            </Link>
+            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#contact`}>
+              Liên hệ
+            </Link>
+            {isAuthenticated && role === 'customer' ? (
+              <Link className="text-primary font-bold border-b-2 border-primary pb-1" to={`/${slug || shop.slug}/appointments`}>
+                Lịch hẹn của tôi
+              </Link>
+            ) : null}
+          </nav>
+          <div className="hidden sm:block text-sm text-main/60">
+            {shop.address || ''}
           </div>
-        </header>
+        </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto space-y-6 p-6 md:p-10">
 
         <section className="bg-white rounded-2xl border border-slate-200 p-5 overflow-x-auto">
           <div className="flex flex-wrap items-center gap-3 mb-4">
