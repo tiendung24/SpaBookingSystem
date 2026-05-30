@@ -253,7 +253,7 @@ export async function lockShop(req, res) {
   await writeAuditLog({ actorUserId: req.auth.userId, action: 'admin.shop_lock', entity: 'shop', entityId: String(shop._id), meta: { previous: 'unknown', next: 'locked' } })
   if (shop.email) {
     const payload = buildShopStatusEmailForShop({ shopName: shop.name, statusLabel: 'locked' })
-    await sendEmailBestEffort({ to: shop.email, ...payload })
+    await sendEmailBestEffort({ to: shop.email, ...payload, meta: { shopId: String(shop._id || '') } })
   }
   res.json({ shop })
 }
@@ -264,7 +264,7 @@ export async function unlockShop(req, res) {
   await writeAuditLog({ actorUserId: req.auth.userId, action: 'admin.shop_unlock', entity: 'shop', entityId: String(shop._id), meta: { previous: 'unknown', next: 'active' } })
   if (shop.email) {
     const payload = buildShopStatusEmailForShop({ shopName: shop.name, statusLabel: 'active' })
-    await sendEmailBestEffort({ to: shop.email, ...payload })
+    await sendEmailBestEffort({ to: shop.email, ...payload, meta: { shopId: String(shop._id || '') } })
   }
   res.json({ shop })
 }
@@ -275,7 +275,7 @@ export async function updateStatus(req, res) {
   await writeAuditLog({ actorUserId: req.auth.userId, action: 'admin.shop_status_update', entity: 'shop', entityId: String(shop._id), meta: { next: req.body?.status || 'inactive' } })
   if (shop.email) {
     const payload = buildShopStatusEmailForShop({ shopName: shop.name, statusLabel: req.body?.status || 'inactive' })
-    await sendEmailBestEffort({ to: shop.email, ...payload })
+    await sendEmailBestEffort({ to: shop.email, ...payload, meta: { shopId: String(shop._id || '') } })
   }
   res.json({ shop })
 }

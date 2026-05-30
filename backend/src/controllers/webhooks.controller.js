@@ -199,7 +199,7 @@ export async function payosWebhook(req, res) {
               staffName,
               createdAt: booking.createdAt
             })
-            await sendEmailBestEffort({ to: shopInfo.email, ...payloadEmailShop })
+            await sendEmailBestEffort({ to: shopInfo.email, ...payloadEmailShop, meta: { shopId: String(shopInfo._id || ''), bookingCode: bookingCode } })
           }
 
           const customerEmail = booking.customerEmail ? String(booking.customerEmail).toLowerCase() : ''
@@ -213,7 +213,7 @@ export async function payosWebhook(req, res) {
               depositAmount: booking.depositAmount || 0,
               createdAt: booking.createdAt
             })
-            await sendEmailBestEffort({ to: customerEmail, ...payloadEmailCustomer })
+            await sendEmailBestEffort({ to: customerEmail, ...payloadEmailCustomer, meta: { shopId: String(shopInfo._id || ''), bookingCode: bookingCode } })
           }
         } catch {
           // ignore email failures in webhook flow

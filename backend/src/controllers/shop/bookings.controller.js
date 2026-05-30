@@ -313,7 +313,7 @@ export async function cancelBooking(req, res) {
         refundUrl: refundLink,
         expiresAt: tokenExpiresAt
       })
-      emailResult = await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
+      emailResult = await sendEmailBestEffort({ to: booking.customerEmail, ...payload, meta: { shopId: String(shopId), bookingCode: booking.bookingCode, refundId: String(refund?._id || '') } })
       await RefundRequest.updateOne(
         { _id: refund._id },
         { $set: { emailSent: Boolean(emailResult?.sent), emailSentAt: emailResult?.sent ? new Date() : null } }

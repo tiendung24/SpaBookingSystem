@@ -1,5 +1,30 @@
 import { EmailService } from '../services/email.service.js'
 
+
+function logEmailEvent(level, event, meta = {}) {
+  try {
+    const safe = {
+      event,
+      to: meta.to,
+      subject: meta.subject,
+      provider: meta.provider,
+      reason: meta.reason,
+      messageId: meta.messageId,
+      accepted: meta.accepted,
+      bookingCode: meta.bookingCode,
+      refundId: meta.refundId,
+      shopId: meta.shopId
+    }
+    const msg = `[email] ${event}`
+    if (level === 'error') console.error(msg, safe)
+    else if (level === 'warn') console.warn(msg, safe)
+    else console.log(msg, safe)
+  } catch {
+    // ignore
+  }
+}
+
+
 function fmtDateTimeVi(date) {
   try {
     const d = new Date(date)
@@ -31,14 +56,18 @@ function safe(value) {
   return String(value || '').trim()
 }
 
-export async function sendEmailBestEffort({ to, subject, html, text }) {
+export async function sendEmailBestEffort({ to, subject, html, text, meta }) {
   const email = safe(to)
   if (!email) return { sent: false, skipped: true, reason: 'missing_to' }
   try {
     const service = new EmailService()
-    return await service.send({ to: email, subject, html, text })
+    const result = await service.send({ to: email, subject, html, text })
+    logEmailEvent(result?.sent ? 'info' : (result?.skipped ? 'warn' : 'warn'), result?.sent ? 'sent' : (result?.skipped ? 'skipped' : 'not_sent'), { to: email, subject, provider: result?.provider, reason: result?.reason, messageId: result?.messageId, accepted: result?.accepted, ...(meta || {}) })
+    return result
   } catch (err) {
-    return { sent: false, failed: true, reason: err?.message || 'unknown_error' }
+    const reason = err?.message || 'unknown_error'
+    logEmailEvent('error', 'failed', { to: email, subject, reason, ...(meta || {}) })
+    return { sent: false, failed: true, reason }
   }
 }
 

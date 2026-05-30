@@ -54,7 +54,7 @@ export async function cancelBooking(req, res) {
       startTime: booking.startTime,
       statusLabel: eligibleForRefund ? 'Đã hủy (chờ hoàn cọc)' : 'Đã hủy (không hoàn cọc)'
     })
-    await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
+    await sendEmailBestEffort({ to: booking.customerEmail, ...payload, meta: { shopId: String(booking.shopId || ''), bookingCode: booking.bookingCode || String(booking._id) } })
   }
 
   res.json({ bookingCode: booking.bookingCode, canceled: true, eligibleForRefund })

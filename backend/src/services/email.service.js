@@ -44,6 +44,7 @@ export class EmailService {
     const transporter = await getTransporter()
 
     if (!transporter || !this.from) {
+      try { console.warn('[EmailService] skipped', { to, subject, reason: 'missing_provider_config', provider: this.provider }) } catch {}
       await AuditLog.create({
         actorUserId: '',
         action: 'email.skipped',
@@ -69,6 +70,8 @@ export class EmailService {
         html: html || text || ''
       })
 
+      try { console.warn('[EmailService] skipped', { to, subject, reason: 'missing_provider_config', provider: this.provider }) } catch {}
+      try { console.log('[EmailService] sent', { to, subject, provider: this.provider, messageId: info.messageId, accepted: info.accepted || [] }) } catch {}
       await AuditLog.create({
         actorUserId: '',
         action: 'email.sent',
@@ -91,6 +94,8 @@ export class EmailService {
         accepted: info.accepted || []
       }
     } catch (error) {
+      try { console.warn('[EmailService] skipped', { to, subject, reason: 'missing_provider_config', provider: this.provider }) } catch {}
+      try { console.error('[EmailService] failed', { to, subject, provider: this.provider, error: error?.message || 'unknown_error' }) } catch {}
       await AuditLog.create({
         actorUserId: '',
         action: 'email.failed',

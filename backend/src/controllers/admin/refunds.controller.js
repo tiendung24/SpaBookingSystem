@@ -65,7 +65,7 @@ export async function markProcessing(req, res) {
       bookingCode: booking.bookingCode || String(booking._id),
       statusLabel: 'Đang xử lý'
     })
-    await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
+    await sendEmailBestEffort({ to: booking.customerEmail, ...payload, meta: { shopId: String(booking.shopId || ''), bookingCode: booking.bookingCode || String(booking._id), refundId: String(refund._id || '') } })
   }
   res.json({ refund })
 }
@@ -137,7 +137,7 @@ export async function markSuccess(req, res) {
       bookingCode: booking.bookingCode || String(booking._id),
       statusLabel: 'Hoàn tiền thành công'
     })
-    await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
+    await sendEmailBestEffort({ to: booking.customerEmail, ...payload, meta: { shopId: String(booking.shopId || ''), bookingCode: booking.bookingCode || String(booking._id), refundId: String(refund._id || '') } })
   }
 
   res.json({ refund })
@@ -165,7 +165,7 @@ export async function markFailed(req, res) {
       bookingCode: booking.bookingCode || String(booking._id),
       statusLabel: 'Hoàn tiền thất bại'
     })
-    await sendEmailBestEffort({ to: booking.customerEmail, ...payload })
+    await sendEmailBestEffort({ to: booking.customerEmail, ...payload, meta: { shopId: String(booking.shopId || ''), bookingCode: booking.bookingCode || String(booking._id), refundId: String(refund._id || '') } })
   }
 
   res.json({ refund })
