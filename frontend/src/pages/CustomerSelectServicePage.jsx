@@ -17,7 +17,7 @@ const categoryLabels = {
 const serviceFallbackImage = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop'
 const staffFallbackImage = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop'
 
-export default function CustomerSelectServicePage() {
+export default function CustomerSelectServicePage({ isModal = false, onClose, onNext } = {}) {
   const navigate = useNavigate()
   const { slug } = useParams()
   const { shop, services, staff, bookingDraft, setBookingDraft, loadPublicShop } = useShop()
@@ -111,12 +111,16 @@ export default function CustomerSelectServicePage() {
         holdExpiresAt: mustResetSlot ? '' : prev.holdExpiresAt
       }
     })
-    navigate(`/${slug || shop.slug}/book/time`)
+    if (isModal && typeof onNext === 'function') {
+      onNext({ serviceId: selectedServiceId, staffId: selectedStaffId })
+    } else {
+      navigate(`/${slug || shop.slug}/book/time`)
+    }
   }
 
   const isCorrectSlug = !slug || slug === shop.slug
 
-  return (
+  const content = (
     <div className="min-h-screen bg-slate-50 text-main">
       {!isCorrectSlug && (
         <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-sm text-center">
@@ -309,4 +313,16 @@ export default function CustomerSelectServicePage() {
       </footer>
     </div>
   )
+
+  if (isModal) {
+    return (
+      <div className="fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => onClose && onClose()}>
+        <div className="bg-white rounded-3xl max-w-[1100px] w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          {content}
+        </div>
+      </div>
+    )
+  }
+
+  return content
 }

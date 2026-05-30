@@ -1,6 +1,8 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import CustomerProfilePage from './CustomerProfilePage'
+import CustomerSelectServicePage from './CustomerSelectServicePage'
+import { useNavigate } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 import LumiXLogo from '../assets/lumix-logo.png'
 
@@ -36,7 +38,9 @@ function staffExperienceLabel(member) {
 
 export default function CustomerHomePage() {
   const { slug } = useParams()
-  const { shop, services, staff, loadPublicShop, isAuthenticated, role, user, logout } = useShop()
+  const { shop, services, staff, loadPublicShop, isAuthenticated, role, user, logout, setBookingDraft } = useShop()
+  const navigate = useNavigate()
+  const [bookingOpen, setBookingOpen] = useState(false)
   const [serviceDetail, setServiceDetail] = useState(null)
   const [staffDetail, setStaffDetail] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -397,9 +401,13 @@ export default function CustomerHomePage() {
               <p className="text-main/70 leading-relaxed whitespace-pre-line break-words">
                 {serviceDetail.detailedDescription || serviceDetail.shortDescription || 'Shop chưa cập nhật mô tả chi tiết cho dịch vụ này.'}
               </p>
-              <Link className="block w-full py-4 rounded-2xl bg-primary text-white text-center font-bold" to={bookUrl}>
+              <button className="block w-full py-4 rounded-2xl bg-primary text-white text-center font-bold" type="button" onClick={() => {
+                setBookingDraft((prev) => ({ ...prev, serviceId: serviceDetail.id || serviceDetail._id, staffId: prev?.staffId || 'random' }))
+                setServiceDetail(null)
+                setBookingOpen(true)
+              }}>
                 Đặt dịch vụ này
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -478,6 +486,17 @@ export default function CustomerHomePage() {
       ) : null}
       {profileOpen ? (
         <CustomerProfilePage isModal onClose={() => setProfileOpen(false)} />
+      ) : null}
+      {bookingOpen ? (
+        <CustomerSelectServicePage
+          isModal
+          onClose={() => setBookingOpen(false)}
+          onNext={({ serviceId, staffId }) => {
+            setBookingDraft((p) => ({ ...p, serviceId, staffId }))
+            setBookingOpen(false)
+            navigate(`/${slug || shop.slug}/book/time`)
+          }}
+        />
       ) : null}
     </div>
   )
