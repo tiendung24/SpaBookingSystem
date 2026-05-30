@@ -263,6 +263,14 @@ export function ShopProvider({ children }) {
     }
   }, [token])
 
+  const loadCustomerBookings = useCallback(async (accessToken = token) => {
+    if (!accessToken) return []
+    const res = await apiRequest('/api/customer/bookings', { token: accessToken })
+    const items = Array.isArray(res?.items) ? res.items : []
+    setCustomerBookings(items)
+    return items
+  }, [token])
+
   const loadShopNotifications = useCallback(async (accessToken = token) => {
     if (!accessToken || role !== 'shop') return
     try {
@@ -373,8 +381,8 @@ export function ShopProvider({ children }) {
     if (!token || role === 'admin') return
     // load current user/shop immediately
     const t = setTimeout(() => {
-      loadMeAndShop,
-    loadCustomerBookings(token)
+      void loadMeAndShop(token)
+      if (role === 'customer') void loadCustomerBookings(token)
     }, 0)
 
     // schedule token expiry handling
@@ -529,14 +537,6 @@ export function ShopProvider({ children }) {
     return apiRequest('/api/auth/shop/register', { method: 'POST', body: payload })
   }
 
-
-  const loadCustomerBookings = useCallback(async (accessToken = token) => {
-    if (!accessToken) return []
-    const res = await apiRequest('/api/customer/bookings', { token: accessToken })
-    const items = Array.isArray(res?.items) ? res.items : []
-    setCustomerBookings(items)
-    return items
-  }, [token])
 
   const logout = () => {
     clearStoredAuth()
