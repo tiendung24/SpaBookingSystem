@@ -271,10 +271,16 @@ export function ShopProvider({ children }) {
 
   const loadCustomerBookings = useCallback(async (accessToken = token) => {
     if (!accessToken) return []
-    const res = await apiRequest('/api/customer/bookings', { token: accessToken })
-    const items = Array.isArray(res?.items) ? res.items : []
-    setCustomerBookings(items)
-    return items
+    try {
+      const res = await apiRequest('/api/customer/bookings', { token: accessToken })
+      const items = Array.isArray(res?.items) ? res.items : []
+      setCustomerBookings(items)
+      return items
+    } catch (err) {
+      console.warn('[ShopContext] loadCustomerBookings failed', err)
+      setCustomerBookings([])
+      return []
+    }
   }, [token])
 
   const loadShopNotifications = useCallback(async (accessToken = token) => {
@@ -422,7 +428,7 @@ export function ShopProvider({ children }) {
 
   useEffect(() => {
     if (!token || role !== 'customer') return
-    void loadCustomerBookings(token)
+    void loadCustomerBookings(token).catch(() => {})
   }, [token, role, loadCustomerBookings])
 
   useEffect(() => {

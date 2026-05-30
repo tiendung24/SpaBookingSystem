@@ -38,6 +38,7 @@ import CustomerPaymentPage from './pages/CustomerPaymentPage'
 import CustomerAppointmentsPage from './pages/CustomerAppointmentsPage'
 import CustomerAccountBookingsPage from './pages/CustomerAccountBookingsPage'
 import CustomerRegisterPage from './pages/CustomerRegisterPage'
+import CustomerProfilePage from './pages/CustomerProfilePage'
 import { GuestOnly, RequireRole } from './components/auth/RouteGuards'
 import { ToastProvider } from './components/ui/ToastProvider'
 
@@ -78,6 +79,7 @@ function App() {
             <Route path="/admin/support/:id" element={<RequireRole allow={['admin']}><AdminTicketDetailPage /></RequireRole>} />
             <Route path="/admin/settings" element={<RequireRole allow={['admin']}><AdminSettingsPage /></RequireRole>} />
             <Route path="/customer/bookings" element={<RequireRole allow={['customer']}><CustomerAccountBookingsPage /></RequireRole>} />
+            <Route path="/customer/profile" element={<RequireRole allow={['customer']}><CustomerProfilePage /></RequireRole>} />
             <Route path="/:slug/service/:serviceId" element={<CustomerServiceDetailPage />} />
             <Route path="/admin/refunds" element={<RequireRole allow={['admin']}><AdminRefundsPage /></RequireRole>} />
             <Route path="/:slug/book" element={<RequireRole allow={['customer']}><CustomerSelectServicePage /></RequireRole>} />

@@ -1,4 +1,4 @@
-import { Booking, PayosPayment, Deposit, Service, Shop, ShopStaff, RefundRequest, Wallet, WalletTransaction, PlatformFee, SystemSetting } from '../../models/index.js'
+import { Booking, PayosPayment, Deposit, Service, Shop, ShopStaff, RefundRequest, Wallet, WalletTransaction, PlatformFee, SystemSetting, Customer, User } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { derivePaymentStatus } from '../../utils/paymentStatus.js'
 import { buildRefundInfoRequestEmailForCustomer, sendEmailBestEffort } from '../../utils/emailNotifications.js'
@@ -230,4 +230,20 @@ export async function cancelMyBooking(req, res) {
     shopReceive,
     emailSent
   })
+}
+
+
+export async function updateMe(req, res) {
+  if (!req.auth?.userId || req.auth.role !== 'customer') throw httpError(403, 'Kh?ng c? quy?n truy c?p')
+  const fullName = String(req.body?.fullName || '').trim()
+  const phone = String(req.body?.phone || '').trim()
+  if (!fullName) throw httpError(400, 'Vui l?ng nh?p h? v? t?n')
+
+  await User.updateOne({ _id: String(req.auth.userId) }, { $set: { fullName, phone, updatedAt: new Date() } })
+  if (req.auth.customerId) {
+    await Customer.updateOne({ _id: String(req.auth.customerId) }, { $set: { fullName, phone, updatedAt: new Date() } })
+  }
+
+  const user = await User.findById(String(req.auth.userId)).lean()
+  res.json({ me: { userId: req.auth.userId, role: req.auth.role, customerId: req.auth.customerId || null, fullName: user?.fullName || '', phone: user?.phone || '', email: user?.email || '' } })
 }
