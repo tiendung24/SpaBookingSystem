@@ -1,8 +1,8 @@
-import { Booking, BookingSlotLock, Deposit, FraudReport, RefundRequest, PayosPayment, Wallet, WalletTransaction, Notification } from '../../models/index.js'
+import { Booking, BookingSlotLock, Deposit, FraudReport, RefundRequest, PayosPayment, Wallet, WalletTransaction, Notification, Shop, Service, ShopStaff } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { getBookingWithRelations } from '../../utils/shop.js'
 import { writeAuditLog } from '../../utils/audit.js'
-import { buildBookingStatusEmailForCustomer, sendEmailBestEffort } from '../../utils/emailNotifications.js'
+import { buildBookingStatusEmailForCustomer, buildBookingEmailForCustomer, buildBookingEmailForShop, sendEmailBestEffort } from '../../utils/emailNotifications.js'
 
 function getCancelCutoffMinutes() {
   return Number(process.env.CUSTOMER_CANCEL_CUTOFF_MINUTES || 120) // mặc định 2h
@@ -182,6 +182,52 @@ export async function refreshPaymentForBooking(req, res) {
       status: 'success',
       createdAt: new Date()
     })
+  }
+
+
+  // Fallback: send emails on refresh (in case webhook delivery failed)
+  try {
+    const [shopInfo, serviceInfo, staffInfo] = await Promise.all([
+      Shop.findById(booking.shopId).lean(),
+      booking.serviceId ? Service.findById(booking.serviceId).lean() : Promise.resolve(null),
+      booking.staffId ? ShopStaff.findById(booking.staffId).lean() : Promise.resolve(null)
+    ])
+
+    const shopName = shopInfo?.name || ''
+    const serviceName = serviceInfo?.name || ''
+    const staffName = staffInfo?.fullName || ''
+
+    if (shopInfo?.email) {
+      const payloadEmailShop = buildBookingEmailForShop({
+        shopName,
+        bookingCode: booking.bookingCode,
+        startTime: booking.startTime,
+        customerName: booking.customerName,
+        customerPhone: booking.customerPhone,
+        serviceName,
+        staffName,
+        createdAt: booking.createdAt
+      })
+      await sendEmailBestEffort({ to: shopInfo.email, ...payloadEmailShop, meta: { shopId: String(shopInfo._id || ''), bookingCode: String(booking.bookingCode || '') } })
+    }
+
+    const customerEmail = booking.customerEmail ? String(booking.customerEmail).toLowerCase() : ''
+    if (customerEmail) {
+      const payloadEmailCustomer = buildBookingEmailForCustomer({
+        shopName,
+        bookingCode: booking.bookingCode,
+        startTime: booking.startTime,
+        serviceName,
+        staffName,
+        depositAmount: booking.depositAmount || 0,
+        createdAt: booking.createdAt
+      })
+      await sendEmailBestEffort({ to: customerEmail, ...payloadEmailCustomer, meta: { shopId: String(shopInfo._id || ''), bookingCode: String(booking.bookingCode || '') } })
+    }
+  } catch (err) {
+    try {
+      console.error('[refreshPaymentForBooking][email] failed', { bookingCode: booking.bookingCode, shopId: booking.shopId, error: err?.message || String(err || '') })
+    } catch {}
   }
 
   // Notify shop/admins via realtime (best-effort)
