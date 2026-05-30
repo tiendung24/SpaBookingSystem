@@ -85,6 +85,11 @@ export default function CustomerHomePage() {
             <a className="text-main/70 hover:text-primary transition-colors" href="#contact">
               Liên hệ
             </a>
+            {isAuthenticated && role === 'customer' ? (
+              <a className="text-main/70 hover:text-primary transition-colors" href="/customer/bookings">
+                Lịch hẹn của tôi
+              </a>
+            ) : null}
           </nav>
           <div className="flex items-center gap-3 relative">
             <Link className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:brightness-110 transition-all" to={bookUrl}>
@@ -110,7 +115,6 @@ export default function CustomerHomePage() {
                 </button>
                 {profileOpen ? (
                     <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg p-2 z-50">
-                      <Link to="/customer/bookings" className="block px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Lịch hẹn của tôi</Link>
                       <Link to="/customer/profile" className="block px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Chỉnh sửa hồ sơ</Link>
                       <button type="button" onClick={logout} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm text-rose-600">Đăng xuất</button>
                     </div>
@@ -262,12 +266,13 @@ export default function CustomerHomePage() {
                   <p className="text-sm text-main/70 line-clamp-2 break-words">{service.shortDescription || service.description || 'Shop chưa cập nhật mô tả ngắn.'}</p>
 
                   <div className="flex gap-2 pt-1 mt-auto">
-                    <Link
+                    <button
                       className="flex-1 py-2 rounded-xl border border-primary/20 text-primary font-label-bold hover:bg-primary/5 transition-colors text-center"
-                      to={`/${slug || shop.slug}/service/${service.id || service._id}`}
+                      type="button"
+                      onClick={() => setServiceDetail(service)}
                     >
                       Xem chi tiết
-                    </Link>
+                    </button>
                     <Link
                       className="flex-1 py-2 rounded-xl bg-primary text-white font-label-bold hover:brightness-110 transition-all text-center"
                       to={bookUrl}

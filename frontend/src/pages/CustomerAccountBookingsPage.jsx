@@ -27,13 +27,38 @@ export default function CustomerAccountBookingsPage() {
   const focusCode = String(searchParams.get('bookingCode') || '').trim().toUpperCase()
   const [activeCode, setActiveCode] = useState('')
   const [detailCode, setDetailCode] = useState('')
+  const [searchText, setSearchText] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [sortBy, setSortBy] = useState('createdAt')
   const [form, setForm] = useState({ bankName: '', accountNumber: '', accountName: '' })
   const [saving, setSaving] = useState(false)
 
   const items = useMemo(() => {
     const raw = Array.isArray(customerBookings) ? customerBookings.slice() : []
-    return raw.sort((a, b) => new Date(b.startTime || b.createdAt || 0).getTime() - new Date(a.startTime || a.createdAt || 0).getTime())
-  }, [customerBookings])
+    const filtered = raw.filter((it) => {
+      if (searchText && searchText.trim()) {
+        const q = searchText.trim().toLowerCase()
+        const code = String(it.bookingCode || '').toLowerCase()
+        const svc = String(it.serviceName || '').toLowerCase()
+        const shop = String(it.shopName || '').toLowerCase()
+        if (!(code.includes(q) || svc.includes(q) || shop.includes(q))) return false
+      }
+      if (statusFilter && statusFilter !== 'all') {
+        if (String(it.status || '') !== String(statusFilter)) return false
+      }
+      return true
+    })
+
+    const sorted = filtered.sort((a, b) => {
+      if (sortBy === 'createdAt') {
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      }
+      // default: sort by startTime
+      return new Date(b.startTime || 0).getTime() - new Date(a.startTime || 0).getTime()
+    })
+
+    return sorted
+  }, [customerBookings, searchText, statusFilter, sortBy])
 
   const openDetail = (code) => {
     setDetailCode(code)
@@ -104,10 +129,36 @@ export default function CustomerAccountBookingsPage() {
         </header>
 
         <section className="bg-white rounded-2xl border border-slate-200 p-5 overflow-x-auto">
-          <table className="w-full min-w-[1000px] text-sm">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <input
+              className="p-3 rounded-xl border min-w-[220px]"
+              placeholder="Tìm kiếm mã, dịch vụ hoặc cửa hàng"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+
+            <select className="p-3 rounded-xl border" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">Tất cả trạng thái</option>
+              <option value="all">Tất cả</option>
+              <option value="pending">Chờ xác nhận</option>
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="checked_in">Đang phục vụ</option>
+              <option value="completed">Hoàn thành</option>
+              <option value="cancelled">Đã hủy</option>
+            </select>
+
+            <select className="p-3 rounded-xl border" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="createdAt">Sắp xếp: Thời gian đặt (mới nhất)</option>
+              <option value="startTime">Sắp xếp: Thời gian hẹn (mới nhất)</option>
+            </select>
+
+            <button className="px-4 py-2 rounded-xl border" onClick={() => { setSearchText(''); setStatusFilter(''); setSortBy('createdAt') }}>Xóa bộ lọc</button>
+          </div>
+          <table className="w-full min-w-[1100px] text-sm">
             <thead>
                 <tr className="bg-slate-50 text-left">
                 <th className="p-3">Mã booking</th>
+                <th className="p-3">Thời gian đặt</th>
                 <th className="p-3">Cửa hàng</th>
                 <th className="p-3">Dịch vụ</th>
                 <th className="p-3">Thời gian hẹn</th>
@@ -129,6 +180,7 @@ export default function CustomerAccountBookingsPage() {
                 return (
                   <tr key={item._id} className={highlight ? 'bg-amber-50' : ''}>
                     <td className="p-3 font-bold text-primary">{code || item._id}</td>
+                    <td className="p-3">{item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '?'}</td>
                     <td className="p-3">{item.shopName || '?'}</td>
                     <td className="p-3">{item.serviceName || '?'}</td>
                     <td className="p-3">{item.startTime ? new Date(item.startTime).toLocaleString('vi-VN') : '?'}</td>
@@ -152,7 +204,7 @@ export default function CustomerAccountBookingsPage() {
                 )
               })}
               {items.length === 0 ? (
-                <tr><td colSpan={10} className="p-6 text-main/60">Chưa có lịch hẹn nào.</td></tr>
+                <tr><td colSpan={11} className="p-6 text-main/60">Chưa có lịch hẹn nào.</td></tr>
               ) : null}
             </tbody>
           </table>
