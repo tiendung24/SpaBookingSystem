@@ -308,7 +308,7 @@ export default function CustomerSelectServicePage({ isModal = false, onClose, on
             <a className="text-main/70 hover:text-primary text-xs" href="#">Liên hệ</a>
             <a className="text-main/70 hover:text-primary text-xs" href="#">Hỗ trợ</a>
           </div>
-          <p className="text-xs text-main/60">© 2024 LumiX Partner. Powered by LumiX.</p>
+          <p className="text-xs text-main/60">© 2026 LumiX Partner. Powered by LumiX.</p>
         </div>
       </footer>
     </div>

@@ -7,6 +7,8 @@ function fmtVnd(v) {
   return `${Number(v || 0).toLocaleString('vi-VN')}₫`
 }
 
+const serviceFallbackImage = 'https://maisonoffice.vn/wp-content/uploads/2024/03/0-thiet-ke-spa.jpg'
+
 function statusText(status) {
   const key = String(status || '')
   if (key === 'pending') return 'Chờ xác nhận'
@@ -63,6 +65,10 @@ export default function CustomerAccountBookingsPage() {
   const openDetail = (code) => {
     setDetailCode(code)
   }
+
+  const getServiceDescription = (item) => item.serviceDetailedDescription || item.serviceDescription || item.serviceShortDescription || 'Shop chưa cập nhật mô tả chi tiết cho dịch vụ này.'
+
+  const getStaffDescription = (item) => item.staffBio || item.staffShortBio || 'Shop chưa cập nhật giới thiệu chi tiết cho nhân sự này.'
 
   const cancelBooking = async (item) => {
     const code = String(item?.bookingCode || '')
@@ -214,21 +220,70 @@ export default function CustomerAccountBookingsPage() {
           const current = items.find((x) => String(x.bookingCode || '') === String(detailCode))
           if (!current) return null
           return (
-            <section className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-primary">Chi tiết lịch hẹn {current.bookingCode}</h3>
+            <section className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-primary">Chi tiết lịch hẹn {current.bookingCode}</h3>
+                  <p className="text-sm text-main/60">Xem lại thông tin dịch vụ đã đặt</p>
+                </div>
                 <button className="px-3 py-1.5 rounded-lg border" onClick={() => setDetailCode('')}>Đóng</button>
               </div>
-              <p><strong>Cửa hàng:</strong> {current.shopName || '?'}</p>
-              <p><strong>Dịch vụ:</strong> {current.serviceName || '?'}</p>
-              <p><strong>Kỹ thuật viên:</strong> {current.staffName || '?'}</p>
-              <p><strong>Thời gian hẹn:</strong> {current.startTime ? new Date(current.startTime).toLocaleString('vi-VN') : '?'}</p>
-              <p><strong>Tiền cọc:</strong> {fmtVnd(current.depositAmount || 0)}</p>
-              <p><strong>Tổng tiền:</strong> {fmtVnd(current.totalAmount || 0)}</p>
-              <p><strong>Còn lại tại shop:</strong> {fmtVnd(Math.max(0, Number(current.totalAmount || 0) - Number(current.depositAmount || 0)))}</p>
-              <p><strong>Trạng thái:</strong> {statusText(current.status)}</p>
-              <p><strong>Trạng thái thanh toán:</strong> {current.paymentStatusInfo?.text || '?'}</p>
-              <p><strong>Ghi chú:</strong> {current.note || '?'}</p>
+
+              <div className="grid md:grid-cols-[180px_1fr] gap-4 items-start">
+                <img
+                  src={current.serviceImageUrl || serviceFallbackImage}
+                  alt={current.serviceName || 'Dịch vụ'}
+                  className="w-full h-44 md:h-40 rounded-2xl object-cover border border-slate-200"
+                />
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-bold text-secondary uppercase tracking-widest">Dịch vụ</p>
+                    <h4 className="text-2xl font-black text-main mt-1">{current.serviceName || '?'}</h4>
+                  </div>
+                  <p className="text-main/70 leading-relaxed whitespace-pre-line break-words">{getServiceDescription(current)}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl bg-primary/5 p-4">
+                      <p className="text-xs text-main/50">Giá dịch vụ</p>
+                      <p className="font-black text-primary">{fmtVnd(current.servicePrice || current.totalAmount || 0)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-primary/5 p-4">
+                      <p className="text-xs text-main/50">Thời gian làm</p>
+                      <p className="font-black text-primary">{current.serviceDurationMinutes ? `${current.serviceDurationMinutes} phút` : '?'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-slate-200 p-4 space-y-2">
+                  <p className="text-sm font-bold text-main/70">Nhân viên</p>
+                  <p className="font-black text-main">{current.staffName || '?'}</p>
+                  <p className="text-sm text-main/70 whitespace-pre-line break-words">{getStaffDescription(current)}</p>
+                  {current.staffSpecialties?.length ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {current.staffSpecialties.map((item) => (
+                        <span key={item} className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold">{item}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="rounded-2xl border border-slate-200 p-4 space-y-2">
+                  <p className="text-sm font-bold text-main/70">Thông tin lịch hẹn</p>
+                  <p><strong>Cửa hàng:</strong> {current.shopName || '?'}</p>
+                  <p><strong>Thời gian đặt:</strong> {current.createdAt ? new Date(current.createdAt).toLocaleString('vi-VN') : '?'}</p>
+                  <p><strong>Thời gian hẹn:</strong> {current.startTime ? new Date(current.startTime).toLocaleString('vi-VN') : '?'}</p>
+                  <p><strong>Tiền cọc:</strong> {fmtVnd(current.depositAmount || 0)}</p>
+                  <p><strong>Tổng tiền:</strong> {fmtVnd(current.totalAmount || 0)}</p>
+                  <p><strong>Còn lại tại shop:</strong> {fmtVnd(Math.max(0, Number(current.totalAmount || 0) - Number(current.depositAmount || 0)))}</p>
+                  <p><strong>Trạng thái:</strong> {statusText(current.status)}</p>
+                  <p><strong>Trạng thái thanh toán:</strong> {current.paymentStatusInfo?.text || '?'}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-sm font-bold text-main/70 mb-2">Ghi chú</p>
+                <p className="text-main/70 whitespace-pre-line break-words">{current.note || 'Không có ghi chú.'}</p>
+              </div>
             </section>
           )
         })() : null}

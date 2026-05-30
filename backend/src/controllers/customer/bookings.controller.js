@@ -59,7 +59,18 @@ export async function myBookings(req, res) {
     return {
       ...booking,
       serviceName: service?.name || '',
+      serviceImageUrl: service?.imageUrl || '',
+      serviceDescription: service?.description || '',
+      serviceShortDescription: service?.shortDescription || '',
+      serviceDetailedDescription: service?.detailedDescription || '',
+      servicePrice: Number(service?.price || 0),
+      serviceDurationMinutes: Number(service?.durationMinutes || 0),
+      serviceCategoryId: service?.categoryId || '',
       staffName: staff?.fullName || '',
+      staffAvatarUrl: staff?.avatarUrl || '',
+      staffBio: staff?.bio || '',
+      staffShortBio: staff?.shortBio || '',
+      staffSpecialties: staff?.specialties || [],
       shopName: shop?.name || '',
       depositStatus: deposit?.status || '',
       paymentStatusInfo: derivePaymentStatus({ booking, payment, deposit })
