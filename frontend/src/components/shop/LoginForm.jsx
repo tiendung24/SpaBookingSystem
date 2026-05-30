@@ -33,7 +33,8 @@ export default function LoginForm() {
       if (result.role === 'admin') {
         navigate('/admin/dashboard')
       } else if (result.role === 'customer') {
-        navigate('/')
+        const from = location.state?.from
+        navigate(from || '/customer/bookings')
       } else {
         const from = location.state?.from
         let dest = from || '/shop/dashboard'

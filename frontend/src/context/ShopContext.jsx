@@ -529,17 +529,41 @@ export function ShopProvider({ children }) {
   }
 
   const loginUnified = async ({ identity, password }) => {
+    const normalizedIdentity = String(identity || '').trim()
+    const looksLikeEmail = normalizedIdentity.includes('@')
+
+    // When user enters email, prioritize customer/admin before shop to avoid confusing 403 spam for customers.
+    if (looksLikeEmail) {
+      try {
+        const res = await loginCustomer({ identity: normalizedIdentity, password })
+        return { ...res, role: 'customer' }
+      } catch (customerErr) {
+        if (customerErr?.status && customerErr.status !== 401 && customerErr.status !== 403) throw customerErr
+      }
+
+      try {
+        const res = await loginAdmin({ identity: normalizedIdentity, password })
+        return { ...res, role: 'admin' }
+      } catch (adminErr) {
+        if (adminErr?.status && adminErr.status !== 401 && adminErr.status !== 403) throw adminErr
+      }
+
+      const res = await loginShop({ identity: normalizedIdentity, password })
+      return { ...res, role: 'shop' }
+    }
+
+    // Phone login: shop first (legacy behavior)
     try {
-      const res = await loginShop({ identity, password })
+      const res = await loginShop({ identity: normalizedIdentity, password })
       return { ...res, role: 'shop' }
     } catch (shopErr) {
       if (shopErr?.status !== 401 && shopErr?.status !== 403) throw shopErr
       try {
-        const res = await loginAdmin({ identity, password })
+        const res = await loginAdmin({ identity: normalizedIdentity, password })
         return { ...res, role: 'admin' }
       } catch (adminErr) {
-        if (adminErr?.status !== 401 && adminErr?.status !== 403) throw adminErr
-        const res = await loginCustomer({ identity, password })
+        if (adminErr?.status && adminErr.status !== 401 && adminErr.status !== 403) throw adminErr
+        const res = await loginCustomer({ identity: normalizedIdentity, password })
         return { ...res, role: 'customer' }
       }
     }
