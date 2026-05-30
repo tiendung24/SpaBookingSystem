@@ -89,6 +89,16 @@ export default function CustomerHomePage() {
             <Link className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:brightness-110 transition-all" to={bookUrl}>
               Đặt lịch ngay
             </Link>
+            {!isAuthenticated ? (
+              <>
+                <Link className="hidden sm:inline-flex px-5 py-3 rounded-full border border-slate-200 text-main font-bold hover:bg-slate-50" to="/login">
+                  {'\u0110\u0103ng nh\u1eadp'}
+                </Link>
+                <Link className="hidden sm:inline-flex px-5 py-3 rounded-full border border-primary/20 text-primary font-bold hover:bg-primary/5" to="/register">
+                  {'\u0110\u0103ng k\u00fd'}
+                </Link>
+              </>
+            ) : null}
             {isAuthenticated && role === 'shop' ? (
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
@@ -143,6 +153,16 @@ export default function CustomerHomePage() {
                 <Link className="bg-primary text-white px-7 py-3 rounded-full font-bold shadow-lg hover:brightness-110 transition-all" to={bookUrl}>
                   Đặt lịch ngay
                 </Link>
+                {!isAuthenticated ? (
+                  <>
+                    <Link className="bg-white border border-slate-200 text-main px-7 py-3 rounded-full font-bold hover:bg-slate-50" to="/login">
+                      {'\u0110\u0103ng nh\u1eadp'}
+                    </Link>
+                    <Link className="bg-white border border-primary/20 text-primary px-7 py-3 rounded-full font-bold hover:bg-primary/5" to="/register">
+                      {'\u0110\u0103ng k\u00fd'}
+                    </Link>
+                  </>
+                ) : null}
                 <a className="bg-white border border-primary/20 text-primary px-7 py-3 rounded-full font-bold hover:bg-primary/5" href="#services">
                   Xem dịch vụ
                 </a>
