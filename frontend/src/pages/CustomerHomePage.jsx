@@ -1,10 +1,10 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import CustomerProfilePage from './CustomerProfilePage'
 import CustomerSelectServicePage from './CustomerSelectServicePage'
 import { useNavigate } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
-import LumiXLogo from '../assets/lumix-logo.png'
+import CustomerHeader from '../components/customer/CustomerHeader'
 
 const heroImage =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuARsefIDC5KnErn7e0YLKhJ6VDKWD_Whwd3vMpSePIQhTbcW-3ir8LX_5NvArJmY8_qpqH2pFNuVaHQLY4PLoI835HlxMznHdjbr3UBB6jhvtmnXohn5AZIB9DuWeDh1th-hAUFfjO8bOYPFRhuy_Cy-WkhwRfuYq1lYY_THLyMeSyOqQPHLNGxNJmVMgFDtusyYOTuDqZ3LXXCcmKYmUgvHuswyeU9jurfwRApFrs68u8vjbwZ4stCSE-ymo9xGYNzQPJ5bbTK3JCJ'
@@ -38,17 +38,28 @@ function staffExperienceLabel(member) {
 
 export default function CustomerHomePage() {
   const { slug } = useParams()
+  const location = useLocation()
   const { shop, services, staff, loadPublicShop, isAuthenticated, role, user, logout, setBookingDraft } = useShop()
   const navigate = useNavigate()
   const [bookingOpen, setBookingOpen] = useState(false)
   const [serviceDetail, setServiceDetail] = useState(null)
   const [staffDetail, setStaffDetail] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('services')
 
   useEffect(() => {
     if (!slug) return
     loadPublicShop(slug).catch(() => {})
   }, [slug, loadPublicShop])
+
+  useEffect(() => {
+    const hash = String(location.hash || '').replace('#', '')
+    if (hash === 'services' || hash === 'staff' || hash === 'contact') {
+      setActiveTab(hash)
+      return
+    }
+    setActiveTab('services')
+  }, [location.hash, location.pathname])
 
   const isCorrectSlug = !slug || slug === shop.slug
   const visibleServices = useMemo(() => services.filter((item) => item.visible), [services])
@@ -74,28 +85,13 @@ export default function CustomerHomePage() {
         </div>
       )}
 
-      <header className="bg-white/80 backdrop-blur-xl border-b border-primary/20 sticky top-0 z-50 h-20 shadow-sm">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-10 flex justify-between items-center h-full">
-          <div className="flex items-center gap-4">
-            <img src={LumiXLogo} alt="LumiX" className="h-12 w-auto" />
-            <h1 className="font-h3 text-h3 tracking-tight text-primary">{shop.name}</h1>
-          </div>
-          <nav className="hidden md:flex gap-6">
-            <a className="text-primary font-bold border-b-2 border-primary pb-1" href="#services">
-              Dịch vụ
-            </a>
-            <a className="text-main/70 hover:text-primary transition-colors" href="#staff">
-              Nhân sự
-            </a>
-            <a className="text-main/70 hover:text-primary transition-colors" href="#contact">
-              Liên hệ
-            </a>
-            {isAuthenticated && role === 'customer' ? (
-              <a className="text-main/70 hover:text-primary transition-colors" href="/customer/bookings">
-                Lịch hẹn của tôi
-              </a>
-            ) : null}
-          </nav>
+      <CustomerHeader
+        shopName={shop.name}
+        shopSlug={slug || shop.slug}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        greeting={`Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.`}
+        rightSlot={(
           <div className="flex items-center gap-3 relative">
             <Link className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:brightness-110 transition-all" to={bookUrl}>
               Đặt lịch ngay
@@ -126,16 +122,9 @@ export default function CustomerHomePage() {
                 ) : null}
               </div>
             ) : null}
-            {isAuthenticated && role === 'shop' ? (
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
-                  {user?.fullName?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
-                <button onClick={logout} className="text-main/70 hover:text-primary">Đăng xuất</button>
-              </div>
-            ) : null}
-          </div>        </div>
-      </header>
+          </div>
+        )}
+      />
 
       <main>
         <section className="relative min-h-[680px] flex items-center hero-mesh">

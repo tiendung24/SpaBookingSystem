@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 import { apiRequest } from '../lib/api'
+import CustomerHeader from '../components/customer/CustomerHeader'
 
 function fmtVnd(v) {
   return `${Number(v || 0).toLocaleString('vi-VN')}₫`
@@ -25,7 +26,7 @@ function statusText(status) {
 
 export default function CustomerAccountBookingsPage() {
   const { slug } = useParams()
-  const { shop, customerBookings, user, token, loadCustomerBookings, isAuthenticated, role } = useShop()
+  const { shop, customerBookings, user, token, loadCustomerBookings } = useShop()
   const [searchParams] = useSearchParams()
   const focusCode = String(searchParams.get('bookingCode') || '').trim().toUpperCase()
   const [activeCode, setActiveCode] = useState('')
@@ -123,35 +124,15 @@ export default function CustomerAccountBookingsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-main">
-      <header className="bg-white/80 backdrop-blur-xl border-b border-primary/20 sticky top-0 z-50 h-20 shadow-sm">
-        <div className="max-w-[1440px] mx-auto px-6 md:px-10 flex justify-between items-center h-full gap-4">
-          <div>
-            <h1 className="font-h3 text-h3 tracking-tight text-primary">{shop.name || 'LumiX'}</h1>
-            <p className="text-xs text-main/60">Xin chào {user?.fullName || user?.email || 'Khách hàng'}.</p>
-          </div>
-          <nav className="hidden md:flex gap-6">
-            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#services`}>
-              Dịch vụ
-            </Link>
-            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#staff`}>
-              Nhân sự
-            </Link>
-            <Link className="text-main/70 hover:text-primary transition-colors" to={`/${slug || shop.slug}#contact`}>
-              Liên hệ
-            </Link>
-            {isAuthenticated && role === 'customer' ? (
-              <Link className="text-primary font-bold border-b-2 border-primary pb-1" to={`/${slug || shop.slug}/appointments`}>
-                Lịch hẹn của tôi
-              </Link>
-            ) : null}
-          </nav>
-          <div className="hidden sm:block text-sm text-main/60">
-            {shop.address || ''}
-          </div>
-        </div>
-      </header>
+      <CustomerHeader
+        shopName={shop.name || 'LumiX'}
+        shopSlug={slug || shop.slug}
+        activeTab="appointments"
+        greeting={`Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.`}
+        address={shop.address || ''}
+      />
 
-      <div className="max-w-6xl mx-auto space-y-6 p-6 md:p-10">
+      <div className="max-w-[1440px] mx-auto space-y-6 p-4 md:p-8 lg:p-10">
 
         <section className="bg-white rounded-2xl border border-slate-200 p-5 overflow-x-auto">
           <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -179,7 +160,7 @@ export default function CustomerAccountBookingsPage() {
 
             <button className="px-4 py-2 rounded-xl border" onClick={() => { setSearchText(''); setStatusFilter(''); setSortBy('createdAt') }}>Xóa bộ lọc</button>
           </div>
-          <table className="w-full min-w-[1100px] text-sm">
+          <table className="w-full min-w-[1280px] text-sm">
             <thead>
                 <tr className="bg-slate-50 text-left">
                 <th className="p-3">Mã booking</th>
