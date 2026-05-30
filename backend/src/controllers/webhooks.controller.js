@@ -177,6 +177,10 @@ export async function payosWebhook(req, res) {
           bookingCode: String(booking.bookingCode || booking._id)
         })
 
+        let emailContext = {
+          shopEmail: '',
+          customerEmail: ''
+        }
         try {
           const [shopInfo, serviceInfo, staffInfo] = await Promise.all([
             Shop.findById(payment.shopId).lean(),
@@ -187,10 +191,22 @@ export async function payosWebhook(req, res) {
           const shopName = shopInfo?.name || ''
           const serviceName = serviceInfo?.name || ''
           const staffName = staffInfo?.fullName || ''
+          const customerEmail = booking.customerEmail ? String(booking.customerEmail).toLowerCase() : ''
+
+          emailContext = {
+            shopEmail: String(shopInfo?.email || ''),
+            customerEmail
+          }
 
           try {
-            console.log('[webhook][email] attempt', { bookingCode: String(booking.bookingCode || ''), shopId: String(payment.shopId || ''), type: 'shop', to: String(shopInfo?.email || '') })
+            console.log('[webhook][email] attempt', {
+              bookingCode: String(booking.bookingCode || ''),
+              shopId: String(payment.shopId || ''),
+              type: 'shop',
+              to: emailContext.shopEmail
+            })
           } catch {}
+
           if (shopInfo?.email) {
             const payloadEmailShop = buildBookingEmailForShop({
               shopName,
@@ -202,13 +218,31 @@ export async function payosWebhook(req, res) {
               staffName,
               createdAt: booking.createdAt
             })
-            await sendEmailBestEffort({ to: shopInfo.email, ...payloadEmailShop, meta: { shopId: String(shopInfo._id || ''), bookingCode: bookingCode } })
+            const shopEmailResult = await sendEmailBestEffort({
+              to: shopInfo.email,
+              ...payloadEmailShop,
+              meta: { shopId: String(shopInfo._id || ''), bookingCode: bookingCode }
+            })
+            try {
+              console.log('[webhook][email] result', {
+                bookingCode: String(booking.bookingCode || ''),
+                shopId: String(payment.shopId || ''),
+                type: 'shop',
+                to: emailContext.shopEmail,
+                ...shopEmailResult
+              })
+            } catch {}
           }
 
-          const customerEmail = booking.customerEmail ? String(booking.customerEmail).toLowerCase() : ''
           try {
-            console.log('[webhook][email] attempt', { bookingCode: String(booking.bookingCode || ''), shopId: String(payment.shopId || ''), type: 'customer', to: customerEmail || '' })
+            console.log('[webhook][email] attempt', {
+              bookingCode: String(booking.bookingCode || ''),
+              shopId: String(payment.shopId || ''),
+              type: 'customer',
+              to: emailContext.customerEmail
+            })
           } catch {}
+
           if (customerEmail) {
             const payloadEmailCustomer = buildBookingEmailForCustomer({
               shopName,
@@ -219,15 +253,28 @@ export async function payosWebhook(req, res) {
               depositAmount: booking.depositAmount || 0,
               createdAt: booking.createdAt
             })
-            await sendEmailBestEffort({ to: customerEmail, ...payloadEmailCustomer, meta: { shopId: String(shopInfo._id || ''), bookingCode: bookingCode } })
+            const customerEmailResult = await sendEmailBestEffort({
+              to: customerEmail,
+              ...payloadEmailCustomer,
+              meta: { shopId: String(shopInfo._id || ''), bookingCode: bookingCode }
+            })
+            try {
+              console.log('[webhook][email] result', {
+                bookingCode: String(booking.bookingCode || ''),
+                shopId: String(payment.shopId || ''),
+                type: 'customer',
+                to: emailContext.customerEmail,
+                ...customerEmailResult
+              })
+            } catch {}
           }
         } catch (err) {
           try {
             console.error('[webhook][email] failed', {
               bookingCode: String(booking?.bookingCode || ''),
               shopId: String(payment?.shopId || ''),
-              shopEmail: String(shopInfo?.email || ''),
-              customerEmail: String(booking?.customerEmail || ''),
+              shopEmail: emailContext.shopEmail,
+              customerEmail: emailContext.customerEmail,
               error: err?.message || String(err || '')
             })
           } catch {}
