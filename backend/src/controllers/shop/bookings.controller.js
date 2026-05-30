@@ -233,6 +233,20 @@ export async function cancelBooking(req, res) {
   const shopId = req.auth.shopId
   const existing = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
   if (!existing) throw httpError(404, 'Không tìm thấy booking')
+  const alreadyCancelledStatuses = ['cancelled', 'canceled', 'cancelled_waiting_refund_info', 'cancelled_refund_pending', 'cancelled_refunded']
+  if (alreadyCancelledStatuses.includes(existing.status)) {
+    const refund = await RefundRequest.findOne({ bookingId: String(existing._id) }).sort({ createdAt: -1 }).lean()
+    const deposit = await Deposit.findOne({ bookingId: String(existing._id) }).sort({ createdAt: -1 }).lean()
+    return res.json({
+      booking: existing,
+      depositStatus: deposit?.status || null,
+      cancellationType: existing.cancellationType || '',
+      refundPercent: Number(existing.depositAmount || 0) > 0 ? 100 : 0,
+      refund,
+      emailSent: Boolean(refund?.emailSent),
+      alreadyCancelled: true
+    })
+  }
   ensureTransition(existing.status, 'cancelled', ['pending', 'confirmed'])
   const shop = await Shop.findById(shopId).lean()
   const cancelMeta = classifyShopCancel(existing, shop)

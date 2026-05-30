@@ -10,6 +10,9 @@ const statusMeta = {
   completed: { label: 'Hoàn thành', color: 'text-emerald-600' },
   canceled: { label: 'Đã hủy', color: 'text-red-600' },
   cancelled: { label: 'Đã hủy', color: 'text-red-600' },
+  cancelled_waiting_refund_info: { label: 'Đã hủy - chờ khách nhập STK', color: 'text-amber-700' },
+  cancelled_refund_pending: { label: 'Đã hủy - chờ hoàn tiền', color: 'text-amber-700' },
+  cancelled_refunded: { label: 'Đã hủy - đã hoàn tiền', color: 'text-emerald-600' },
   no_show: { label: 'Không đến', color: 'text-red-600' }
 }
 
@@ -69,7 +72,7 @@ export default function ShopBookingDetailPage() {
   const [nowTick, setNowTick] = useState(() => Date.now())
   const [actionLoading, setActionLoading] = useState('')
 
-  const isCancelable = booking && !['completed', 'canceled', 'cancelled', 'no_show'].includes(booking.status)
+  const isCancelable = booking && !['completed', 'canceled', 'cancelled', 'cancelled_waiting_refund_info', 'cancelled_refund_pending', 'cancelled_refunded', 'no_show'].includes(booking.status)
 
   const cancelPolicy = useMemo(() => {
     const hours = shop.deposit.cancelHours ?? 4
