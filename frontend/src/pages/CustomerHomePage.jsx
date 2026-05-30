@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import CustomerProfilePage from './CustomerProfilePage'
 import { useShop } from '../context/ShopContext'
 import LumiXLogo from '../assets/lumix-logo.png'
 
@@ -115,7 +116,7 @@ export default function CustomerHomePage() {
                 </button>
                 {profileOpen ? (
                     <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg p-2 z-50">
-                      <Link to="/customer/profile" className="block px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Chỉnh sửa hồ sơ</Link>
+                      <button type="button" onClick={() => setProfileOpen(true)} className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Chỉnh sửa hồ sơ</button>
                       <button type="button" onClick={logout} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm text-rose-600">Đăng xuất</button>
                     </div>
                 ) : null}
@@ -474,6 +475,9 @@ export default function CustomerHomePage() {
             </div>
           </div>
         </div>
+      ) : null}
+      {profileOpen ? (
+        <CustomerProfilePage isModal onClose={() => setProfileOpen(false)} />
       ) : null}
     </div>
   )
