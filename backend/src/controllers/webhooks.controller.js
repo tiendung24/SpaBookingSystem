@@ -221,7 +221,7 @@ export async function payosWebhook(req, res) {
             const shopEmailResult = await sendEmailBestEffort({
               to: shopInfo.email,
               ...payloadEmailShop,
-              meta: { shopId: String(shopInfo._id || ''), bookingCode: bookingCode }
+              meta: { shopId: String(shopInfo._id || ''), bookingCode: String(booking.bookingCode || booking._id) }
             })
             try {
               console.log('[webhook][email] result', {
@@ -256,7 +256,7 @@ export async function payosWebhook(req, res) {
             const customerEmailResult = await sendEmailBestEffort({
               to: customerEmail,
               ...payloadEmailCustomer,
-              meta: { shopId: String(shopInfo._id || ''), bookingCode: bookingCode }
+              meta: { shopId: String(shopInfo._id || ''), bookingCode: String(booking.bookingCode || booking._id) }
             })
             try {
               console.log('[webhook][email] result', {
