@@ -154,6 +154,7 @@ export async function getPublicShops(req, res) {
       { name: regex },
       { slug: regex },
       { phone: regex },
+      { address: regex },
       { 'address.fullText': regex },
       { 'address.line1': regex },
       { 'address.district': regex },
