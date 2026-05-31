@@ -330,7 +330,7 @@ export async function createBooking(req, res) {
 
   const customerAccount = await Customer.findById(String(req.auth.customerId)).lean()
   if (!customerAccount) throw httpError(401, 'Không tìm thấy tài khoản khách hàng')
-  const customerName = String(customerAccount.name || '').trim()
+  const customerName = String(customerAccount.fullName || customerAccount.name || '').trim()
   const phone = String(customerAccount.phone || '').trim()
   const email = String(customerAccount.email || '').trim().toLowerCase()
   if (!customerName || !phone || !email) throw httpError(400, 'Tài khoản khách hàng thiếu thông tin liên hệ')
