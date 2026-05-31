@@ -1,6 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import CustomerProfilePage from './CustomerProfilePage'
 import CustomerSelectServicePage from './CustomerSelectServicePage'
 import { useNavigate } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
@@ -39,12 +38,11 @@ function staffExperienceLabel(member) {
 export default function CustomerHomePage() {
   const { slug } = useParams()
   const location = useLocation()
-  const { shop, services, staff, loadPublicShop, isAuthenticated, role, user, logout, setBookingDraft } = useShop()
+  const { shop, services, staff, loadPublicShop, setBookingDraft } = useShop()
   const navigate = useNavigate()
   const [bookingOpen, setBookingOpen] = useState(false)
   const [serviceDetail, setServiceDetail] = useState(null)
   const [staffDetail, setStaffDetail] = useState(null)
-  const [profileOpen, setProfileOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('services')
 
   useEffect(() => {
@@ -90,41 +88,6 @@ export default function CustomerHomePage() {
         shopSlug={slug || shop.slug}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        greeting={`Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.`}
-        rightSlot={(
-          <div className="flex items-center gap-3 relative">
-            <Link className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:brightness-110 transition-all" to={bookUrl}>
-              Đặt lịch ngay
-            </Link>
-            {(!isAuthenticated || role !== 'customer') ? (
-              <>
-                <Link className="hidden sm:inline-flex px-5 py-3 rounded-full border border-slate-200 text-main font-bold hover:bg-slate-50" to="/login">
-                  Đăng nhập
-                </Link>
-                <Link className="hidden sm:inline-flex px-5 py-3 rounded-full border border-primary/20 text-primary font-bold hover:bg-primary/5" to="/customer/register">
-                  Đăng ký
-                </Link>
-              </>
-            ) : null}
-            {isAuthenticated && role === 'customer' ? (
-              <div className="relative">
-                <button type="button" onClick={() => setProfileOpen((v) => !v)} className="flex items-center gap-2 px-3 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50">
-                  <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
-                    {(user?.fullName || user?.email || 'U').charAt(0).toUpperCase()}
-                  </span>
-                  <span className="max-w-[140px] truncate text-sm font-semibold text-main">{user?.fullName || user?.email}</span>
-                </button>
-                {profileOpen ? (
-                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg p-2 z-50">
-                      <Link to="/customer/bookings" onClick={() => setProfileOpen(false)} className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Lịch hẹn của tôi</Link>
-                      <Link to="/customer/profile" onClick={() => setProfileOpen(false)} className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Chỉnh sửa hồ sơ</Link>
-                      <button type="button" onClick={logout} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm text-rose-600">Đăng xuất</button>
-                    </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        )}
       />
 
       <main>
@@ -169,16 +132,6 @@ export default function CustomerHomePage() {
                 <Link className="bg-primary text-white px-7 py-3 rounded-full font-bold shadow-lg hover:brightness-110 transition-all" to={bookUrl}>
                   Đặt lịch ngay
                 </Link>
-                {(!isAuthenticated || role !== 'customer') ? (
-                  <>
-                        <Link className="bg-white border border-slate-200 text-main px-7 py-3 rounded-full font-bold hover:bg-slate-50" to="/login">
-                          Đăng nhập
-                        </Link>
-                        <Link className="bg-white border border-primary/20 text-primary px-7 py-3 rounded-full font-bold hover:bg-primary/5" to="/customer/register">
-                          Đăng ký
-                        </Link>
-                  </>
-                ) : null}
                 <a className="bg-white border border-primary/20 text-primary px-7 py-3 rounded-full font-bold hover:bg-primary/5" href="#services">
                   Xem dịch vụ
                 </a>

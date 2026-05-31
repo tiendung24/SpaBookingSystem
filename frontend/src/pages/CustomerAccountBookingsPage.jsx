@@ -26,7 +26,7 @@ function statusText(status) {
 
 export default function CustomerAccountBookingsPage() {
   const { slug } = useParams()
-  const { shop, customerBookings, user, token, role, isAuthenticated, logout, loadCustomerBookings } = useShop()
+  const { shop, customerBookings, user, token, loadCustomerBookings } = useShop()
   const [searchParams] = useSearchParams()
   const focusCode = String(searchParams.get('bookingCode') || '').trim().toUpperCase()
   const [activeCode, setActiveCode] = useState('')
@@ -36,7 +36,6 @@ export default function CustomerAccountBookingsPage() {
   const [sortBy, setSortBy] = useState('createdAt')
   const [form, setForm] = useState({ bankName: '', accountNumber: '', accountName: '' })
   const [saving, setSaving] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
 
   const items = useMemo(() => {
     const raw = Array.isArray(customerBookings) ? customerBookings.slice() : []
@@ -129,34 +128,9 @@ export default function CustomerAccountBookingsPage() {
         shopName={shop.name || 'LumiX'}
         shopSlug={slug || shop.slug}
         activeTab="bookings"
-        greeting={`Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.`}
         address={shop.address || ''}
-        rightSlot={(
-          <div className="flex items-center gap-3 relative">
-            <Link className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:brightness-110 transition-all" to={`/${slug || shop.slug}/book`}>
-              Đặt lịch ngay
-            </Link>
-            {isAuthenticated && role === 'customer' ? (
-              <div className="relative">
-                <button type="button" onClick={() => setProfileOpen((v) => !v)} className="flex items-center gap-2 px-3 py-2 rounded-full border border-slate-200 bg-white hover:bg-slate-50">
-                  <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
-                    {(user?.fullName || user?.email || 'U').charAt(0).toUpperCase()}
-                  </span>
-                  <span className="max-w-[140px] truncate text-sm font-semibold text-main">{user?.fullName || user?.email}</span>
-                </button>
-                {profileOpen ? (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg p-2 z-50">
-                    <Link to="/customer/profile" onClick={() => setProfileOpen(false)} className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Chỉnh sửa hồ sơ</Link>
-                    <button type="button" onClick={logout} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm text-rose-600">Đăng xuất</button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        )}
       />
-
-      <div className="max-w-[1440px] mx-auto space-y-6 p-4 md:p-8 lg:p-10">
+<div className="max-w-[1440px] mx-auto space-y-6 p-4 md:p-8 lg:p-10">
 
         <section className="bg-white rounded-2xl border border-slate-200 p-5 overflow-x-auto">
           <div className="flex flex-wrap items-center gap-3 mb-4">
