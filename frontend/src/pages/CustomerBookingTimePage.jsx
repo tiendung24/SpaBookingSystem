@@ -174,7 +174,7 @@ export default function CustomerBookingTimePage() {
 
   // No localStorage restore for holdToken; session-scoped attempt is used instead when available
 
-  const [name, setName] = useState(bookingDraft.customerName || user?.name || '')
+  const [name, setName] = useState(bookingDraft.customerName || user?.fullName || user?.name || '')
   const [phone, setPhone] = useState(bookingDraft.customerPhone || user?.phone || '')
   const phoneTrimmed = normalizePhone(phone)
   const phoneOk = phoneTrimmed ? isValidPhone(phoneTrimmed) : false
@@ -184,7 +184,7 @@ export default function CustomerBookingTimePage() {
 
   useEffect(() => {
     if (!user) return
-    setName((prev) => prev || user.name || '')
+    setName((prev) => prev || user.fullName || user.name || '')
     setPhone((prev) => prev || user.phone || '')
     setEmail((prev) => prev || user.email || '')
   }, [user])
@@ -603,4 +603,5 @@ export default function CustomerBookingTimePage() {
     </div>
   )
 }
+
 

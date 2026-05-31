@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 
@@ -34,7 +34,9 @@ export default function LoginForm() {
         navigate('/admin/dashboard')
       } else if (result.role === 'customer') {
         const from = location.state?.from
-        navigate(from || '/customer/bookings')
+        const shopHome = shop?.slug ? `/${shop.slug}` : '/'
+        const safeFrom = from && !String(from).startsWith('/login') ? from : ''
+        navigate(safeFrom || shopHome)
       } else {
         const from = location.state?.from
         let dest = from || '/shop/dashboard'
@@ -84,3 +86,5 @@ export default function LoginForm() {
     </div>
   )
 }
+
+
