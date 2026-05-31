@@ -24,15 +24,27 @@ export default function CustomerHeader({
   const [profileOpen, setProfileOpen] = useState(false)
 
   const resolvedSlug = shopSlug || params.slug || shop?.slug || ''
+  const isCustomerArea = location.pathname.startsWith('/customer')
   const basePath = resolvedSlug ? `/${resolvedSlug}` : '/'
   const bookingPath = resolvedSlug ? `/${resolvedSlug}/book` : '/'
-  const resolvedActiveTab = activeTab || (location.pathname.startsWith('/customer/bookings') ? 'bookings' : String(location.hash || '#services').replace('#', '') || 'services')
+  const customerNavItems = [
+    { key: 'book', label: 'Đặt lịch', path: bookingPath },
+    { key: 'bookings', label: 'Lịch hẹn của tôi', path: '/customer/bookings' },
+    { key: 'profile', label: 'Hồ sơ', path: '/customer/profile' }
+  ]
+  const headerNavItems = isCustomerArea ? customerNavItems : navItems
+  const resolvedActiveTab = activeTab || (
+    isCustomerArea
+      ? (location.pathname.startsWith('/customer/profile') ? 'profile' : location.pathname.startsWith('/customer/bookings') ? 'bookings' : 'bookings')
+      : (String(location.hash || '#services').replace('#', '') || 'services')
+  )
   const displayName = shopName || shop?.name || 'LumiX'
   const displayAddress = address || shop?.address || ''
   const displayGreeting = greeting || (isAuthenticated && role === 'customer' ? `Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.` : '')
 
   const handleNavClick = (event, item) => {
     onTabChange?.(item.key)
+    if (isCustomerArea) return
     if (!item.hash) return
 
     const targetId = item.hash.replace('#', '')
@@ -59,7 +71,7 @@ export default function CustomerHeader({
         </div>
 
         <nav className="hidden md:flex gap-6 items-center">
-          {navItems.map((item) => {
+          {headerNavItems.map((item) => {
             const to = item.path ? item.path : `${basePath}${item.hash}`
             const isActive = resolvedActiveTab === item.key
             return (
