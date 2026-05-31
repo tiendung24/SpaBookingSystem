@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+﻿/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../lib/api'
 import { AUTH_EXPIRED_EVENT, clearStoredAuth, getStoredRole, getStoredToken, setStoredAuth, emitAuthExpired } from '../lib/auth'
@@ -813,7 +813,7 @@ export function ShopProvider({ children }) {
 
   const addStaff = async (member) => {
     const payload = {
-      fullName: member.name || member.fullName,
+      fullName: member.fullName || member.name,
       phone: member.phone,
       role: 'tech',
       status: member.status === 'off' ? 'inactive' : 'active',
@@ -842,7 +842,7 @@ export function ShopProvider({ children }) {
       return mapped
     }
     const payload = {
-      fullName: patch.name || patch.fullName,
+      fullName: patch.fullName || patch.name,
       phone: patch.phone,
       role: 'tech',
       status: patch.status === 'off' ? 'inactive' : 'active',
@@ -1007,6 +1007,7 @@ export function useShop() {
   if (!ctx) throw new Error('useShop must be used within ShopProvider')
   return ctx
 }
+
 
 
 
