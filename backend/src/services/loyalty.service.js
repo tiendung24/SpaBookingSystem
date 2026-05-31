@@ -167,8 +167,9 @@ export async function earnPointsForCompletedBooking(bookingId) {
   account.lifetimeEarned = safeNumber(account.lifetimeEarned) + points
   account.updatedAt = now
   await account.save()
+  if (isLoyaltyDebug()) console.log('[loyalty][earn] account updated', { customerId, pointsBalance: account.pointsBalance, lifetimeEarned: account.lifetimeEarned })
 
-  return LoyaltyTransaction.create({
+  const createdTx = await LoyaltyTransaction.create({
     customerId,
     bookingId: String(booking._id),
     bookingCode: String(booking.bookingCode || ''),
@@ -180,6 +181,9 @@ export async function earnPointsForCompletedBooking(bookingId) {
     createdAt: now,
     updatedAt: now
   })
+
+  if (isLoyaltyDebug()) console.log('[loyalty][earn] transaction created', { bookingId: String(booking._id), customerId, points: createdTx?.points, txId: String(createdTx?._id || '') })
+  return createdTx
 }
 
 export async function getCustomerLoyaltyHistory(customerId, limit = 20) {
