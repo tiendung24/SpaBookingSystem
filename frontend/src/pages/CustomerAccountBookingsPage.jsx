@@ -29,6 +29,7 @@ export default function CustomerAccountBookingsPage() {
   const { shop, customerBookings, user, token, loadCustomerBookings } = useShop()
   const [searchParams] = useSearchParams()
   const focusCode = String(searchParams.get('bookingCode') || '').trim().toUpperCase()
+  const scopedShopSlug = String(searchParams.get('shopSlug') || slug || shop?.slug || '').trim().toLowerCase()
   const [activeCode, setActiveCode] = useState('')
   const [detailCode, setDetailCode] = useState('')
   const [searchText, setSearchText] = useState('')
@@ -69,7 +70,7 @@ export default function CustomerAccountBookingsPage() {
 
   const items = useMemo(() => {
     const source = Array.isArray(pageBookings) && pageBookings.length ? pageBookings : (Array.isArray(customerBookings) ? customerBookings : [])
-    const currentShopSlug = String(slug || shop?.slug || '').trim().toLowerCase()
+    const currentShopSlug = scopedShopSlug
     const raw = source.filter((it) => {
       if (!currentShopSlug) return true
       const itemShopSlug = String(it.shopSlug || '').trim().toLowerCase()
@@ -98,7 +99,7 @@ export default function CustomerAccountBookingsPage() {
     })
 
     return sorted
-  }, [pageBookings, customerBookings, slug, shop?.slug, searchText, statusFilter, sortBy])
+  }, [pageBookings, customerBookings, scopedShopSlug, searchText, statusFilter, sortBy])
 
   const openDetail = (code) => {
     setDetailCode(code)
@@ -162,7 +163,7 @@ export default function CustomerAccountBookingsPage() {
     <div className="min-h-screen bg-slate-50 text-main">
       <CustomerHeader
         shopName={shop.name || 'LumiX'}
-        shopSlug={slug || shop.slug}
+        shopSlug={scopedShopSlug || shop.slug}
         activeTab="bookings"
         address={shop.address || ''}
       />

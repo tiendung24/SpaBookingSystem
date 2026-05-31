@@ -41,7 +41,7 @@ export default function CustomerProfilePage({ isModal = false, onClose } = {}) {
     <div className="max-w-3xl w-full space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-primary">Hồ sơ khách hàng</h1>
-        {!isModal ? <Link to="/customer/bookings" className="px-4 py-2 rounded-xl border">Lịch hẹn của tôi</Link> : (
+        {!isModal ? <Link to={shop?.slug ? `/customer/bookings?shopSlug=${encodeURIComponent(shop.slug)}` : "/customer/bookings"} className="px-4 py-2 rounded-xl border">Lịch hẹn của tôi</Link> : (
           <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg border">Đóng</button>
         )}
       </div>

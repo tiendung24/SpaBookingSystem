@@ -27,9 +27,12 @@ export default function CustomerHeader({
   const isCustomerArea = location.pathname.startsWith('/customer')
   const basePath = resolvedSlug ? `/${resolvedSlug}` : '/'
   const bookingPath = resolvedSlug ? `/${resolvedSlug}/book` : '/'
+  const customerBookingsPath = resolvedSlug
+    ? `/customer/bookings?shopSlug=${encodeURIComponent(resolvedSlug)}`
+    : '/customer/bookings'
   const customerNavItems = [
     { key: 'book', label: 'Đặt lịch', path: bookingPath },
-    { key: 'bookings', label: 'Lịch hẹn của tôi', path: '/customer/bookings' },
+    { key: 'bookings', label: 'Lịch hẹn của tôi', path: customerBookingsPath },
     { key: 'profile', label: 'Hồ sơ', path: '/customer/profile' }
   ]
   const headerNavItems = isCustomerArea ? customerNavItems : navItems

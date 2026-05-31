@@ -1076,7 +1076,7 @@ export default function CustomerPaymentPage() {
           <h1 className="text-2xl font-bold text-primary">Thanh toán thành công</h1>
           <p className="text-main/70 mt-2">Cảm ơn bạn! Hệ thống đã ghi nhận đặt lịch.</p>
           <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/customer/bookings" className="inline-block px-6 py-3 rounded-2xl bg-primary text-white font-bold">
+            <Link to={slug ? `/customer/bookings?shopSlug=${encodeURIComponent(slug)}` : "/customer/bookings"} className="inline-block px-6 py-3 rounded-2xl bg-primary text-white font-bold">
               Xem lịch hẹn của tôi
             </Link>
             <Link to={`/${slug || ''}/book`} className="inline-block px-6 py-3 rounded-2xl border border-primary text-primary font-bold">
