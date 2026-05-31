@@ -189,11 +189,11 @@ export default function CustomerAccountBookingsPage() {
       />
 <div className="max-w-[1440px] mx-auto space-y-6 p-4 md:p-8 lg:p-10">
 
-        <section className="bg-white/80 backdrop-blur rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-5 md:p-6 border-b border-slate-200">
+        <section className="glass-card rounded-2xl overflow-hidden bg-white/70">
+          <div className="p-5 md:p-6 border-b border-primary/10 bg-primary/5">
             <div className="flex flex-col lg:flex-row lg:items-end gap-4 lg:gap-6">
               <div className="flex-1">
-                <h2 className="text-xl md:text-2xl font-black text-main">Lịch hẹn của tôi</h2>
+                <h2 className="font-h2 text-h2 text-primary">Lịch hẹn của tôi</h2>
                 <p className="text-sm text-main/60 mt-1">Theo dõi lịch hẹn, trạng thái và thông tin thanh toán.</p>
               </div>
 
@@ -234,20 +234,20 @@ export default function CustomerAccountBookingsPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1320px] text-sm">
-              <thead className="bg-slate-50 text-main/70">
+            <table className="w-full min-w-[1320px]">
+              <thead className="bg-primary/5 border-b border-primary/10">
                 <tr className="text-left">
-                  <th className="p-4 font-bold">Mã booking</th>
-                  <th className="p-4 font-bold">Thời gian đặt</th>
-                  <th className="p-4 font-bold">Cửa hàng</th>
-                  <th className="p-4 font-bold">Dịch vụ</th>
-                  <th className="p-4 font-bold">Thời gian hẹn</th>
-                  <th className="p-4 font-bold text-right">Tiền cọc</th>
-                  <th className="p-4 font-bold text-right">Tổng tiền</th>
-                  <th className="p-4 font-bold text-right">Còn lại</th>
-                  <th className="p-4 font-bold">Trạng thái</th>
-                  <th className="p-4 font-bold">Thanh toán</th>
-                  <th className="p-4 font-bold">Hành động</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Mã booking</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Thời gian đặt</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Cửa hàng</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Dịch vụ</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Thời gian hẹn</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Tiền cọc</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Tổng tiền</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Còn lại</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Trạng thái</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Thanh toán</th>
+                  <th className="p-4 text-left font-label-bold text-label-bold text-primary">Hành động</th>
                 </tr>
               </thead>
 
@@ -267,34 +267,30 @@ export default function CustomerAccountBookingsPage() {
                       key={item._id}
                       className={highlight
                         ? 'bg-amber-50'
-                        : 'bg-white hover:bg-slate-50/70 transition-colors'}
+                        : 'hover:bg-white/60 transition-colors'}
                     >
-                      <td className="p-4 font-black text-primary">{code || item._id}</td>
+                      <td className="p-4 font-bold text-primary">{code ? `#${code}` : item._id}</td>
                       <td className="p-4">{item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '—'}</td>
-                      <td className="p-4 font-semibold">{item.shopName || '—'}</td>
-                      <td className="p-4">{item.serviceName || '—'}</td>
-                      <td className="p-4">{item.startTime ? new Date(item.startTime).toLocaleString('vi-VN') : '—'}</td>
-                      <td className="p-4 text-right font-semibold">{fmtVnd(item.depositAmount || 0)}</td>
-                      <td className="p-4 text-right font-semibold">{fmtVnd(item.totalAmount || 0)}</td>
-                      <td className="p-4 text-right font-semibold">{fmtVnd(remain)}</td>
+                      <td className="p-4"><p className="font-semibold text-main">{item.shopName || '—'}</p></td>
+                      <td className="p-4 text-main/80">{item.serviceName || '—'}</td>
+                      <td className="p-4 text-sm text-main/70">{item.startTime ? new Date(item.startTime).toLocaleString('vi-VN') : '—'}</td>
+                      <td className="p-4 font-semibold text-primary">{fmtVnd(item.depositAmount || 0)}</td>
+                      <td className="p-4 font-semibold text-main">{fmtVnd(item.totalAmount || 0)}</td>
+                      <td className="p-4 font-semibold text-emerald-700">{fmtVnd(remain)}</td>
                       <td className="p-4">
-                        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-100 text-main/70 font-bold">
-                          {statusText(item.status)}
-                        </span>
+                        <span className="font-bold text-main/70">{statusText(item.status)}</span>
                       </td>
                       <td className="p-4">
-                        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/10 text-primary font-bold">
-                          {item.paymentStatusInfo?.text || '—'}
-                        </span>
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">{item.paymentStatusInfo?.text || '—'}</span>
                       </td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-2">
-                          <button className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold" onClick={() => openDetail(code)}>Xem</button>
+                          <button className="px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/10 text-sm font-semibold" onClick={() => openDetail(code)}>Xem</button>
                           {['pending', 'confirmed'].includes(String(item.status || '')) ? (
-                            <button className="px-3 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:brightness-110" onClick={() => cancelBooking(item)}>Hủy</button>
+                            <button className="px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:brightness-110 text-sm font-semibold" onClick={() => cancelBooking(item)}>Hủy</button>
                           ) : null}
                           {canInputRefund ? (
-                            <button className="px-3 py-2 rounded-xl bg-primary text-white font-semibold hover:brightness-110" onClick={() => setActiveCode(code)}>Nhập STK</button>
+                            <button className="px-3 py-1.5 rounded-lg bg-primary text-white hover:brightness-110 text-sm font-semibold" onClick={() => setActiveCode(code)}>Nhập STK</button>
                           ) : null}
                         </div>
                       </td>
