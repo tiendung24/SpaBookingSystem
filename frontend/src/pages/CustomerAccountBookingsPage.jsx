@@ -93,7 +93,7 @@ export default function CustomerAccountBookingsPage() {
     })
 
     return sorted
-  }, [customerBookings, searchText, statusFilter, sortBy])
+  }, [pageBookings, customerBookings, searchText, statusFilter, sortBy])
 
   const openDetail = (code) => {
     setDetailCode(code)
@@ -338,6 +338,7 @@ export default function CustomerAccountBookingsPage() {
     </div>
   )
 }
+
 
 
 
