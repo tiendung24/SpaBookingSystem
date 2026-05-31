@@ -202,7 +202,7 @@ export default function CustomerAccountBookingsPage() {
                           <button className="px-3 py-1.5 rounded-lg bg-rose-600 text-white" onClick={() => cancelBooking(item)}>Hủy lịch</button>
                         ) : null}
                         {canInputRefund ? (
-                          <button className="px-3 py-1.5 rounded-lg bg-primary text-white" onClick={() => setActiveCode(code)}>Nh?p STK nh?n ho?n</button>
+                          <button className="px-3 py-1.5 rounded-lg bg-primary text-white" onClick={() => setActiveCode(code)}>Nhập STK nhận hoàn</button>
                         ) : null}
                       </div>
                     </td>
@@ -290,7 +290,7 @@ export default function CustomerAccountBookingsPage() {
 
         {activeCode ? (
           <section className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
-            <h3 className="text-lg font-bold text-primary">Nh?p th?ng tin nh?n ho?n c?c cho {activeCode}</h3>
+            <h3 className="text-lg font-bold text-primary">Nhập thông tin nhận hoàn cọc cho {activeCode}</h3>
             <div className="grid md:grid-cols-3 gap-3">
               <input className="p-3 rounded-xl border" placeholder="Tên ngân hàng" value={form.bankName} onChange={(e) => setForm((p) => ({ ...p, bankName: e.target.value }))} />
               <input className="p-3 rounded-xl border" placeholder="Số tài khoản" value={form.accountNumber} onChange={(e) => setForm((p) => ({ ...p, accountNumber: e.target.value }))} />

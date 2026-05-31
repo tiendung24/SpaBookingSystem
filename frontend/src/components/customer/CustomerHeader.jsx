@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 
 const navItems = [
-  { key: 'services', label: 'D?ch v?', hash: '#services' },
-  { key: 'staff', label: 'Nh?n s?', hash: '#staff' },
-  { key: 'contact', label: 'Li?n h?', hash: '#contact' },
-  { key: 'bookings', label: 'L?ch h?n c?a t?i', path: '/customer/bookings' }
+  { key: 'services', label: 'Dịch vụ', hash: '#services' },
+  { key: 'staff', label: 'Nhân sự', hash: '#staff' },
+  { key: 'contact', label: 'Liên hệ', hash: '#contact' },
+  { key: 'bookings', label: 'Lịch hẹn của tôi', path: '/customer/bookings' }
 ]
 
 export default function CustomerHeader({

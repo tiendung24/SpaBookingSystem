@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
       setDone(true)
       setTimeout(() => navigate('/login'), 1500)
     } catch (err) {
-      setError(err?.message || 'Kh?ng th? ??t l?i m?t kh?u')
+      setError(err?.message || 'Không thể đặt lại mật khẩu')
     } finally {
       setSubmitting(false)
     }
