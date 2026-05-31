@@ -5,6 +5,10 @@ export const LOYALTY_EARN_BASE_VND = 10000
 export const LOYALTY_REDEEM_VALUE_PER_POINT = 100
 export const LOYALTY_MAX_REDEEM_DEPOSIT_PERCENT = 80
 
+function isLoyaltyDebug() {
+  return String(process.env.LOYALTY_DEBUG || '').trim() === '1'
+}
+
 function nowDate() {
   return new Date()
 }
@@ -142,16 +146,19 @@ export async function releaseRedeemForBooking(bookingId, note = '') {
 
 export async function earnPointsForCompletedBooking(bookingId) {
   const booking = await Booking.findById(String(bookingId)).lean()
+  if (isLoyaltyDebug()) console.log('[loyalty][earn] booking loaded', { bookingId: String(bookingId), status: booking?.status, totalAmount: booking?.totalAmount, customerId: booking?.customerId, customerEmail: booking?.customerEmail })
   if (!booking) throw httpError(404, 'Không tìm thấy booking để cộng điểm')
   if (String(booking.status) !== 'completed') return null
 
   const customerId = await resolveCanonicalCustomerIdForBooking(booking)
+  if (isLoyaltyDebug()) console.log('[loyalty][earn] resolved customer', { bookingId: String(bookingId), customerId })
   if (!customerId) return null
 
   const existing = await LoyaltyTransaction.findOne({ bookingId: String(booking._id), type: 'earn' })
   if (existing) return existing
 
   const points = calculateEarnPoints(booking.totalAmount)
+  if (isLoyaltyDebug()) console.log('[loyalty][earn] calculated', { bookingId: String(bookingId), points })
   if (points <= 0) return null
 
   const account = await getOrCreateLoyaltyAccount(customerId)

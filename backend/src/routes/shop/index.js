@@ -253,6 +253,7 @@ shopRouter.get('/bookings', asyncHandler(ShopBookingsController.getBookings))
  *       409: { $ref: '#/components/responses/Conflict' }
  */
 shopRouter.post('/bookings', asyncHandler(ShopBookingsController.createBooking))
+shopRouter.get('/bookings/:bookingId/loyalty-debug', asyncHandler(ShopBookingsController.debugBookingLoyalty))
 shopRouter.get('/bookings/:bookingId', asyncHandler(ShopBookingsController.getBookingById))
 
 /**

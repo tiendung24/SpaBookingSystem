@@ -3,6 +3,7 @@ import {
   Booking,
   BookingSlotLock,
   BookingStatusLog,
+  LoyaltyTransaction,
   Deposit,
   PayosPayment,
   PlatformFee,
@@ -217,6 +218,28 @@ export async function getBookingById(req, res) {
   res.json({ booking: await decorateBooking(booking) })
 }
 
+
+export async function debugBookingLoyalty(req, res) {
+  const shopId = req.auth.shopId
+  const booking = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
+  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  const transactions = await LoyaltyTransaction.find({ bookingId: String(booking._id) }).sort({ createdAt: -1 }).lean()
+  const customerLoyalty = booking.customerId ? await getLoyaltySummary(String(booking.customerId)).catch((err) => ({ error: err?.message || String(err) })) : null
+  res.json({
+    booking: {
+      _id: String(booking._id),
+      bookingCode: booking.bookingCode,
+      status: booking.status,
+      totalAmount: booking.totalAmount,
+      customerId: booking.customerId,
+      customerEmail: booking.customerEmail,
+      customerPhone: booking.customerPhone
+    },
+    customerLoyalty,
+    transactions
+  })
+}
+
 export async function confirmBooking(req, res) {
   const shopId = req.auth.shopId
   const existing = await Booking.findOne({ _id: req.params.bookingId, shopId }).lean()
@@ -427,13 +450,14 @@ export async function checkOut(req, res) {
 
   await appendStatusLog(booking._id, 'completed', req.auth.userId, existing.status || '')
 
+  let loyaltyEarn = null
   try {
-    await earnPointsForCompletedBooking(String(booking._id))
+    loyaltyEarn = await earnPointsForCompletedBooking(String(booking._id))
   } catch (err) {
     console.error('[shop.booking][loyalty] earn failed', err?.message || err)
   }
 
-res.json({ booking: await decorateBooking(booking), feeAmount })
+res.json({ booking: await decorateBooking(booking), feeAmount, loyaltyEarnedPoints: Number(loyaltyEarn?.points || 0), loyaltyEarnCustomerId: String(loyaltyEarn?.customerId || '') })
 }
 
 export async function noShow(req, res) {
