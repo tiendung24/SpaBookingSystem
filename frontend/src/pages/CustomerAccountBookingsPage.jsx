@@ -36,14 +36,40 @@ export default function CustomerAccountBookingsPage() {
   const [sortBy, setSortBy] = useState('createdAt')
   const [form, setForm] = useState({ bankName: '', accountNumber: '', accountName: '' })
   const [saving, setSaving] = useState(false)
+  const [pageBookings, setPageBookings] = useState([])
+  const [loadingBookings, setLoadingBookings] = useState(false)
 
   useEffect(() => {
-    if (!token) return
-    loadCustomerBookings().catch(() => {})
-  }, [token, loadCustomerBookings])
+    if (!token) {
+      setPageBookings([])
+      return
+    }
+
+    let alive = true
+    setLoadingBookings(true)
+    apiRequest('/api/customer/bookings', { token })
+      .then((res) => {
+        const items = Array.isArray(res?.items) ? res.items : []
+        if (!alive) return
+        setPageBookings(items)
+        console.log('[customer-ui] bookings fetched', { items: items.length })
+      })
+      .catch((err) => {
+        console.warn('[customer-ui] bookings fetch failed', err)
+        if (!alive) return
+        setPageBookings([])
+      })
+      .finally(() => {
+        if (!alive) return
+        setLoadingBookings(false)
+      })
+
+    return () => { alive = false }
+  }, [token])
 
   const items = useMemo(() => {
-    const raw = Array.isArray(customerBookings) ? customerBookings.slice() : []
+    const source = Array.isArray(pageBookings) && pageBookings.length ? pageBookings : (Array.isArray(customerBookings) ? customerBookings : [])
+    const raw = source.slice()
     const filtered = raw.filter((it) => {
       if (searchText && searchText.trim()) {
         const q = searchText.trim().toLowerCase()
@@ -180,6 +206,9 @@ export default function CustomerAccountBookingsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
+              {loadingBookings ? (
+                <tr><td colSpan={11} className="p-6 text-main/60">Đang tải lịch hẹn...</td></tr>
+              ) : null}
               {items.map((item) => {
                 const code = String(item.bookingCode || '')
                 const highlight = focusCode && code === focusCode
