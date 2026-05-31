@@ -98,9 +98,14 @@ export default function PlatformLandingPage() {
               <img src={lumixLogo} alt="LumiX" className="h-9 sm:h-11 w-auto object-contain" />
               <span className="text-xl sm:text-2xl tracking-tight text-[#14677a] font-bold" style={{ fontFamily: 'Quicksand, sans-serif' }}>LumiX</span>
             </div>
-            <nav className="flex items-center gap-3 sm:gap-5 lg:gap-8 min-w-0">
-              <a className="text-xs sm:text-sm lg:text-xl font-semibold text-[#3f484b] hover:text-[#14677a] transition-all whitespace-nowrap" href="#">Tổng quan</a>
-              <a className="text-xs sm:text-sm lg:text-xl font-semibold text-[#3f484b] hover:text-[#14677a] transition-all whitespace-nowrap" href="#search-section">Cửa hàng đối tác</a>
+            <nav className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
+              <a className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm lg:text-base font-bold tracking-wide text-[#3f484b] hover:text-[#14677a] hover:bg-[#14677a]/5 transition-all whitespace-nowrap" href="#">
+                Tổng quan
+              </a>
+              <a className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm lg:text-base font-bold tracking-wide text-[#14677a] bg-[#14677a]/10 border border-[#14677a]/20 hover:bg-[#14677a]/15 transition-all whitespace-nowrap" href="#search-section">
+                <span className="material-symbols-outlined text-[15px] sm:text-[17px]">storefront</span>
+                Cửa hàng đối tác
+              </a>
             </nav>
             <div className="hidden lg:flex items-center gap-4">
               <Link to="/shop-landing" className="text-[#14677a] border border-[#14677a] px-6 py-2.5 rounded-full text-xl font-semibold hover:bg-[#14677a]/5 active:scale-95 transition-all">Đăng ký làm đối tác</Link>
@@ -144,7 +149,7 @@ export default function PlatformLandingPage() {
         <main className="max-w-[1440px] mx-auto px-10">
           <section className="mb-16 -mt-12 relative z-10" id="search-section">
             <form onSubmit={handleSearch} className="bg-white p-6 rounded-2xl shadow-xl border border-[#14677a]/5 flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-3">
-              <div className="relative w-full lg:max-w-[760px]">
+              <div className="relative w-full lg:flex-1">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#14677a]">search</span>
                 <input className="bg-[#f0f3ff] border-none rounded-xl pl-12 pr-6 py-4 w-full focus:ring-2 focus:ring-[#14677a]/30 transition-all text-[#111c2c]" placeholder="Tìm kiếm cửa hàng spa/salon, địa điểm" type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
