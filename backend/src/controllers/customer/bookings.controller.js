@@ -57,38 +57,53 @@ export async function myBookings(req, res) {
   const normalizedFullName = normalizePersonName(customer?.fullName || user?.fullName || '')
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
 
-  const directMatch = [{ customerId }]
-  emailSet.forEach((email) => directMatch.push({ customerEmail: email }))
-  phoneSet.forEach((phone) => directMatch.push({ customerPhone: phone }))
+  const allCustomerItems = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
 
-  let directItems = await Booking.find({ $or: directMatch }).sort({ createdAt: -1, startTime: -1 }).lean()
-
-  let nameMatchedItems = []
-  // Safety: only use name-based recovery when no direct match by customerId/email/phone.
-  if (!directItems.length && normalizedFullName) {
-    const nameCandidates = await Booking.find({
-      createdAt: { $gte: oneYearAgo },
-      customerName: { $exists: true, $ne: '' }
-    }).lean()
-    nameMatchedItems = nameCandidates.filter((booking) => normalizePersonName(booking.customerName) === normalizedFullName)
-  }
-
-  const byId = new Map()
-  ;[...directItems, ...nameMatchedItems].forEach((booking) => {
-    if (booking?._id) byId.set(String(booking._id), booking)
+  const verifiedItems = allCustomerItems.filter((booking) => {
+    const bookingEmail = String(booking.customerEmail || '').trim().toLowerCase()
+    const bookingPhone = String(booking.customerPhone || '').replace(/\s+/g, '')
+    if ((bookingEmail && emailSet.has(bookingEmail)) || (bookingPhone && phoneSet.has(bookingPhone))) {
+      return true
+    }
+    return false
   })
 
-  const matchedIds = [...byId.keys()]
-  if (matchedIds.length) {
-    await Booking.updateMany(
-      { _id: { $in: matchedIds }, customerId: { $ne: customerId } },
-      { $set: { customerId, updatedAt: new Date() } }
-    )
+  let recoveredItems = []
+  if (!verifiedItems.length) {
+    const directMatch = []
+    emailSet.forEach((email) => directMatch.push({ customerEmail: email }))
+    phoneSet.forEach((phone) => directMatch.push({ customerPhone: phone }))
+
+    const directItems = directMatch.length
+      ? await Booking.find({ $or: directMatch }).sort({ createdAt: -1, startTime: -1 }).lean()
+      : []
+
+    let nameMatchedItems = []
+    if (!directItems.length && normalizedFullName) {
+      const nameCandidates = await Booking.find({
+        createdAt: { $gte: oneYearAgo },
+        customerName: { $exists: true, $ne: '' }
+      }).lean()
+      nameMatchedItems = nameCandidates.filter((booking) => normalizePersonName(booking.customerName) === normalizedFullName)
+    }
+
+    const byId = new Map()
+    ;[...directItems, ...nameMatchedItems].forEach((booking) => {
+      if (booking?._id) byId.set(String(booking._id), booking)
+    })
+    recoveredItems = [...byId.values()]
+
+    const matchedIds = recoveredItems.map((booking) => booking._id)
+    if (matchedIds.length) {
+      await Booking.updateMany(
+        { _id: { $in: matchedIds }, customerId: { $ne: customerId } },
+        { $set: { customerId, updatedAt: new Date() } }
+      )
+    }
   }
 
-  const items = matchedIds.length
-    ? await Booking.find({ _id: { $in: matchedIds } }).sort({ createdAt: -1, startTime: -1 }).lean()
-    : []
+  const items = (verifiedItems.length ? verifiedItems : recoveredItems)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
 
   console.log('[customer.bookings] myBookings', {
     userId: String(req.auth.userId || ''),
@@ -96,8 +111,9 @@ export async function myBookings(req, res) {
     emails: [...emailSet],
     phones: [...phoneSet],
     normalizedFullName,
-    directCount: directItems.length,
-    nameCount: nameMatchedItems.length,
+    assignedCount: allCustomerItems.length,
+    verifiedCount: verifiedItems.length,
+    recoveredCount: recoveredItems.length,
     finalCount: items.length
   })
 
