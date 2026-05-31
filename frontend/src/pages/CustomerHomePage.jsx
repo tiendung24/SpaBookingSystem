@@ -173,7 +173,7 @@ export default function CustomerHomePage() {
           </div>
         </section>
 
-        <section id="contact" className="py-16 max-w-[1440px] mx-auto px-6 md:px-10">
+        <section id="contact" className="py-16 max-w-[1440px] mx-auto px-6 md:px-10 scroll-mt-24">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
               <span className="material-symbols-outlined text-primary">location_on</span>
@@ -193,7 +193,7 @@ export default function CustomerHomePage() {
           </div>
         </section>
 
-        <section id="services" className="py-16 max-w-[1440px] mx-auto px-6 md:px-10">
+        <section id="services" className="py-16 max-w-[1440px] mx-auto px-6 md:px-10 scroll-mt-24">
           <div className="text-center mb-12 space-y-2">
             <h3 className="font-label-bold text-label-bold text-secondary uppercase tracking-widest">Dịch vụ nổi bật</h3>
             <h2 className="font-h2 text-h2 text-main">Trải nghiệm đẳng cấp tại {shop.name}</h2>
@@ -234,7 +234,7 @@ export default function CustomerHomePage() {
           </div>
         </section>
 
-        <section id="staff" className="py-16 bg-white border-y border-slate-200">
+        <section id="staff" className="py-16 bg-white border-y border-slate-200 scroll-mt-24">
           <div className="max-w-[1440px] mx-auto px-6 md:px-10">
             <div className="text-center mb-12 space-y-2">
               <h3 className="font-label-bold text-label-bold text-secondary uppercase tracking-widest">Đội ngũ nhân sự</h3>
@@ -441,4 +441,6 @@ export default function CustomerHomePage() {
     </div>
   )
 }
+
+
 
