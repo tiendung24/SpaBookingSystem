@@ -1,4 +1,4 @@
-﻿import { Booking, Customer, LoyaltyAccount, LoyaltyTransaction } from '../models/index.js'
+﻿import { Booking, Customer, LoyaltyAccount, LoyaltyTransaction, User } from '../models/index.js'
 import { httpError } from '../utils/httpError.js'
 
 export const LOYALTY_EARN_BASE_VND = 10000
@@ -13,6 +13,24 @@ function safeNumber(value) {
   const n = Number(value || 0)
   return Number.isFinite(n) ? n : 0
 }
+
+
+async function resolveCanonicalCustomerIdForBooking(booking) {
+  const directCustomerId = String(booking?.customerId || '').trim()
+  const email = String(booking?.customerEmail || '').trim().toLowerCase()
+
+  if (email) {
+    const user = await User.findOne({ email, role: 'customer' }).lean()
+    const linked = String(user?.customerId || '').trim()
+    if (linked) return linked
+
+    const customerByEmail = await Customer.findOne({ email }).sort({ updatedAt: -1, createdAt: -1 }).lean()
+    if (customerByEmail?._id) return String(customerByEmail._id)
+  }
+
+  return directCustomerId || ''
+}
+
 
 export function calculateEarnPoints(totalAmount) {
   return Math.max(0, Math.floor(safeNumber(totalAmount) / LOYALTY_EARN_BASE_VND))
@@ -127,7 +145,7 @@ export async function earnPointsForCompletedBooking(bookingId) {
   if (!booking) throw httpError(404, 'Không tìm thấy booking để cộng điểm')
   if (String(booking.status) !== 'completed') return null
 
-  const customerId = String(booking.customerId || '').trim()
+  const customerId = await resolveCanonicalCustomerIdForBooking(booking)
   if (!customerId) return null
 
   const existing = await LoyaltyTransaction.findOne({ bookingId: String(booking._id), type: 'earn' })
