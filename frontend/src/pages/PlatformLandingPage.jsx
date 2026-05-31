@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../lib/api'
 import lumixLogo from '../assets/lumix-logo.png'
-import heroCoverImage from '../assets/anhbialandingpage-tong.jpg'
+import heroCoverImage from '../assets/anhbialandingpage-tong.png'
 
 const heroImageUrl = heroCoverImage
 const bookingProcessImageUrl = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBhra6yeHfGlKGWvFOIPvAo7-D40da0dcM0hGbH6kayF_663DSc_AfKideRack5vk9Q7vtpHpCCOtYDgkaoqFN8gLMj41b9b2JgMBh1m0Xe56Yd-ml-pIdNkA6kF-uqOZuW7dk-d3Zzl-tt0Z6-KwU9upepOaJxftYrNpZKsE1h4Od6chGdBlkwN3R_zyQgot8h9_UrCedoSvpTuFJcD2JYCL-apW7OHYau3cxK6N8jYv3ZEwovKoIdcRinGJdoJqjRYPnHKuWarjWd'
