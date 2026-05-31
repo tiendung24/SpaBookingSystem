@@ -1037,6 +1037,47 @@ export default function CustomerPaymentPage() {
   const createPaymentNow = async () => {
     if (!slug || expired) return
 
+    const isRecreateOnCurrentBooking = Boolean(createdBookingId && paymentDirty)
+
+    if (isRecreateOnCurrentBooking) {
+      setCreating(true)
+      try {
+        const res = await apiRequest(`/api/public/bookings/${createdBookingId}/recreate-payment`, {
+          method: 'POST',
+          body: { redeemPoints: Math.max(0, Math.floor(Number(redeemPoints || 0))) }
+        })
+
+        if (res?.booking) {
+          createdRedeemPointsRef.current = Math.max(0, Math.floor(Number(redeemPoints || 0)))
+          setPaymentDirty(false)
+          setAttemptAmounts({
+            depositAmount: Number(res.booking.depositAmount || 0),
+            totalAmount: Number(res.booking.totalAmount || 0)
+          })
+          setCreatedBookingId(pickBookingCode(res.booking))
+          if (res.booking.depositExpiresAt) setBookingExpiresAt(res.booking.depositExpiresAt)
+        }
+
+        if (res?.payment) {
+          setPayosData(normalizePaymentPayload(res.payment))
+        } else if (res?.booking?.bookingCode) {
+          void fetchPaymentWithRetries(res.booking.bookingCode, 24, 500)
+        }
+
+        return
+      } catch (err) {
+        const msg = String(err?.message || '')
+        if (Number(err?.status || 0) === 409 && (msg.toLowerCase().includes('hết hạn') || msg.toLowerCase().includes('giữ chỗ'))) {
+          pushToast({ type: 'warning', title: 'Phiên giữ chỗ hết hạn', message: 'Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.' })
+          navigate(`/${slug}/book/time`, { replace: true })
+        } else {
+          pushToast({ type: 'error', title: 'Không thể tạo lại mã cọc', message: msg || 'Vui lòng thử lại.' })
+        }
+      } finally {
+        setCreating(false)
+      }
+    }
+
     const phoneNormalized = normalizePhone(effectiveBookingDraft.customerPhone)
     const phoneOk = isValidPhone(phoneNormalized)
     const hasHold = Boolean(effectiveBookingDraft?.holdToken)
@@ -1057,15 +1098,7 @@ export default function CustomerPaymentPage() {
 
     setCreating(true)
     try {
-      let res = null
-      if (createdBookingId && paymentDirty) {
-        res = await apiRequest(`/api/public/bookings/${createdBookingId}/recreate-payment`, {
-          method: 'POST',
-          body: { redeemPoints: Math.max(0, Math.floor(Number(redeemPoints || 0))) }
-        })
-      } else {
-        res = await createBookingFromDraft(slug)
-      }
+      const res = await createBookingFromDraft(slug)
       if (res?.booking) {
         createdRedeemPointsRef.current = Math.max(0, Math.floor(Number(redeemPoints || 0)))
         setPaymentDirty(false)
