@@ -402,6 +402,7 @@ export default function CustomerPaymentPage() {
     }
   }, [slug, resetBookingDraft, createdBookingId, success, expired, expireUnpaidBooking])
 
+
   const depositAmount = useMemo(() => {
     const fallbackDeposit = Number(attemptAmounts.depositAmount || 0)
     if (!service) return fallbackDeposit
@@ -415,6 +416,25 @@ export default function CustomerPaymentPage() {
     }
     return computed > 0 ? computed : fallbackDeposit
   }, [service, shop.deposit, attemptAmounts.depositAmount])
+
+  const loyaltyBalancePoints = Math.max(0, Math.floor(Number(customerLoyalty?.pointsBalance || 0)))
+  const safeRedeemPoints = Math.max(0, Math.floor(Number(redeemPoints || 0)))
+  const maxDiscountVnd = Math.floor((Math.max(0, Number(depositAmount || 0)) * 80) / 100)
+  const maxRedeemablePoints = Math.max(0, Math.floor(maxDiscountVnd / 100))
+  const redeemPointsToUse = Math.max(0, Math.min(safeRedeemPoints, loyaltyBalancePoints, maxRedeemablePoints))
+  const redeemDiscountVnd = redeemPointsToUse * 100
+  const originalDepositAmount = Math.max(0, Number((payosData?.loyalty?.originalDepositAmount ?? attemptAmounts?.depositAmount ?? depositAmount) || depositAmount || 0))
+  const finalDepositAmount = Math.max(0, Number(depositAmount || 0))
+  const redeemPreview = {
+    balancePoints: loyaltyBalancePoints,
+    requestedPoints: safeRedeemPoints,
+    pointsToUse: redeemPointsToUse,
+    discountVnd: redeemDiscountVnd,
+    maxRedeemablePoints,
+    originalDepositAmount,
+    finalDepositAmount
+  }
+
 
   const isPaymentLoading = Boolean(
     !success &&
@@ -1215,8 +1235,61 @@ export default function CustomerPaymentPage() {
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-primary/10">
+                    <div className="mb-5 p-4 rounded-2xl border border-primary/15 bg-primary/5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-bold text-main">Dùng điểm để giảm tiền cọc</p>
+                          <p className="text-xs text-main/60 mt-0.5">Tối đa dùng 80% tiền cọc · 1 điểm = 100đ</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-main/60">Điểm hiện có</p>
+                          <p className="font-extrabold text-primary">{redeemPreview.balancePoints.toLocaleString('vi-VN')} điểm</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex-1">
+                          <label className="block text-xs text-main/60 mb-1">Số điểm muốn dùng</label>
+                          <input
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            type="number"
+                            min={0}
+                            value={redeemPoints}
+                            onChange={(e) => setRedeemPoints(Math.max(0, Math.floor(Number(e.target.value || 0))))}
+                            placeholder="Nhập số điểm"
+                          />
+                          <p className="text-xs text-main/50 mt-1">Tối đa: {redeemPreview.maxRedeemablePoints.toLocaleString('vi-VN')} điểm</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="px-4 py-3 rounded-xl bg-white border border-primary text-primary font-bold hover:bg-primary/5"
+                          onClick={() => setRedeemPoints(Math.max(0, Math.min(redeemPreview.balancePoints, redeemPreview.maxRedeemablePoints)))}
+                        >
+                          Dùng tối đa
+                        </button>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="p-3 rounded-xl bg-white border border-slate-200">
+                          <p className="text-xs text-main/60">Cọc gốc</p>
+                          <p className="font-bold text-main">{formatVnd(redeemPreview.originalDepositAmount)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white border border-slate-200">
+                          <p className="text-xs text-main/60">Giảm từ điểm</p>
+                          <p className="font-bold text-emerald-600">- {formatVnd(redeemPreview.discountVnd)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white border border-slate-200">
+                          <p className="text-xs text-main/60">Cọc cần thanh toán</p>
+                          <p className="font-extrabold text-primary">{formatVnd(redeemPreview.finalDepositAmount)}</p>
+                        </div>
+                      </div>
+
+                      {redeemPreview.pointsToUse > 0 ? (
+                        <div className="mt-3 text-xs text-main/60">Dự kiến dùng <b className="text-main">{redeemPreview.pointsToUse.toLocaleString('vi-VN')}</b> điểm (giảm <b className="text-main">{formatVnd(redeemPreview.discountVnd)}</b>). Điểm sẽ được giữ khi bạn bắt đầu thanh toán.</div>
+                      ) : null}
+                    </div>
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-primary">Cọc trước (khấu trừ):</span>
+                      <span className="font-bold text-primary">Tiền cọc cần thanh toán:</span>
                       <span className="text-2xl font-bold text-primary">{formatVnd(depositAmount)}</span>
                     </div>
                     <div className="flex justify-between items-center mt-2">
