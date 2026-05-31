@@ -291,13 +291,15 @@ export function ShopProvider({ children }) {
       const res = await apiRequest('/api/customer/bookings', { token: accessToken })
       const items = Array.isArray(res?.items) ? res.items : []
       setCustomerBookings(items)
+      // Refresh loyalty too so points update after shop marks booking completed.
+      void loadCustomerLoyalty(accessToken).catch(() => {})
       return items
     } catch (err) {
       console.warn('[ShopContext] loadCustomerBookings failed', err)
       setCustomerBookings([])
       return []
     }
-  }, [token])
+  }, [token, loadCustomerLoyalty])
 
   const loadShopNotifications = useCallback(async (accessToken = token) => {
     if (!accessToken || role !== 'shop') return
