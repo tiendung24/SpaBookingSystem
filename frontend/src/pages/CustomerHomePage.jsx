@@ -474,9 +474,6 @@ export default function CustomerHomePage() {
           </div>
         </div>
       ) : null}
-      {profileOpen ? (
-        <CustomerProfilePage isModal onClose={() => setProfileOpen(false)} />
-      ) : null}
       {bookingOpen ? (
         <CustomerSelectServicePage
           isModal
