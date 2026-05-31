@@ -90,3 +90,4 @@ export default function CustomerProfilePage({ isModal = false, onClose } = {}) {
     </div>
   )
 }
+
