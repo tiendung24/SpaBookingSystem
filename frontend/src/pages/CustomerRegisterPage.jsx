@@ -84,7 +84,7 @@ export default function CustomerRegisterPage() {
 
         <section className="hidden md:flex md:w-5/12 lg:w-1/2 bg-[#f5f9fb] relative items-center justify-center overflow-hidden">
           <div className="absolute inset-0">
-            <img src={sideImage} alt="Kh?ch h?ng LumiX" className="w-full h-full object-cover" />
+            <img src={sideImage} alt="Kh\u00e1ch h\u00e0ng LumiX" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-slate-900/35" />
           </div>
           <div className="absolute top-[-10%] right-[-10%] w-[420px] h-[420px] bg-primary/10 rounded-full blur-3xl" />
