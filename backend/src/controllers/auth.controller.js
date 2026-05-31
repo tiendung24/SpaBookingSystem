@@ -237,6 +237,8 @@ export async function customerRegister(req, res) {
 export async function customerLogin(req, res) {
   const result = await loginByRole(req, 'customer')
   const email = normalizeEmail(result.user.email || req.body?.email || '')
+  let resolvedCustomerId = result.user?.customerId ? String(result.user.customerId) : ''
+
   if (email) {
     const customer = await Customer.findOneAndUpdate(
       { email },
@@ -251,12 +253,21 @@ export async function customerLogin(req, res) {
       { upsert: true, new: true }
     )
     if (customer) {
-      await User.updateOne({ _id: result.user._id }, { $set: { customerId: String(customer._id), updatedAt: new Date() } })
-      await Booking.updateMany({ customerEmail: email }, { $set: { customerId: String(customer._id), updatedAt: new Date() } })
+      resolvedCustomerId = String(customer._id)
+      await User.updateOne({ _id: result.user._id }, { $set: { customerId: resolvedCustomerId, updatedAt: new Date() } })
+      await Booking.updateMany({ customerEmail: email }, { $set: { customerId: resolvedCustomerId, updatedAt: new Date() } })
     }
   }
+
+  const refreshedToken = signAccessToken({
+    sub: String(result.user._id),
+    role: result.user.role,
+    shopId: result.user.shopId ? String(result.user.shopId) : null,
+    customerId: resolvedCustomerId || null
+  })
+
   await writeAuditLog({ actorUserId: String(result.user._id), action: 'auth.customer_login', entity: 'user', entityId: String(result.user._id), meta: { email: result.user.email || '' } })
-  res.json({ token: result.token, user: result.user })
+  res.json({ token: refreshedToken, user: { ...result.user, customerId: resolvedCustomerId || null } })
 }
 
 export async function me(req, res) {
