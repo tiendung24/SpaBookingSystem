@@ -189,3 +189,19 @@ export async function earnPointsForCompletedBooking(bookingId) {
 export async function getCustomerLoyaltyHistory(customerId, limit = 20) {
   return LoyaltyTransaction.find({ customerId: String(customerId) }).sort({ createdAt: -1 }).limit(Math.max(1, Math.min(100, Number(limit || 20)))).lean()
 }
+
+
+export async function replaceRedeemReserveForBooking({ customerId, bookingId, bookingCode, depositAmount, requestedPoints }) {
+  const existing = await LoyaltyTransaction.findOne({ bookingId: String(bookingId), type: 'redeem_reserve' })
+  if (existing && String(existing.status) === 'applied') throw httpError(409, 'Không thể đổi điểm vì cọc đã thanh toán thành công')
+
+  if (existing && String(existing.status) === 'reserved') {
+    const account = await getOrCreateLoyaltyAccount(existing.customerId)
+    account.pointsBalance = safeNumber(account.pointsBalance) + safeNumber(existing.points)
+    account.updatedAt = nowDate()
+    await account.save()
+    await LoyaltyTransaction.deleteOne({ _id: existing._id })
+  }
+
+  return reserveRedeemPointsForBooking({ customerId, bookingId, bookingCode, depositAmount, requestedPoints })
+}

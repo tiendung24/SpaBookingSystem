@@ -431,8 +431,8 @@ export default function CustomerPaymentPage() {
   const maxRedeemablePoints = Math.max(0, Math.floor(maxDiscountVnd / 100))
   const redeemPointsToUse = Math.max(0, Math.min(safeRedeemPoints, loyaltyBalancePoints, maxRedeemablePoints))
   const redeemDiscountVnd = redeemPointsToUse * 100
-  const originalDepositAmount = Math.max(0, Number((payosData?.loyalty?.originalDepositAmount ?? attemptAmounts?.depositAmount ?? depositAmount) || depositAmount || 0))
-  const finalDepositAmount = Math.max(0, Number(depositAmount || 0))
+  const originalDepositAmount = Math.max(0, Number((payosData?.loyalty?.originalDepositAmount ?? depositAmount) || 0))
+  const finalDepositAmount = Math.max(0, Number((payosData?.loyalty?.finalDepositAmount ?? (originalDepositAmount - redeemDiscountVnd)) || 0))
   const redeemPreview = {
     balancePoints: loyaltyBalancePoints,
     requestedPoints: safeRedeemPoints,
@@ -449,7 +449,7 @@ export default function CustomerPaymentPage() {
     !expired &&
     (
       creating ||
-      (shop.deposit?.enabled && !payosData && (depositAmount > 0 || !service))
+      (shop.deposit?.enabled && creating)
     )
   )
 
@@ -547,7 +547,7 @@ export default function CustomerPaymentPage() {
     if (!depositAmount || depositAmount <= 0) return
 
     const timer = setTimeout(() => {
-      setQrFetchHint((prev) => prev || 'Đang lấy mã thanh toán cọc... Nếu chờ lâu, bấm “Thử lấy lại mã cọc”.')
+      setQrFetchHint((prev) => prev || 'Đang lấy mã thanh toán cọc...')
     }, 3500)
     return () => clearTimeout(timer)
   }, [success, expired, isPaymentLoading, payosData, depositAmount])
@@ -1057,16 +1057,15 @@ export default function CustomerPaymentPage() {
 
     setCreating(true)
     try {
+      let res = null
       if (createdBookingId && paymentDirty) {
-        try {
-          await expireUnpaidBooking(createdBookingId, true)
-        } catch {
-          // ignore
-        }
-        setCreatedBookingId(null)
+        res = await apiRequest(`/api/public/bookings/${createdBookingId}/recreate-payment`, {
+          method: 'POST',
+          body: { redeemPoints: Math.max(0, Math.floor(Number(redeemPoints || 0))) }
+        })
+      } else {
+        res = await createBookingFromDraft(slug)
       }
-
-      const res = await createBookingFromDraft(slug)
       if (res?.booking) {
         createdRedeemPointsRef.current = Math.max(0, Math.floor(Number(redeemPoints || 0)))
         setPaymentDirty(false)
@@ -1253,13 +1252,6 @@ export default function CustomerPaymentPage() {
                       {isPaymentLoading ? (
                         <div className="text-center text-main/70 space-y-3">
                           <div>{qrFetchHint || 'Đang lấy mã thanh toán cọc...'}</div>
-                          <button
-                            type="button"
-                            className="px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110"
-                            onClick={createPaymentNow}
-                          >
-                            Thử lấy lại mã cọc
-                          </button>
                         </div>
                     ) : (!paymentDirty && (payosData?.qrCodeUrl || payosData?.qrCode || payosData?.checkoutUrl)) ? (
                       <img
@@ -1270,15 +1262,6 @@ export default function CustomerPaymentPage() {
                     ) : (
                         <div className="text-main/60 text-center">
                           <p>{paymentDirty ? 'Bạn đã thay đổi điểm. Vui lòng tạo lại mã cọc để cập nhật số tiền.' : (depositAmount > 0 ? 'Chưa có mã QR. Vui lòng bấm tạo mã cọc.' : 'Không cần đặt cọc.')}</p>
-                          {depositAmount > 0 ? (
-                            <button
-                              type="button"
-                              className="mt-3 px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110"
-                              onClick={createPaymentNow}
-                            >
-                              Thử lấy lại mã cọc
-                            </button>
-                          ) : null}
                         </div>
                     )}
                     </div>
@@ -1369,7 +1352,7 @@ export default function CustomerPaymentPage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-primary">Tiền cọc cần thanh toán:</span>
-                      <span className="text-2xl font-bold text-primary">{formatVnd(depositAmount)}</span>
+                      <span className="text-2xl font-bold text-primary">{formatVnd(redeemPreview.finalDepositAmount)}</span>
                     </div>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-main/60">Nội dung chuyển khoản</span>

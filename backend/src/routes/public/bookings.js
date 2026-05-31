@@ -102,5 +102,6 @@ publicBookingsRouter.post('/:bookingCode/report-shop-fraud', asyncHandler(Public
 publicBookingsRouter.post('/:bookingCode/reviews', asyncHandler(PublicBookingsController.createReview))
 
 publicBookingsRouter.post('/:bookingCode/refresh-payment', asyncHandler(PublicBookingsController.refreshPaymentForBooking))
+publicBookingsRouter.post('/:bookingCode/recreate-payment', asyncHandler(PublicBookingsController.recreatePaymentForBooking))
 
 publicBookingsRouter.post('/:bookingCode/expire-unpaid', asyncHandler(PublicBookingsController.expireUnpaidBooking))

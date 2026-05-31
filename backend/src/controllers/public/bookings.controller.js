@@ -3,6 +3,8 @@ import { httpError } from '../../utils/httpError.js'
 import { getBookingWithRelations } from '../../utils/shop.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { buildBookingStatusEmailForCustomer, buildBookingEmailForCustomer, buildBookingEmailForShop, sendEmailBestEffort } from '../../utils/emailNotifications.js'
+import { replaceRedeemReserveForBooking } from '../../services/loyalty.service.js'
+import { PayOSService } from '../../services/payos.service.js'
 
 function getCancelCutoffMinutes() {
   return Number(process.env.CUSTOMER_CANCEL_CUTOFF_MINUTES || 120) // mặc định 2h
@@ -305,4 +307,77 @@ export async function expireUnpaidBooking(req, res) {
   })
 
   res.json({ bookingCode: booking.bookingCode, expired: true, status: booking.status })
+}
+
+export async function recreatePaymentForBooking(req, res) {
+  const booking = await Booking.findOne({ bookingCode: req.params.bookingCode })
+  if (!booking) throw httpError(404, 'Không tìm thấy booking')
+  if (String(booking.status) !== 'pending') throw httpError(409, 'Chỉ đổi mã cọc khi booking đang chờ thanh toán')
+
+  const expiresAt = booking.depositExpiresAt ? new Date(booking.depositExpiresAt) : null
+  if (!expiresAt || Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
+    throw httpError(409, 'Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+  }
+
+  const requestedPoints = Math.max(0, Math.floor(Number(req.body?.redeemPoints || 0)))
+  const originalDeposit = Math.max(0, Number(booking.originalDepositAmount || booking.depositAmount || 0))
+
+  const reserve = await replaceRedeemReserveForBooking({
+    customerId: String(booking.customerId || ''),
+    bookingId: String(booking._id),
+    bookingCode: String(booking.bookingCode || ''),
+    depositAmount: originalDeposit,
+    requestedPoints
+  })
+
+  booking.redeemPointsUsed = Number(reserve?.plan?.pointsToUse || 0)
+  booking.redeemDiscountVnd = Number(reserve?.plan?.redeemDiscountVnd || 0)
+  booking.depositAmount = Number(reserve?.plan?.finalDepositAmount || originalDeposit)
+  booking.loyaltyStatus = booking.redeemPointsUsed > 0 ? 'reserved' : 'none'
+  booking.updatedAt = new Date()
+  await booking.save()
+
+  const payos = new PayOSService()
+  const payment = await payos.createDepositPayment({
+    bookingCode: booking.bookingCode,
+    amount: Number(booking.depositAmount || 0),
+    description: `LUMIX_${booking.bookingCode}`
+  })
+
+  await PayosPayment.findOneAndUpdate(
+    { bookingId: String(booking._id) },
+    {
+      $set: {
+        shopId: String(booking.shopId || ''),
+        amount: Number(payment.amount || booking.depositAmount || 0),
+        orderCode: String(payment.payosOrderId || ''),
+        status: String(payment.status || 'pending'),
+        raw: payment,
+        updatedAt: new Date()
+      },
+      $setOnInsert: { createdAt: new Date() }
+    },
+    { upsert: true, new: true }
+  )
+
+  await Deposit.findOneAndUpdate(
+    { bookingId: String(booking._id) },
+    {
+      $set: { amount: Number(booking.depositAmount || 0), status: 'pending', updatedAt: new Date() },
+      $setOnInsert: { shopId: String(booking.shopId || ''), createdAt: new Date() }
+    },
+    { upsert: true, new: true }
+  )
+
+  return res.json({
+    booking,
+    payment,
+    loyalty: {
+      requestedRedeemPoints: requestedPoints,
+      redeemPointsUsed: Number(booking.redeemPointsUsed || 0),
+      redeemDiscountVnd: Number(booking.redeemDiscountVnd || 0),
+      originalDepositAmount: Number(booking.originalDepositAmount || originalDeposit || 0),
+      finalDepositAmount: Number(booking.depositAmount || 0)
+    }
+  })
 }
