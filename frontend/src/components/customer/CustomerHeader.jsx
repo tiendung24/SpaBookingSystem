@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 
@@ -20,7 +20,7 @@ export default function CustomerHeader({
   const location = useLocation()
   const navigate = useNavigate()
   const params = useParams()
-  const { shop, isAuthenticated, role, user, logout, customerLoyalty } = useShop()
+  const { shop, isAuthenticated, role, user, logout, customerLoyalty, loadCustomerLoyalty, token } = useShop()
   const [profileOpen, setProfileOpen] = useState(false)
 
   const resolvedSlug = shopSlug || params.slug || shop?.slug || ''
@@ -44,6 +44,12 @@ export default function CustomerHeader({
   const displayName = shopName || shop?.name || 'LumiX'
   const displayAddress = address || shop?.address || ''
   const displayGreeting = greeting || (isAuthenticated && role === 'customer' ? `Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.` : '')
+  useEffect(() => {
+    if (!isAuthenticated || role !== 'customer') return
+    // Always refresh loyalty when entering customer area so points update after shop marks booking completed.
+    void loadCustomerLoyalty(token).catch(() => {})
+  }, [isAuthenticated, role, token, loadCustomerLoyalty, location.pathname])
+
   const loyaltyPoints = Math.max(0, Number(customerLoyalty?.pointsBalance || 0))
   const loyaltyValue = Math.max(0, Number(customerLoyalty?.redeemValueVnd || 0))
 
