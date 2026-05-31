@@ -250,7 +250,8 @@ export default function CustomerPaymentPage() {
     resetBookingDraft,
     loadPublicShop,
     checkBookingStatus,
-    expireUnpaidBooking
+    expireUnpaidBooking,
+    loadCustomerBookings
   } = useShop()
   // allow restoring booking draft from localStorage when page reloaded
   const { setBookingDraft } = useShop()
@@ -1034,6 +1035,7 @@ export default function CustomerPaymentPage() {
           setSuccess(true)
           setConfetti(true)
           setTimeout(() => setConfetti(false), 2500)
+          await loadCustomerBookings().catch(() => {})
           resetBookingDraft()
           return
         }
@@ -1051,6 +1053,7 @@ export default function CustomerPaymentPage() {
         setSuccess(true)
         setConfetti(true)
         setTimeout(() => setConfetti(false), 2500)
+        await loadCustomerBookings().catch(() => {})
         resetBookingDraft()
         return
       }
@@ -1072,9 +1075,14 @@ export default function CustomerPaymentPage() {
         <div className="bg-white rounded-3xl p-8 border border-slate-200 text-center max-w-md w-full">
           <h1 className="text-2xl font-bold text-primary">Thanh toán thành công</h1>
           <p className="text-main/70 mt-2">Cảm ơn bạn! Hệ thống đã ghi nhận đặt lịch.</p>
-          <Link to={`/${slug || ''}/book`} className="inline-block mt-5 px-6 py-3 rounded-2xl bg-primary text-white font-bold">
-            Quay lại đặt lịch
-          </Link>
+          <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/customer/bookings" className="inline-block px-6 py-3 rounded-2xl bg-primary text-white font-bold">
+              Xem lịch hẹn của tôi
+            </Link>
+            <Link to={`/${slug || ''}/book`} className="inline-block px-6 py-3 rounded-2xl border border-primary text-primary font-bold">
+              Đặt thêm lịch
+            </Link>
+          </div>
         </div>
       </div>
     )

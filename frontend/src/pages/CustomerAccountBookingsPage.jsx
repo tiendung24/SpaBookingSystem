@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 import { apiRequest } from '../lib/api'
@@ -36,6 +36,11 @@ export default function CustomerAccountBookingsPage() {
   const [sortBy, setSortBy] = useState('createdAt')
   const [form, setForm] = useState({ bankName: '', accountNumber: '', accountName: '' })
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!token) return
+    loadCustomerBookings().catch(() => {})
+  }, [token, loadCustomerBookings])
 
   const items = useMemo(() => {
     const raw = Array.isArray(customerBookings) ? customerBookings.slice() : []
@@ -304,5 +309,6 @@ export default function CustomerAccountBookingsPage() {
     </div>
   )
 }
+
 
 
