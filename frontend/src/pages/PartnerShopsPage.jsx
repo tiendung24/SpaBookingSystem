@@ -12,8 +12,13 @@ const fallbackImages = [
 ]
 
 function getAddress(shop) {
-  const address = shop?.address || {}
-  return String(address.fullText || [address.line1, address.district, address.city].filter(Boolean).join(', ') || 'Đang cập nhật địa chỉ').trim()
+  const address = shop?.address
+  if (typeof address === 'string') {
+    const text = address.trim()
+    return text || 'Đang cập nhật địa chỉ'
+  }
+  const obj = address || {}
+  return String(obj.fullText || [obj.line1, obj.district, obj.city].filter(Boolean).join(', ') || 'Đang cập nhật địa chỉ').trim()
 }
 
 function getCover(shop, index) {

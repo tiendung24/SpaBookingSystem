@@ -15,8 +15,13 @@ const fallbackShops = [
 ]
 
 function shopAddress(shop) {
-  const address = shop?.address || {}
-  return String(address.fullText || [address.district, address.city].filter(Boolean).join(', ') || 'Đang cập nhật').trim()
+  const address = shop?.address
+  if (typeof address === 'string') {
+    const text = address.trim()
+    return text || 'Đang cập nhật'
+  }
+  const obj = address || {}
+  return String(obj.fullText || [obj.line1, obj.district, obj.city].filter(Boolean).join(', ') || 'Đang cập nhật').trim()
 }
 
 function brandItem(icon, name) {
