@@ -39,6 +39,8 @@ export default function CustomerAccountBookingsPage() {
   const [saving, setSaving] = useState(false)
   const [pageBookings, setPageBookings] = useState([])
   const [loadingBookings, setLoadingBookings] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [cancelDialog, setCancelDialog] = useState({ open: false, item: null, reason: '', submitting: false })
 
   useEffect(() => {
     if (!token) {
@@ -67,6 +69,46 @@ export default function CustomerAccountBookingsPage() {
 
     return () => { alive = false }
   }, [token])
+
+
+  useEffect(() => {
+    if (!toast) return undefined
+    const t = setTimeout(() => setToast(null), 2600)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  const pushToast = (type, message) => {
+    setToast({ type, message })
+  }
+
+  const openCancelDialog = (item) => {
+    setCancelDialog({ open: true, item, reason: '', submitting: false })
+  }
+
+  const closeCancelDialog = () => {
+    setCancelDialog({ open: false, item: null, reason: '', submitting: false })
+  }
+
+  const submitCancelDialog = async () => {
+    const item = cancelDialog.item
+    const code = String(item?.bookingCode || '')
+    if (!code) return closeCancelDialog()
+    setCancelDialog((prev) => ({ ...prev, submitting: true }))
+    try {
+      await apiRequest(`/api/customer/bookings/${encodeURIComponent(code)}/cancel`, {
+        method: 'POST',
+        token,
+        body: { reason: cancelDialog.reason || '' }
+      })
+      const refreshed = await apiRequest('/api/customer/bookings', { token })
+      setPageBookings(Array.isArray(refreshed?.items) ? refreshed.items : [])
+      closeCancelDialog()
+      pushToast('success', `Đã hủy lịch ${code} thành công.`)
+    } catch (err) {
+      setCancelDialog((prev) => ({ ...prev, submitting: false }))
+      pushToast('error', err?.message || 'Không thể hủy lịch.')
+    }
+  }
 
   const items = useMemo(() => {
     const source = Array.isArray(pageBookings) && pageBookings.length ? pageBookings : (Array.isArray(customerBookings) ? customerBookings : [])
@@ -110,35 +152,13 @@ export default function CustomerAccountBookingsPage() {
   const getStaffDescription = (item) => item.staffBio || item.staffShortBio || 'Shop chưa cập nhật giới thiệu chi tiết cho nhân sự này.'
 
   const cancelBooking = async (item) => {
-    const code = String(item?.bookingCode || '')
-    if (!code) return
-
-    const start = item?.startTime ? new Date(item.startTime) : null
-    const hoursLeft = start ? ((start.getTime() - Date.now()) / (60 * 60 * 1000)) : 0
-    const isValid = hoursLeft >= 4
-
-        const ok = window.confirm(
-          isValid
-      ? `Bạn xác nhận hủy lịch ${code}?
-    Bạn sẽ nhận lại cọc sau khi nhập STK.`
-      : `Bạn xác nhận hủy muộn ${code}?
-    Bạn sẽ mất cọc, LumiX thu 10.000₫, phần còn lại chuyển cho shop.`
-        )
-    if (!ok) return
-
-    try {
-      const reason = window.prompt('Lý do hủy lịch (tùy chọn):','') || ''
-      await apiRequest(`/api/customer/bookings/${encodeURIComponent(code)}/cancel`, { method: 'POST', token, body: { reason } })
-      await loadCustomerBookings()
-      alert('Hủy lịch thành công')
-    } catch (err) {
-      alert(err?.message || 'Không thể hủy lịch')
-    }
+    if (!item?.bookingCode) return
+    openCancelDialog(item)
   }
 
   const submitRefund = async (bookingCode) => {
     if (!form.bankName.trim() || !form.accountNumber.trim() || !form.accountName.trim()) {
-      alert('Vui lòng nhập đủ thông tin ngân hàng')
+      pushToast('error', 'Vui lòng nhập đủ thông tin ngân hàng.')
       return
     }
     setSaving(true)
@@ -151,9 +171,9 @@ export default function CustomerAccountBookingsPage() {
       setActiveCode('')
       setForm({ bankName: '', accountNumber: '', accountName: '' })
       await loadCustomerBookings()
-      alert('Gửi thông tin nhận hoàn cọc thành công')
+      pushToast('success', 'Đã gửi thông tin nhận hoàn cọc thành công.')
     } catch (err) {
-      alert(err?.message || 'Không gửi được thông tin hoàn cọc')
+      pushToast('error', err?.message || 'Không gửi được thông tin hoàn cọc.')
     } finally {
       setSaving(false)
     }
@@ -376,6 +396,55 @@ export default function CustomerAccountBookingsPage() {
             </div>
           </section>
         ) : null}
+
+        {toast ? (
+          <div className="fixed top-24 right-4 z-[90] max-w-sm">
+            <div className={`rounded-2xl shadow-xl border px-4 py-3 text-sm font-semibold ${toast.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
+              {toast.message}
+            </div>
+          </div>
+        ) : null}
+
+        {cancelDialog.open && cancelDialog.item ? (() => {
+          const item = cancelDialog.item
+          const start = item?.startTime ? new Date(item.startTime) : null
+          const hoursLeft = start ? ((start.getTime() - Date.now()) / (60 * 60 * 1000)) : 0
+          const isValid = hoursLeft >= 4
+          return (
+            <div className="fixed inset-0 z-[95] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={closeCancelDialog}>
+              <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-slate-200 p-6" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-black text-main">Xác nhận hủy lịch {item.bookingCode}</h3>
+                    <p className="text-sm text-main/60 mt-1">
+                      {isValid
+                        ? 'Bạn sẽ nhận lại cọc sau khi nhập thông tin hoàn tiền.'
+                        : 'Bạn đang hủy muộn. Tiền cọc sẽ được xử lý theo chính sách của LumiX.'}
+                    </p>
+                  </div>
+                  <button type="button" onClick={closeCancelDialog} className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200">✕</button>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  <label className="block text-sm font-semibold text-main">Lý do hủy lịch</label>
+                  <textarea
+                    value={cancelDialog.reason}
+                    onChange={(e) => setCancelDialog((prev) => ({ ...prev, reason: e.target.value }))}
+                    placeholder="Nhập lý do hủy lịch (không bắt buộc)"
+                    className="w-full min-h-[120px] rounded-2xl border border-slate-200 p-4 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+
+                <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-end">
+                  <button type="button" onClick={closeCancelDialog} className="px-4 py-3 rounded-2xl border border-slate-200 bg-white font-semibold hover:bg-slate-50">Đóng</button>
+                  <button type="button" disabled={cancelDialog.submitting} onClick={submitCancelDialog} className="px-4 py-3 rounded-2xl bg-rose-600 text-white font-semibold hover:brightness-110 disabled:opacity-60">
+                    {cancelDialog.submitting ? 'Đang xử lý...' : 'Xác nhận hủy lịch'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })() : null}
       </div>
     </div>
   )
