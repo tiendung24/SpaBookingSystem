@@ -18,6 +18,17 @@ function buildRefundLink(bookingCode) {
   return `${getFrontendOrigin()}/customer/bookings?bookingCode=${encodeURIComponent(bookingCode)}`
 }
 
+
+function normalizePersonName(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export async function me(req, res) {
   if (!req.auth?.userId || req.auth.role !== 'customer') throw httpError(403, 'Không có quyền truy cập')
   res.json({ me: { userId: req.auth.userId, role: req.auth.role, customerId: req.auth.customerId || null } })
@@ -34,8 +45,11 @@ export async function myBookings(req, res) {
 
   let items = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
 
-  if (!items.length && (normalizedEmail || normalizedPhone)) {
+  if (!items.length) {
+    const now = Date.now()
+    const oneYearAgo = new Date(now - 365 * 24 * 60 * 60 * 1000)
     const legacyMatch = []
+
     if (normalizedEmail) legacyMatch.push({ customerEmail: normalizedEmail })
     if (normalizedPhone) legacyMatch.push({ customerPhone: normalizedPhone })
 
@@ -48,6 +62,29 @@ export async function myBookings(req, res) {
         { $set: { customerId, updatedAt: new Date() } }
       )
       items = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
+    }
+
+    if (!items.length) {
+      const normalizedFullName = normalizePersonName(customer?.fullName || '')
+      if (normalizedFullName) {
+        const nameCandidates = await Booking.find({
+          customerId: { $ne: customerId },
+          createdAt: { $gte: oneYearAgo },
+          customerName: { $exists: true, $ne: '' }
+        }).select({ _id: 1, customerName: 1 }).lean()
+
+        const matchedIds = nameCandidates
+          .filter((booking) => normalizePersonName(booking.customerName) === normalizedFullName)
+          .map((booking) => booking._id)
+
+        if (matchedIds.length) {
+          await Booking.updateMany(
+            { _id: { $in: matchedIds }, customerId: { $ne: customerId } },
+            { $set: { customerId, updatedAt: new Date() } }
+          )
+          items = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
+        }
+      }
     }
   }
   const serviceIds = [...new Set(items.map((item) => String(item.serviceId || '')).filter(Boolean))]
