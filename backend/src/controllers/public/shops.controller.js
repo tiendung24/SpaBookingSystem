@@ -145,7 +145,7 @@ export async function getPublicShops(req, res) {
 
   const conditions = {
     status: 'active',
-    onlineBookingEnabled: true
+    onlineBookingEnabled: { $ne: false }
   }
 
   if (q) {
@@ -165,6 +165,14 @@ export async function getPublicShops(req, res) {
     .sort({ updatedAt: -1, createdAt: -1 })
     .limit(limit)
     .lean()
+
+  try {
+    if (String(process.env.NODE_ENV || '') === 'production') {
+      console.log('[publicShops] list', { q: q || '', limit, count: items.length })
+    }
+  } catch {
+    // ignore logging errors
+  }
 
   const mapped = items.map((shop) => ({
     id: String(shop._id),
