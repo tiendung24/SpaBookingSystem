@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 
 const navItems = [
@@ -18,6 +18,7 @@ export default function CustomerHeader({
   address = ''
 }) {
   const location = useLocation()
+  const navigate = useNavigate()
   const params = useParams()
   const { shop, isAuthenticated, role, user, logout } = useShop()
   const [profileOpen, setProfileOpen] = useState(false)
@@ -29,6 +30,25 @@ export default function CustomerHeader({
   const displayName = shopName || shop?.name || 'LumiX'
   const displayAddress = address || shop?.address || ''
   const displayGreeting = greeting || (isAuthenticated && role === 'customer' ? `Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.` : '')
+
+  const handleNavClick = (event, item) => {
+    onTabChange?.(item.key)
+    if (!item.hash) return
+
+    const targetId = item.hash.replace('#', '')
+    const sameHomePath = location.pathname === basePath
+
+    if (sameHomePath) {
+      event.preventDefault()
+      if (location.hash !== item.hash) {
+        navigate(`${basePath}${item.hash}`)
+      }
+      const target = document.getElementById(targetId)
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+  }
 
   return (
     <header className="bg-white/80 backdrop-blur-xl border-b border-primary/20 sticky top-0 z-50 h-20 shadow-sm">
@@ -46,7 +66,7 @@ export default function CustomerHeader({
               <Link
                 key={item.key}
                 to={to}
-                onClick={() => onTabChange?.(item.key)}
+                onClick={(event) => handleNavClick(event, item)}
                 className={isActive
                   ? 'text-primary font-bold border-b-2 border-primary pb-1 whitespace-nowrap'
                   : 'text-main/70 hover:text-primary transition-colors whitespace-nowrap'}

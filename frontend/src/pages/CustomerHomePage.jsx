@@ -54,6 +54,10 @@ export default function CustomerHomePage() {
     const hash = String(location.hash || '').replace('#', '')
     if (hash === 'services' || hash === 'staff' || hash === 'contact') {
       setActiveTab(hash)
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById(hash)
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
       return
     }
     setActiveTab('services')
