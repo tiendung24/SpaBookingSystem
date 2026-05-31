@@ -64,7 +64,8 @@ export async function myBookings(req, res) {
   let directItems = await Booking.find({ $or: directMatch }).sort({ createdAt: -1, startTime: -1 }).lean()
 
   let nameMatchedItems = []
-  if (normalizedFullName) {
+  // Safety: only use name-based recovery when no direct match by customerId/email/phone.
+  if (!directItems.length && normalizedFullName) {
     const nameCandidates = await Booking.find({
       createdAt: { $gte: oneYearAgo },
       customerName: { $exists: true, $ne: '' }
