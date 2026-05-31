@@ -1238,14 +1238,25 @@ export default function CustomerPaymentPage() {
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white rounded-3xl p-5 border border-slate-200">
                   <h3 className="font-bold mb-3">Quét QR để thanh toán</h3>
-                  <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 min-h-[320px]">
+                  <div className="flex flex-col rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 min-h-[320px]">
+                    {depositAmount > 0 ? (
+                      <button
+                        type="button"
+                        className="w-full mb-4 px-5 py-3 rounded-2xl bg-primary text-white font-bold hover:brightness-110 disabled:opacity-60"
+                        onClick={createPaymentNow}
+                        disabled={Boolean(creating) || Boolean(success) || Boolean(expired)}
+                      >
+                        {payosData ? (paymentDirty ? 'Tạo lại mã cọc theo điểm mới' : 'Tạo lại mã cọc') : 'Áp dụng điểm & tạo mã cọc'}
+                      </button>
+                    ) : null}
+                    <div className="flex items-center justify-center min-h-[250px]">
                       {isPaymentLoading ? (
                         <div className="text-center text-main/70 space-y-3">
                           <div>{qrFetchHint || 'Đang lấy mã thanh toán cọc...'}</div>
                           <button
                             type="button"
                             className="px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110"
-                            onClick={retryFetchPaymentNow}
+                            onClick={createPaymentNow}
                           >
                             Thử lấy lại mã cọc
                           </button>
@@ -1263,13 +1274,14 @@ export default function CustomerPaymentPage() {
                             <button
                               type="button"
                               className="mt-3 px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110"
-                              onClick={retryFetchPaymentNow}
+                              onClick={createPaymentNow}
                             >
                               Thử lấy lại mã cọc
                             </button>
                           ) : null}
                         </div>
                     )}
+                    </div>
                   </div>
 
                   {payosData?.checkoutUrl ? (
