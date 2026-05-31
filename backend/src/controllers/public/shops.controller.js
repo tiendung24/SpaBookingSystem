@@ -185,6 +185,8 @@ export async function getPublicShops(req, res) {
     description: String(shop.description || ''),
     status: String(shop.status || ''),
     onlineBookingEnabled: Boolean(shop.onlineBookingEnabled),
+    createdAt: shop.createdAt || null,
+    updatedAt: shop.updatedAt || null,
     address: shop.address || {},
     publicUrl: `/${String(shop.slug || '')}`
   }))

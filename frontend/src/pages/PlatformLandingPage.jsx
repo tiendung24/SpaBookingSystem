@@ -32,14 +32,21 @@ export default function PlatformLandingPage() {
   const [shops, setShops] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const displayShops = useMemo(() => (shops.length ? shops.slice(0, 4) : fallbackShops), [shops])
+  const displayShops = useMemo(() => {
+    const sorted = [...shops].sort((a, b) => {
+      const aTime = new Date(a?.updatedAt || a?.createdAt || 0).getTime()
+      const bTime = new Date(b?.updatedAt || b?.createdAt || 0).getTime()
+      return bTime - aTime
+    })
+    return sorted.slice(0, 4)
+  }, [shops])
 
   useEffect(() => {
     let mounted = true
     async function load() {
       setLoading(true)
       try {
-        const res = await apiRequest('/api/public/shops?limit=4')
+        const res = await apiRequest('/api/public/shops?limit=24')
         if (mounted) setShops(Array.isArray(res?.items) ? res.items : [])
       } finally {
         if (mounted) setLoading(false)
@@ -115,7 +122,10 @@ export default function PlatformLandingPage() {
                 <input className="bg-[#f0f3ff] border-none rounded-xl pl-12 pr-6 py-4 w-full focus:ring-2 focus:ring-[#14677a]/30 transition-all text-[#111c2c]" placeholder="Tìm kiếm cửa hàng spa/salon, địa điểm" type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
               <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide py-1 w-full lg:w-auto">
-                <button className="px-6 py-3 rounded-xl bg-[#14677a] text-white text-xl font-semibold whitespace-nowrap shadow-sm" type="submit">{loading ? 'Đang tải...' : 'Tìm kiếm'}</button>
+                <button className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#14677a] text-white text-base font-bold whitespace-nowrap shadow-sm hover:brightness-110 active:scale-95 transition-all" type="submit">
+                  <span className="material-symbols-outlined text-[20px]">search</span>
+                  {loading ? 'Đang tải' : 'Tìm'}
+                </button>
               </div>
             </form>
           </section>
@@ -143,6 +153,12 @@ export default function PlatformLandingPage() {
                 )
               })}
             </div>
+            {loading ? (
+              <div className="mt-6 text-center text-[#3f484b]">Đang tải cửa hàng từ hệ thống...</div>
+            ) : null}
+            {!loading && !displayShops.length ? (
+              <div className="mt-6 rounded-2xl bg-white border border-[#14677a]/10 p-6 text-center text-[#3f484b]">Chưa có cửa hàng đối tác đang hoạt động.</div>
+            ) : null}
             <div className="mt-8 text-center">
               <Link to="/partner-shops" className="inline-flex border border-[#14677a] text-[#14677a] px-10 py-4 rounded-full text-xl font-semibold hover:bg-[#14677a]/5 transition-all">Xem thêm cửa hàng</Link>
             </div>
