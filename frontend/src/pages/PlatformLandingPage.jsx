@@ -34,6 +34,7 @@ export default function PlatformLandingPage() {
   const [shops, setShops] = useState([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const displayShops = useMemo(() => {
     const sorted = [...shops].sort((a, b) => {
@@ -92,19 +93,33 @@ export default function PlatformLandingPage() {
       `}</style>
       <div className="lumix-platform-page">
         <header className="bg-white/80 backdrop-blur-xl border-b border-[#14677a]/10 full-width top-0 sticky z-50 shadow-sm">
-          <div className="max-w-[1440px] mx-auto px-10 flex justify-between items-center h-20">
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 flex justify-between items-center h-20 gap-3 relative">
             <div className="flex items-center gap-3">
-              <img src={lumixLogo} alt="LumiX" className="h-11 w-auto object-contain" />
-              <span className="text-2xl tracking-tight text-[#14677a] font-bold" style={{ fontFamily: 'Quicksand, sans-serif' }}>LumiX</span>
+              <img src={lumixLogo} alt="LumiX" className="h-9 sm:h-11 w-auto object-contain" />
+              <span className="text-xl sm:text-2xl tracking-tight text-[#14677a] font-bold" style={{ fontFamily: 'Quicksand, sans-serif' }}>LumiX</span>
             </div>
-            <nav className="hidden lg:flex items-center gap-8">
-              <a className="text-xl font-semibold text-[#3f484b] hover:text-[#14677a] transition-all" href="#">Tổng quan</a>
-              <a className="text-xl font-semibold text-[#3f484b] hover:text-[#14677a] transition-all" href="#search-section">Cửa hàng đối tác</a>
+            <nav className="flex items-center gap-3 sm:gap-5 lg:gap-8 min-w-0">
+              <a className="text-xs sm:text-sm lg:text-xl font-semibold text-[#3f484b] hover:text-[#14677a] transition-all whitespace-nowrap" href="#">Tổng quan</a>
+              <a className="text-xs sm:text-sm lg:text-xl font-semibold text-[#3f484b] hover:text-[#14677a] transition-all whitespace-nowrap" href="#search-section">Cửa hàng đối tác</a>
             </nav>
-            <div className="flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-4">
               <Link to="/shop-landing" className="text-[#14677a] border border-[#14677a] px-6 py-2.5 rounded-full text-xl font-semibold hover:bg-[#14677a]/5 active:scale-95 transition-all">Đăng ký làm đối tác</Link>
               <Link to="/partner-shops" className="bg-[#14677a] text-white px-8 py-2.5 rounded-full text-xl font-semibold hover:brightness-110 active:scale-95 transition-all shadow-md">Đặt lịch ngay</Link>
             </div>
+            <button
+              type="button"
+              className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-full border border-[#14677a]/20 text-[#14677a] bg-white/70 active:scale-95 transition"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              aria-label="Mở menu"
+            >
+              <span className="material-symbols-outlined">{mobileMenuOpen ? 'close' : 'menu'}</span>
+            </button>
+            {mobileMenuOpen ? (
+              <div className="lg:hidden absolute right-4 top-[72px] w-[260px] rounded-2xl bg-white shadow-2xl border border-[#14677a]/10 p-3 z-[60]">
+                <Link to="/shop-landing" onClick={() => setMobileMenuOpen(false)} className="block text-center text-[#14677a] border border-[#14677a] px-4 py-3 rounded-xl font-bold hover:bg-[#14677a]/5 active:scale-95 transition-all">Đăng ký làm đối tác</Link>
+                <Link to="/partner-shops" onClick={() => setMobileMenuOpen(false)} className="block text-center mt-3 bg-[#14677a] text-white px-4 py-3 rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-md">Đặt lịch ngay</Link>
+              </div>
+            ) : null}
           </div>
         </header>
 
