@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 import { apiRequest } from '../lib/api'
@@ -129,12 +129,12 @@ export default function CustomerAccountBookingsPage() {
         shopName={shop.name || 'LumiX'}
         shopSlug={slug || shop.slug}
         activeTab="bookings"
-        greeting={`Xin ch?o ${user?.fullName || user?.email || 'Kh?ch h?ng'}.`}
+        greeting={`Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.`}
         address={shop.address || ''}
         rightSlot={(
           <div className="flex items-center gap-3 relative">
             <Link className="bg-primary text-white px-6 py-3 rounded-full font-bold hover:brightness-110 transition-all" to={`/${slug || shop.slug}/book`}>
-              ??t l?ch ngay
+              Đặt lịch ngay
             </Link>
             {isAuthenticated && role === 'customer' ? (
               <div className="relative">
@@ -146,8 +146,8 @@ export default function CustomerAccountBookingsPage() {
                 </button>
                 {profileOpen ? (
                   <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg p-2 z-50">
-                    <Link to="/customer/profile" onClick={() => setProfileOpen(false)} className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Ch?nh s?a h? s?</Link>
-                    <button type="button" onClick={logout} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm text-rose-600">??ng xu?t</button>
+                    <Link to="/customer/profile" onClick={() => setProfileOpen(false)} className="block w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm">Chỉnh sửa hồ sơ</Link>
+                    <button type="button" onClick={logout} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm text-rose-600">Đăng xuất</button>
                   </div>
                 ) : null}
               </div>
@@ -330,3 +330,5 @@ export default function CustomerAccountBookingsPage() {
     </div>
   )
 }
+
+
