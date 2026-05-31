@@ -28,7 +28,28 @@ export async function myBookings(req, res) {
   const customerId = String(req.auth.customerId || '')
   if (!customerId) return res.json({ items: [] })
 
-  const items = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
+  const customer = await Customer.findById(customerId).lean()
+  const normalizedEmail = String(customer?.email || '').trim().toLowerCase()
+  const normalizedPhone = String(customer?.phone || '').replace(/\s+/g, '')
+
+  let items = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
+
+  if (!items.length && (normalizedEmail || normalizedPhone)) {
+    const legacyMatch = []
+    if (normalizedEmail) legacyMatch.push({ customerEmail: normalizedEmail })
+    if (normalizedPhone) legacyMatch.push({ customerPhone: normalizedPhone })
+
+    if (legacyMatch.length) {
+      await Booking.updateMany(
+        {
+          customerId: { $ne: customerId },
+          $or: legacyMatch
+        },
+        { $set: { customerId, updatedAt: new Date() } }
+      )
+      items = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
+    }
+  }
   const serviceIds = [...new Set(items.map((item) => String(item.serviceId || '')).filter(Boolean))]
   const staffIds = [...new Set(items.map((item) => String(item.staffId || '')).filter(Boolean))]
   const bookingIds = items.map((item) => String(item._id))

@@ -478,7 +478,7 @@ export async function createBooking(req, res) {
             bookingCode,
             clientAttemptId: clientBookingAttemptId || undefined,
             shopId: String(shop._id),
-            customerId: String(customer._id),
+            customerId: String(customerAccount._id),
             customerName,
             customerPhone: String(phone).replace(/\\s+/g, ''),
             customerEmail: email ? String(email).toLowerCase() : undefined,
