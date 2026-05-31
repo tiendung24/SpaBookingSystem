@@ -985,6 +985,8 @@ export function ShopProvider({ children }) {
     setStaff,
     bookings,
     setBookings,
+    customerBookings,
+    customerLoyalty,
     notifications,
     unreadNotificationCount,
     walletTransactions,
