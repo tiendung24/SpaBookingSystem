@@ -31,6 +31,7 @@ export default function PlatformLandingPage() {
   const [query, setQuery] = useState('')
   const [shops, setShops] = useState([])
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState('')
 
   const displayShops = useMemo(() => {
     const sorted = [...shops].sort((a, b) => {
@@ -45,9 +46,17 @@ export default function PlatformLandingPage() {
     let mounted = true
     async function load() {
       setLoading(true)
+      setLoadError('')
       try {
         const res = await apiRequest('/api/public/shops?limit=24')
+        try { console.log('[PlatformLandingPage] public shops fetched', { count: Array.isArray(res?.items) ? res.items.length : 0, res }) } catch {}
         if (mounted) setShops(Array.isArray(res?.items) ? res.items : [])
+      } catch (error) {
+        try { console.error('[PlatformLandingPage] public shops failed', error) } catch {}
+        if (mounted) {
+          setShops([])
+          setLoadError(error?.message || 'Không tải được danh sách cửa hàng từ backend.')
+        }
       } finally {
         if (mounted) setLoading(false)
       }
@@ -155,6 +164,9 @@ export default function PlatformLandingPage() {
             </div>
             {loading ? (
               <div className="mt-6 text-center text-[#3f484b]">Đang tải cửa hàng từ hệ thống...</div>
+            ) : null}
+            {!loading && loadError ? (
+              <div className="mt-6 rounded-2xl bg-white border border-red-200 p-6 text-center text-red-600">{loadError}</div>
             ) : null}
             {!loading && !displayShops.length ? (
               <div className="mt-6 rounded-2xl bg-white border border-[#14677a]/10 p-6 text-center text-[#3f484b]">Chưa có cửa hàng đối tác đang hoạt động.</div>

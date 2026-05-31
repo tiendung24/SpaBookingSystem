@@ -27,6 +27,7 @@ export default function PartnerShopsPage() {
   const [query, setQuery] = useState(initialQuery)
   const [shops, setShops] = useState([])
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState('')
   const [page, setPage] = useState(1)
 
   const pageSize = 6
@@ -35,10 +36,16 @@ export default function PartnerShopsPage() {
 
   const fetchShops = async (q = '') => {
     setLoading(true)
+    setLoadError('')
     try {
       const res = await apiRequest(`/api/public/shops?q=${encodeURIComponent(q || '')}&limit=48`)
+      try { console.log('[PartnerShopsPage] public shops fetched', { q, count: Array.isArray(res?.items) ? res.items.length : 0, res }) } catch {}
       setShops(Array.isArray(res?.items) ? res.items : [])
       setPage(1)
+    } catch (error) {
+      try { console.error('[PartnerShopsPage] public shops failed', error) } catch {}
+      setShops([])
+      setLoadError(error?.message || 'Không tải được danh sách cửa hàng từ backend.')
     } finally {
       setLoading(false)
     }
@@ -134,7 +141,13 @@ export default function PartnerShopsPage() {
           ))}
         </section>
 
-        {!visibleShops.length ? (
+        {loadError ? (
+          <div className="mt-12 rounded-3xl bg-white/70 border border-red-200 p-10 text-center text-red-600">
+            {loadError}
+          </div>
+        ) : null}
+
+        {!loadError && !visibleShops.length ? (
           <div className="mt-12 rounded-3xl bg-white/70 border border-[#14677a]/10 p-10 text-center text-[#3f484b]">
             {loading ? 'Đang tải danh sách cửa hàng...' : 'Chưa có cửa hàng đối tác phù hợp.'}
           </div>
