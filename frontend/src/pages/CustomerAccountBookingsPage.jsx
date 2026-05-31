@@ -10,6 +10,17 @@ function fmtVnd(v) {
 
 const serviceFallbackImage = 'https://maisonoffice.vn/wp-content/uploads/2024/03/0-thiet-ke-spa.jpg'
 
+function statusBadgeClass(status) {
+  const key = String(status || '')
+  if (key === 'pending') return 'bg-amber-100 text-amber-700'
+  if (key === 'confirmed') return 'bg-primary/10 text-primary'
+  if (key === 'checked_in') return 'bg-sky-100 text-sky-700'
+  if (key === 'completed') return 'bg-emerald-100 text-emerald-700'
+  if (key === 'no_show') return 'bg-rose-100 text-rose-700'
+  if (key === 'cancelled' || key === 'canceled' || key.startsWith('cancelled_')) return 'bg-slate-100 text-slate-700'
+  return 'bg-slate-100 text-slate-700'
+}
+
 function statusText(status) {
   const key = String(status || '')
   if (key === 'pending') return 'Chờ xác nhận'
@@ -278,7 +289,7 @@ export default function CustomerAccountBookingsPage() {
                       <td className="p-4 font-semibold text-main">{fmtVnd(item.totalAmount || 0)}</td>
                       <td className="p-4 font-semibold text-emerald-700">{fmtVnd(remain)}</td>
                       <td className="p-4">
-                        <span className="font-bold text-main/70">{statusText(item.status)}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusBadgeClass(item.status)}`}>{statusText(item.status)}</span>
                       </td>
                       <td className="p-4">
                         <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">{item.paymentStatusInfo?.text || '—'}</span>
