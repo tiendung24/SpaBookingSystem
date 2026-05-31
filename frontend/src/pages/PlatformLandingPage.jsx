@@ -102,14 +102,13 @@ export default function PlatformLandingPage() {
               <a className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm lg:text-base font-bold tracking-wide text-[#3f484b] hover:text-[#14677a] hover:bg-[#14677a]/5 transition-all whitespace-nowrap" href="#">
                 Tổng quan
               </a>
-              <a className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm lg:text-base font-bold tracking-wide text-[#14677a] bg-[#14677a]/10 border border-[#14677a]/20 hover:bg-[#14677a]/15 transition-all whitespace-nowrap" href="#search-section">
-                <span className="material-symbols-outlined text-[15px] sm:text-[17px]">storefront</span>
+              <a className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm lg:text-base font-bold tracking-wide text-[#3f484b] hover:text-[#14677a] hover:bg-[#14677a]/5 transition-all whitespace-nowrap" href="#search-section">
                 Cửa hàng đối tác
               </a>
             </nav>
             <div className="hidden lg:flex items-center gap-4">
-              <Link to="/shop-landing" className="text-[#14677a] border border-[#14677a] px-6 py-2.5 rounded-full text-xl font-semibold hover:bg-[#14677a]/5 active:scale-95 transition-all">Đăng ký làm đối tác</Link>
-              <Link to="/partner-shops" className="bg-[#14677a] text-white px-8 py-2.5 rounded-full text-xl font-semibold hover:brightness-110 active:scale-95 transition-all shadow-md">Đặt lịch ngay</Link>
+              <Link to="/shop-landing" className="text-[#14677a] border border-[#14677a] px-5 py-2 rounded-full text-base font-semibold hover:bg-[#14677a]/5 active:scale-95 transition-all">Đăng ký làm đối tác</Link>
+              <Link to="/partner-shops" className="bg-[#14677a] text-white px-6 py-2 rounded-full text-base font-semibold hover:brightness-110 active:scale-95 transition-all shadow-md">Đặt lịch ngay</Link>
             </div>
             <button
               type="button"
@@ -121,6 +120,13 @@ export default function PlatformLandingPage() {
             </button>
             {mobileMenuOpen ? (
               <div className="lg:hidden absolute right-4 top-[72px] w-[260px] rounded-2xl bg-white shadow-2xl border border-[#14677a]/10 p-3 z-[60]">
+                <a href="#" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-xl text-main hover:bg-primary/5 font-semibold">
+                  Tổng quan
+                </a>
+                <a href="#search-section" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-xl text-main hover:bg-primary/5 font-semibold">
+                  Cửa hàng đối tác
+                </a>
+                <div className="h-px bg-slate-100 my-2" />
                 <Link to="/shop-landing" onClick={() => setMobileMenuOpen(false)} className="block text-center text-[#14677a] border border-[#14677a] px-4 py-3 rounded-xl font-bold hover:bg-[#14677a]/5 active:scale-95 transition-all">Đăng ký làm đối tác</Link>
                 <Link to="/partner-shops" onClick={() => setMobileMenuOpen(false)} className="block text-center mt-3 bg-[#14677a] text-white px-4 py-3 rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-md">Đặt lịch ngay</Link>
               </div>
