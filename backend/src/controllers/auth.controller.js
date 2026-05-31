@@ -4,7 +4,7 @@ import { Booking, Customer, Shop, User } from '../models/index.js'
 import { signAccessToken } from '../utils/auth.js'
 import { httpError } from '../utils/httpError.js'
 import { writeAuditLog } from '../utils/audit.js'
-import { sendEmailBestEffort } from '../utils/emailNotifications.js'
+import { buildResetPasswordEmail, sendEmailBestEffort } from '../utils/emailNotifications.js'
 
 function normalizeRole(role) {
   return String(role || '').toLowerCase()
@@ -323,9 +323,7 @@ export async function forgotPassword(req, res) {
   const resetUrl = `${base}/reset-password/${rawToken}`
   const expiresText = expiresAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
 
-  const subject = '[LumiX] Đặt lại mật khẩu'
-  const text = `Bạn vừa yêu cầu đặt lại mật khẩu. Truy cập link sau để tiếp tục: ${resetUrl} (hết hạn lúc ${expiresText})`
-  const html = `<p>Bạn vừa yêu cầu đặt lại mật khẩu LumiX.</p><p><a href="${resetUrl}">Bấm vào đây để đặt lại mật khẩu</a></p><p>Link hết hạn lúc <strong>${expiresText}</strong>.</p>`
+  const { subject, text, html } = buildResetPasswordEmail({ resetUrl, expiresAt })
 
   await sendEmailBestEffort({ to: email, subject, text, html, meta: { userId: String(user._id), event: 'auth.forgot_password' } })
   await writeAuditLog({ actorUserId: String(user._id), action: 'auth.forgot_password', entity: 'user', entityId: String(user._id), meta: { email } })
