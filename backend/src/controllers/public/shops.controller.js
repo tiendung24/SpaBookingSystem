@@ -139,6 +139,51 @@ export async function getShopBySlug(req, res) {
   })
 }
 
+export async function getPublicShops(req, res) {
+  const q = String(req.query?.q || '').trim()
+  const limit = Math.max(1, Math.min(48, Number(req.query?.limit || 16)))
+
+  const conditions = {
+    status: 'active',
+    onlineBookingEnabled: true
+  }
+
+  if (q) {
+    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+    conditions.$or = [
+      { name: regex },
+      { slug: regex },
+      { phone: regex },
+      { 'address.fullText': regex },
+      { 'address.line1': regex },
+      { 'address.district': regex },
+      { 'address.city': regex }
+    ]
+  }
+
+  const items = await Shop.find(conditions)
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .limit(limit)
+    .lean()
+
+  const mapped = items.map((shop) => ({
+    id: String(shop._id),
+    name: String(shop.name || ''),
+    slug: String(shop.slug || ''),
+    phone: String(shop.phone || ''),
+    logoUrl: String(shop.logoUrl || ''),
+    coverUrl: String(shop.coverUrl || ''),
+    businessTypes: Array.isArray(shop.businessTypes) ? shop.businessTypes : [],
+    description: String(shop.description || ''),
+    status: String(shop.status || ''),
+    onlineBookingEnabled: Boolean(shop.onlineBookingEnabled),
+    address: shop.address || {},
+    publicUrl: `/${String(shop.slug || '')}`
+  }))
+
+  return res.json({ items: mapped, total: mapped.length })
+}
+
 export async function getShopStatus(req, res) {
   const shop = await findShopBySlug(req.params.slug)
   res.json({

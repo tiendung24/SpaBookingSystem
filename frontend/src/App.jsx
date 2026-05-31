@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 
 import ShopLandingPage from './pages/ShopLandingPage'
+import PlatformLandingPage from './pages/PlatformLandingPage'
+import PartnerShopsPage from './pages/PartnerShopsPage'
 import LoginPage from './pages/LoginPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -52,7 +54,9 @@ function App() {
       <ToastProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
-            <Route path="/" element={<ShopLandingPage />} />
+            <Route path="/" element={<PlatformLandingPage />} />
+            <Route path="/partner-shops" element={<PartnerShopsPage />} />
+            <Route path="/shop-landing" element={<ShopLandingPage />} />
 
             <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
             <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />

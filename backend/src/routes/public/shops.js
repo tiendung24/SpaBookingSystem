@@ -5,6 +5,8 @@ import * as PublicShopsController from '../../controllers/public/shops.controlle
 
 export const publicShopsRouter = Router()
 
+publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
+
 /**
  * @openapi
  * /api/public/shops/{slug}:
