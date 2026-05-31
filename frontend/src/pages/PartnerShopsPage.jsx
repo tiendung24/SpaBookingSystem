@@ -115,7 +115,7 @@ export default function PartnerShopsPage() {
                 <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt={shop.name} src={getCover(shop, index)} />
                 <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
                   <span className="material-symbols-outlined text-yellow-500 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-sm font-bold text-[#111c2c]">LumiX Partner</span>
+                  <span className="text-sm font-bold text-[#111c2c]">LumiX</span>
                 </div>
               </div>
               <div className="p-8 flex flex-col flex-1">

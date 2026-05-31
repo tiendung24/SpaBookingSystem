@@ -98,7 +98,7 @@ export default function PlatformLandingPage() {
               <img src={lumixLogo} alt="LumiX" className="h-9 sm:h-11 w-auto object-contain" />
               <span className="text-xl sm:text-2xl tracking-tight text-[#14677a] font-bold" style={{ fontFamily: 'Quicksand, sans-serif' }}>LumiX</span>
             </div>
-            <nav className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
+            <nav className="hidden md:flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
               <a className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-sm lg:text-base font-bold tracking-wide text-[#3f484b] hover:text-[#14677a] hover:bg-[#14677a]/5 transition-all whitespace-nowrap" href="#">
                 Tổng quan
               </a>
