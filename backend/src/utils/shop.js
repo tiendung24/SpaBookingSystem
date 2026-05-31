@@ -13,6 +13,7 @@ import {
   Wallet
 } from '../models/index.js'
 import { httpError } from './httpError.js'
+import { releaseRedeemForBooking } from '../services/loyalty.service.js'
 
 
 function toDateIsoByOffset(date, offsetMinutes) {
@@ -186,6 +187,8 @@ async function expireAwaitingDepositIfNeeded(booking) {
     { bookingId: String(booking._id), status: { $in: ['pending'] } },
     { $set: { status: 'expired_unpaid', updatedAt: now } }
   )
+
+  await releaseRedeemForBooking(String(booking._id), 'Hoàn điểm do booking hết hạn thanh toán cọc').catch(() => null)
 
   return { ...booking, status: 'cancelled', updatedAt: now }
 }

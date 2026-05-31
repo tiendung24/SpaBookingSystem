@@ -15,7 +15,8 @@ const emptyDraft = {
   customerEmail: '',
   note: '',
   holdToken: '',
-  holdExpiresAt: ''
+  holdExpiresAt: '',
+  redeemPoints: 0
 }
 
 function loadStoredBookingDraft() {
@@ -161,6 +162,7 @@ export function ShopProvider({ children }) {
   const [bookings, setBookings] = useState([])
   const [walletTransactions, setWalletTransactions] = useState([])
   const [customerBookings, setCustomerBookings] = useState([])
+  const [customerLoyalty, setCustomerLoyalty] = useState({ pointsBalance: 0, redeemValueVnd: 0, lifetimeEarned: 0, lifetimeSpent: 0, rules: null })
   const [notifications, setNotifications] = useState([])
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
   const [bookingDraft, setBookingDraft] = useState(loadStoredBookingDraft)
@@ -266,6 +268,20 @@ export function ShopProvider({ children }) {
     } finally {
       setLoading(false)
       setMeLoaded(true)
+    }
+  }, [token])
+
+
+  const loadCustomerLoyalty = useCallback(async (accessToken = token) => {
+    if (!accessToken) return null
+    try {
+      const res = await apiRequest('/api/customer/loyalty/me', { token: accessToken })
+      const payload = res?.loyalty || null
+      if (payload) setCustomerLoyalty(payload)
+      return payload
+    } catch (err) {
+      console.warn('[ShopContext] loadCustomerLoyalty failed', err)
+      return null
     }
   }, [token])
 
@@ -394,7 +410,7 @@ export function ShopProvider({ children }) {
     // load current user/shop immediately
     const t = setTimeout(() => {
       void loadMeAndShop(token)
-      if (role === 'customer') void loadCustomerBookings(token)
+      if (role === 'customer') { void loadCustomerBookings(token); void loadCustomerLoyalty(token) }
     }, 0)
 
     // schedule token expiry handling
@@ -429,6 +445,7 @@ export function ShopProvider({ children }) {
   useEffect(() => {
     if (!token || role !== 'customer') return
     void loadCustomerBookings(token).catch(() => {})
+    void loadCustomerLoyalty(token).catch(() => {})
   }, [token, role, loadCustomerBookings])
 
   useEffect(() => {
@@ -660,7 +677,8 @@ export function ShopProvider({ children }) {
       time: bookingDraft.time,
       holdToken: bookingDraft.holdToken || undefined,
       clientBookingAttemptId: attemptId || undefined,
-      note: bookingDraft.note
+      note: bookingDraft.note,
+      redeemPoints: Math.max(0, Math.floor(Number(bookingDraft.redeemPoints || 0)))
     }
     let res = null
     try {
@@ -713,7 +731,8 @@ export function ShopProvider({ children }) {
           ...prev,
           holdToken: '',
           holdExpiresAt: '',
-          time: ''
+          time: '',
+          redeemPoints: 0
         }))
         const userMsg = 'Khung giờ vừa bị đặt. Vui lòng chọn khung giờ khác.'
         const friendlyErr = new Error(userMsg)
@@ -996,7 +1015,8 @@ export function ShopProvider({ children }) {
     logout,
     loadPublicShop,
     loadMeAndShop,
-    loadCustomerBookings
+    loadCustomerBookings,
+    loadCustomerLoyalty
   }
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>

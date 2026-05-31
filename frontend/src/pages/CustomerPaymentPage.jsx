@@ -248,6 +248,8 @@ export default function CustomerPaymentPage() {
     services,
     staff,
     bookingDraft,
+    customerLoyalty,
+    loadCustomerLoyalty,
     createBookingFromDraft,
     resetBookingDraft,
     loadPublicShop,
@@ -309,11 +311,16 @@ export default function CustomerPaymentPage() {
   const [showRestoreHold, setShowRestoreHold] = useState(false)
   const [attemptAmounts, setAttemptAmounts] = useState(paymentSnapshot?.attemptAmounts || { depositAmount: 0, totalAmount: 0 })
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [redeemPoints, setRedeemPoints] = useState(() => Math.max(0, Math.floor(Number(bookingDraft?.redeemPoints || 0))))
   const autoBookingCalledRef = useRef(false)
   const skipExitCleanupRef = useRef(false)
   const autoRetryRef = useRef({ attempts: 0, lastAt: 0 })
   const paymentPageUrlRef = useRef(`${window.location.pathname}${window.location.search}${window.location.hash}`)
   const shouldBlockExit = Boolean(createdBookingId && !success && !expired)
+
+  useEffect(() => {
+    setBookingDraft((prev) => ({ ...prev, redeemPoints }))
+  }, [redeemPoints, setBookingDraft])
 
   useEffect(() => {
     if (!slug) return
@@ -1031,6 +1038,7 @@ export default function CustomerPaymentPage() {
           setConfetti(true)
           setTimeout(() => setConfetti(false), 2500)
           await loadCustomerBookings().catch(() => {})
+          await loadCustomerLoyalty().catch(() => {})
           resetBookingDraft()
           return
         }

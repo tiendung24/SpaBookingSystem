@@ -18,6 +18,7 @@ import { httpError } from '../../utils/httpError.js'
 import { getSettingNumber } from '../../utils/settings.js'
 import { buildTimeOnDate, ensureCustomer, getWorkingPlan } from '../../utils/shop.js'
 import { derivePaymentStatus } from '../../utils/paymentStatus.js'
+import { earnPointsForCompletedBooking, getLoyaltySummary } from '../../services/loyalty.service.js'
 import { buildRefundInfoRequestEmailForCustomer, sendEmailBestEffort } from '../../utils/emailNotifications.js'
 import crypto from 'crypto'
 
@@ -90,7 +91,8 @@ async function decorateBooking(booking) {
   if (!booking) return booking
   const payment = await PayosPayment.findOne({ bookingId: String(booking._id) }).sort({ createdAt: -1 }).lean()
   const deposit = await Deposit.findOne({ bookingId: String(booking._id) }).sort({ createdAt: -1 }).lean()
-  return { ...booking, paymentStatus: derivePaymentStatus({ booking, payment, deposit }) }
+  const customerLoyalty = booking.customerId ? await getLoyaltySummary(String(booking.customerId)).catch(() => null) : null
+  return { ...booking, customerLoyalty, paymentStatus: derivePaymentStatus({ booking, payment, deposit }) }
 }
 
 // Shop tạo booking thủ công (không qua public flow, không tạo deposit)
@@ -425,7 +427,13 @@ export async function checkOut(req, res) {
 
   await appendStatusLog(booking._id, 'completed', req.auth.userId, existing.status || '')
 
-res.json({ booking, feeAmount })
+  try {
+    await earnPointsForCompletedBooking(String(booking._id))
+  } catch (err) {
+    console.error('[shop.booking][loyalty] earn failed', err?.message || err)
+  }
+
+res.json({ booking: await decorateBooking(booking), feeAmount })
 }
 
 export async function noShow(req, res) {

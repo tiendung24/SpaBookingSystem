@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import { Booking, BookingSlotLock, Customer, Deposit, PayosPayment, Service, ServiceCategory, ShopStaff, ShopWorkingHour } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
+import { releaseRedeemForBooking, reserveRedeemPointsForBooking } from '../../services/loyalty.service.js'
 import {
   buildTimeOnDate,
   ensureCustomer,
@@ -42,6 +43,8 @@ async function cleanupExpiredAwaitingDeposits(shopId) {
     { bookingId: { $in: ids }, status: { $in: ['pending'] } },
     { $set: { status: 'expired_unpaid', updatedAt: now } }
   )
+
+  await Promise.all(ids.map((id) => releaseRedeemForBooking(String(id), 'Hoàn điểm do booking hết hạn thanh toán cọc').catch(() => null)))
 }
 function calcDepositAmount({ shop, service }) {
   const cfg = shop?.depositConfig || {}
@@ -347,7 +350,7 @@ export async function holdSlot(req, res) {
   res.status(201).json({ holdToken, staffId: String(staffId), expiresAt })
 }
 export async function createBooking(req, res) {
-  const { serviceId, staffId: requestedStaffId, date, time, note, holdToken, clientBookingAttemptId } = req.body || {}
+  const { serviceId, staffId: requestedStaffId, date, time, note, holdToken, clientBookingAttemptId, redeemPoints } = req.body || {}
   if (!req.auth?.userId || req.auth?.role !== 'customer' || !req.auth?.customerId) throw httpError(401, 'Vui lòng đăng nhập tài khoản khách hàng để đặt lịch')
   if (!serviceId || !date || !time) throw httpError(400, 'Thiếu thông tin đặt lịch')
 
@@ -410,7 +413,7 @@ export async function createBooking(req, res) {
           { upsert: true, new: true }
         )
       }
-      return res.status(200).json({ booking: existingBooking, payment: paymentRow || null })
+      return res.status(200).json({ booking: existingBooking, payment: paymentRow || null, loyalty: { redeemPointsUsed: Number(existingBooking.redeemPointsUsed || 0), redeemDiscountVnd: Number(existingBooking.redeemDiscountVnd || 0), originalDepositAmount: Number(existingBooking.originalDepositAmount || existingBooking.depositAmount || 0), finalDepositAmount: Number(existingBooking.depositAmount || 0) } })
     }
   }
   const holdLock = holdToken
@@ -484,6 +487,8 @@ export async function createBooking(req, res) {
   const depositAmount = calcDepositAmount({ shop, service })
   const needsDeposit = depositAmount > 0
 
+  const requestedRedeemPoints = Math.max(0, Math.floor(Number(redeemPoints || 0)))
+
   const bookingCode = `BK${Math.floor(Math.random() * 900000 + 100000)}`
   const session = await mongoose.startSession()
   let booking
@@ -509,7 +514,11 @@ export async function createBooking(req, res) {
             note: note || '',
             status: 'pending',
             depositExpiresAt: needsDeposit ? new Date(Date.now() + getHoldMinutes() * 60 * 1000) : null,
+            originalDepositAmount: Number(depositAmount || 0),
             depositAmount: Number(depositAmount || 0),
+            redeemPointsUsed: 0,
+            redeemDiscountVnd: 0,
+            loyaltyStatus: requestedRedeemPoints > 0 ? 'pending_reserve' : 'none',
             totalAmount: Number(service.price || 0),
             createdAt: new Date(),
             updatedAt: new Date()
@@ -518,6 +527,22 @@ export async function createBooking(req, res) {
         createOpts
       )
       booking = created[0]
+
+      if (needsDeposit && requestedRedeemPoints > 0) {
+        const reserve = await reserveRedeemPointsForBooking({
+          customerId: String(customerAccount._id),
+          bookingId: String(booking._id),
+          bookingCode,
+          depositAmount: Number(depositAmount || 0),
+          requestedPoints: requestedRedeemPoints
+        })
+        booking.redeemPointsUsed = Number(reserve?.plan?.pointsToUse || 0)
+        booking.redeemDiscountVnd = Number(reserve?.plan?.redeemDiscountVnd || 0)
+        booking.depositAmount = Number(reserve?.plan?.finalDepositAmount || booking.depositAmount || 0)
+        booking.loyaltyStatus = booking.redeemPointsUsed > 0 ? 'reserved' : 'none'
+        booking.updatedAt = new Date()
+        await booking.save({ ...(updateOpts || {}) })
+      }
 
       if (holdLock) {
         await BookingSlotLock.updateOne(
@@ -618,7 +643,7 @@ export async function createBooking(req, res) {
     }
   })
 
-  res.status(201).json({ booking, payment })
+  res.status(201).json({ booking, payment, loyalty: { requestedRedeemPoints, redeemPointsUsed: Number(booking.redeemPointsUsed || 0), redeemDiscountVnd: Number(booking.redeemDiscountVnd || 0), originalDepositAmount: Number(booking.originalDepositAmount || depositAmount || 0), finalDepositAmount: Number(booking.depositAmount || 0) } })
 }
 
 export async function getBookingsByPhone(req, res) {

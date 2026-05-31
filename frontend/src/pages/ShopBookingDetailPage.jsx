@@ -188,6 +188,22 @@ export default function ShopBookingDetailPage() {
 
         <section className="glass-card bg-white/70 rounded-3xl p-6">
           <h2 className="font-h3 text-h3 text-primary mb-4">Dòng tiền</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="p-4 bg-white rounded-2xl border border-slate-200">
+              <p className="text-xs text-main/60 uppercase font-bold">Điểm khách (ước tính)</p>
+              <p className="font-bold text-lg text-primary">{Number(booking?.customerLoyalty?.pointsBalance || 0).toLocaleString('vi-VN')} điểm</p>
+              <p className="text-xs text-main/60">≈ {Number(booking?.customerLoyalty?.redeemValueVnd || 0).toLocaleString('vi-VN')}đ</p>
+            </div>
+            <div className="p-4 bg-white rounded-2xl border border-slate-200">
+              <p className="text-xs text-main/60 uppercase font-bold">Điểm đã dùng (booking này)</p>
+              <p className="font-bold text-lg text-main">{Number(booking?.redeemPointsUsed || 0).toLocaleString('vi-VN')} điểm</p>
+              <p className="text-xs text-main/60">Giảm cọc: {fmtVnd(booking?.redeemDiscountVnd || 0)}</p>
+            </div>
+            <div className="p-4 bg-white rounded-2xl border border-slate-200">
+              <p className="text-xs text-main/60 uppercase font-bold">Cọc gốc / Cọc sau giảm</p>
+              <p className="font-bold text-lg text-main">{fmtVnd(booking?.originalDepositAmount || booking?.deposit || 0)} → <span className="text-primary">{fmtVnd(booking?.deposit || 0)}</span></p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-white rounded-2xl border border-slate-200">
               <p className="text-xs text-main/60 uppercase font-bold">Tổng bill</p>

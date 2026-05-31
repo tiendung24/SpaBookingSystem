@@ -3,6 +3,7 @@ import { PayOSService } from '../services/payos.service.js'
 import { writeAuditLog } from '../utils/audit.js'
 import { broadcastToAdmins, broadcastToShop } from '../utils/realtime.js'
 import { buildBookingEmailForCustomer, buildBookingEmailForShop, sendEmailBestEffort } from '../utils/emailNotifications.js'
+import { applyRedeemForBooking } from '../services/loyalty.service.js'
 
 function extractWebhookData(body = {}) {
   const data = body.data || body.payload || body
@@ -108,6 +109,12 @@ export async function payosWebhook(req, res) {
         deposit.status = 'holding'
         deposit.updatedAt = new Date()
         await deposit.save()
+      }
+
+      try {
+        await applyRedeemForBooking(String(booking._id))
+      } catch (err) {
+        console.error('[payosWebhook][loyalty] apply redeem failed', err?.message || err)
       }
 
       const defaultMin = Number(process.env.SHOP_WALLET_MIN_BALANCE || 100000)

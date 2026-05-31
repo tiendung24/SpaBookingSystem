@@ -20,7 +20,7 @@ export default function CustomerHeader({
   const location = useLocation()
   const navigate = useNavigate()
   const params = useParams()
-  const { shop, isAuthenticated, role, user, logout } = useShop()
+  const { shop, isAuthenticated, role, user, logout, customerLoyalty } = useShop()
   const [profileOpen, setProfileOpen] = useState(false)
 
   const resolvedSlug = shopSlug || params.slug || shop?.slug || ''
@@ -44,6 +44,9 @@ export default function CustomerHeader({
   const displayName = shopName || shop?.name || 'LumiX'
   const displayAddress = address || shop?.address || ''
   const displayGreeting = greeting || (isAuthenticated && role === 'customer' ? `Xin chào ${user?.fullName || user?.email || 'Khách hàng'}.` : '')
+  const loyaltyPoints = Math.max(0, Number(customerLoyalty?.pointsBalance || 0))
+  const loyaltyValue = Math.max(0, Number(customerLoyalty?.redeemValueVnd || 0))
+
 
   const handleNavClick = (event, item) => {
     onTabChange?.(item.key)
@@ -95,6 +98,12 @@ export default function CustomerHeader({
         <div className="flex items-center gap-3">
           {displayAddress ? <div className="hidden xl:block text-sm text-main/60 max-w-[260px] truncate">{displayAddress}</div> : null}
           <div className="flex items-center gap-3 relative">
+            {isAuthenticated && role === 'customer' ? (
+              <Link to="/customer/bookings" className="hidden lg:flex flex-col px-3 py-1.5 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10">
+                <span className="text-[11px] text-primary/80 font-semibold leading-none">Điểm LumiX</span>
+                <span className="text-sm font-bold text-primary leading-tight">{loyaltyPoints.toLocaleString('vi-VN')} điểm ≈ {loyaltyValue.toLocaleString('vi-VN')}đ</span>
+              </Link>
+            ) : null}
             <Link className="bg-primary text-white px-5 py-2.5 rounded-full font-bold hover:brightness-110 transition-all whitespace-nowrap" to={bookingPath}>
               Đặt lịch ngay
             </Link>
