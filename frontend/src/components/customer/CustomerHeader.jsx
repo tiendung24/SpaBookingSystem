@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 
 const navItems = [
-  { key: 'services', label: 'Dịch vụ', hash: '#services' },
-  { key: 'staff', label: 'Nhân sự', hash: '#staff' },
-  { key: 'contact', label: 'Liên hệ', hash: '#contact' },
-  { key: 'bookings', label: 'Lịch hẹn của tôi', path: '/customer/bookings' }
+  { key: 'services', label: 'D?ch v?', hash: '#services' },
+  { key: 'staff', label: 'Nh?n s?', hash: '#staff' },
+  { key: 'contact', label: 'Li?n h?', hash: '#contact' },
+  { key: 'bookings', label: 'L?ch h?n c?a t?i', path: '/customer/bookings' }
 ]
 
 export default function CustomerHeader({
@@ -26,9 +26,9 @@ export default function CustomerHeader({
           {greeting ? <p className="text-xs text-main/60">{greeting}</p> : null}
         </div>
 
-        <nav className="hidden md:flex gap-6">
+        <nav className="hidden md:flex gap-6 items-center">
           {navItems.map((item) => {
-            const to = item.path ? `${item.path}` : `${basePath}${item.hash}`
+            const to = item.path ? item.path : `${basePath}${item.hash}`
             const isActive = activeTab === item.key
             return (
               <Link
