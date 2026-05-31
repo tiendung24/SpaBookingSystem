@@ -1208,8 +1208,8 @@ export default function CustomerPaymentPage() {
 
       <CustomerHeader />
 
-      <main className="px-4 md:px-10 pb-12">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className="px-4 md:px-10 pb-16">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
           {showRestoreHold ? (
             <div className="lg:col-span-12 mb-4">
               <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex items-center justify-between">
@@ -1221,8 +1221,8 @@ export default function CustomerPaymentPage() {
               </div>
             </div>
           ) : null}
-          <section className="lg:col-span-7">
-            <div className="bg-white/80 rounded-3xl p-6 border border-primary/10 shadow-xl">
+          <section className="lg:col-span-8">
+            <div className="bg-white/80 rounded-3xl p-7 md:p-8 border border-primary/10 shadow-xl backdrop-blur-sm transition-shadow hover:shadow-2xl">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h1 className="font-h2 text-h2 text-primary">Thanh toán đặt cọc</h1>
@@ -1230,32 +1230,38 @@ export default function CustomerPaymentPage() {
                 </div>
                 <div className="text-right">
                   <div className="text-xs text-main/60">Còn lại</div>
-                  <div className="text-2xl font-bold text-primary">{formatCountdown(timeLeft)}</div>
+                  <div className="text-3xl font-black text-primary tracking-tight tabular-nums">{formatCountdown(timeLeft)}</div>
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-3xl p-5 border border-slate-200">
-                  <h3 className="font-bold mb-3">Quét QR để thanh toán</h3>
-                  <div className="flex flex-col rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 min-h-[320px]">
+              <div className="mt-7 grid grid-cols-1 md:grid-cols-2 gap-7">
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm transition-all hover:shadow-lg">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <h3 className="font-extrabold text-main">Quét QR để thanh toán</h3>
+                    <span className="text-xs text-main/60">PayOS</span>
+                  </div>
+                  <div className="flex flex-col rounded-2xl border border-dashed border-slate-300 bg-gradient-to-br from-slate-50 to-white p-5 min-h-[420px]">
                     {depositAmount > 0 ? (
                       <button
                         type="button"
-                        className="w-full mb-4 px-5 py-3 rounded-2xl bg-primary text-white font-bold hover:brightness-110 disabled:opacity-60"
+                        className="w-full mb-5 px-6 py-3.5 rounded-2xl bg-primary text-white font-extrabold hover:brightness-110 active:brightness-95 disabled:opacity-60 transition"
                         onClick={createPaymentNow}
                         disabled={Boolean(creating) || Boolean(success) || Boolean(expired)}
                       >
                         {payosData ? (paymentDirty ? 'Tạo lại mã cọc theo điểm mới' : 'Tạo lại mã cọc') : 'Áp dụng điểm & tạo mã cọc'}
                       </button>
                     ) : null}
-                    <div className="flex items-center justify-center min-h-[250px]">
+                    <div className="flex items-center justify-center min-h-[320px]">
                       {isPaymentLoading ? (
                         <div className="text-center text-main/70 space-y-3">
-                          <div>{qrFetchHint || 'Đang lấy mã thanh toán cọc...'}</div>
+                          <div className="font-semibold">{qrFetchHint || 'Đang lấy mã thanh toán cọc...'}</div>
+                          <div className="mx-auto w-40 h-2 rounded-full bg-slate-200 overflow-hidden">
+                            <div className="h-full w-1/2 bg-primary/40 animate-pulse" />
+                          </div>
                         </div>
                     ) : (!paymentDirty && (payosData?.qrCodeUrl || payosData?.qrCode || payosData?.checkoutUrl)) ? (
                       <img
-                        className="w-[300px] h-[300px] rounded-2xl"
+                        className="w-[340px] h-[340px] rounded-2xl shadow-md ring-1 ring-black/5 transition-transform duration-300 hover:scale-[1.01]"
                         alt="PayOS QR"
                         src={buildQrImageSrc(payosData.qrCodeUrl || payosData.qrCode || payosData.checkoutUrl)}
                       />
@@ -1269,7 +1275,7 @@ export default function CustomerPaymentPage() {
 
                   {payosData?.checkoutUrl ? (
                     <a
-                      className="mt-4 inline-flex w-full items-center justify-center px-5 py-3 rounded-2xl bg-primary text-white font-bold hover:brightness-110"
+                      className="mt-5 inline-flex w-full items-center justify-center px-6 py-3.5 rounded-2xl bg-primary text-white font-extrabold hover:brightness-110 active:brightness-95 transition"
                       href={payosData.checkoutUrl}
                       target="_blank"
                       rel="noreferrer"
@@ -1287,7 +1293,7 @@ export default function CustomerPaymentPage() {
                   </button>
                 </div>
 
-                <div className="bg-white rounded-3xl p-5 border border-slate-200">
+                <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm transition-all hover:shadow-lg">
                   <h3 className="font-bold mb-4">Thông tin đặt lịch</h3>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between"><span className="text-main/60">Dịch vụ</span><span className="font-bold text-main">{service?.name || '—'}</span></div>
@@ -1351,8 +1357,8 @@ export default function CustomerPaymentPage() {
                       ) : null}
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="font-bold text-primary">Tiền cọc cần thanh toán:</span>
-                      <span className="text-2xl font-bold text-primary">{formatVnd(redeemPreview.finalDepositAmount)}</span>
+                      <span className="font-extrabold text-primary">Tiền cọc cần thanh toán:</span>
+                      <span className="text-3xl font-black text-primary tracking-tight">{formatVnd(redeemPreview.finalDepositAmount)}</span>
                     </div>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-main/60">Nội dung chuyển khoản</span>
@@ -1364,8 +1370,8 @@ export default function CustomerPaymentPage() {
             </div>
           </section>
 
-          <aside className="lg:col-span-5">
-            <div className="bg-white/80 rounded-3xl p-6 border border-primary/10 shadow-xl">
+          <aside className="lg:col-span-4">
+            <div className="bg-white/80 rounded-3xl p-7 md:p-8 border border-primary/10 shadow-xl backdrop-blur-sm lg:sticky lg:top-24 transition-shadow hover:shadow-2xl">
               <h3 className="font-h3 text-h3 text-main">Xác nhận đặt lịch</h3>
               <p className="text-main/70 mt-1">Vui lòng kiểm tra thông tin trước khi thanh toán.</p>
 
