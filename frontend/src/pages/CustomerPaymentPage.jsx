@@ -313,6 +313,9 @@ export default function CustomerPaymentPage() {
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [redeemPoints, setRedeemPoints] = useState(() => Math.max(0, Math.floor(Number(bookingDraft?.redeemPoints || 0))))
   const autoBookingCalledRef = useRef(false)
+  const AUTO_CREATE_PAYMENT = false
+  const createdRedeemPointsRef = useRef(0)
+  const [paymentDirty, setPaymentDirty] = useState(false)
   const skipExitCleanupRef = useRef(false)
   const autoRetryRef = useRef({ attempts: 0, lastAt: 0 })
   const paymentPageUrlRef = useRef(`${window.location.pathname}${window.location.search}${window.location.hash}`)
@@ -320,7 +323,12 @@ export default function CustomerPaymentPage() {
 
   useEffect(() => {
     setBookingDraft((prev) => ({ ...prev, redeemPoints }))
-  }, [redeemPoints, setBookingDraft])
+
+    if (createdBookingId && !success && !expired && Number(redeemPoints || 0) != Number(createdRedeemPointsRef.current || 0)) {
+      setPaymentDirty(true)
+      setPayosData(null)
+    }
+  }, [redeemPoints, setBookingDraft, createdBookingId, success, expired])
 
   useEffect(() => {
     if (!slug) return
@@ -700,7 +708,9 @@ export default function CustomerPaymentPage() {
   }
 
   // Auto-create booking when arriving at payment page.
+  // Disabled: customer must confirm loyalty points before generating QR/payment.
   useEffect(() => {
+    if (!AUTO_CREATE_PAYMENT) return
     if (expired) return
 
     const readyToEvaluate = restoreChecked || Boolean(service)
@@ -1023,6 +1033,63 @@ export default function CustomerPaymentPage() {
     navigate(`/${slug}/book`, { replace: true })
   }, [expired, slug, navigate])
 
+
+  const createPaymentNow = async () => {
+    if (!slug || expired) return
+
+    const phoneNormalized = normalizePhone(effectiveBookingDraft.customerPhone)
+    const phoneOk = isValidPhone(phoneNormalized)
+    const hasHold = Boolean(effectiveBookingDraft?.holdToken)
+    const holdExpiresAt = effectiveBookingDraft?.holdExpiresAt ? new Date(effectiveBookingDraft.holdExpiresAt) : null
+    const holdExpired = !holdExpiresAt || Number.isNaN(holdExpiresAt.getTime()) ? true : holdExpiresAt.getTime() <= Date.now()
+
+    if (!service || !phoneOk) {
+      pushToast({ type: 'warning', title: 'Thiếu thông tin', message: 'Vui lòng quay lại và nhập đủ thông tin trước khi tạo mã cọc.' })
+      navigate(`/${slug}/book`, { replace: true })
+      return
+    }
+
+    if (!hasHold || holdExpired) {
+      pushToast({ type: 'warning', title: 'Phiên giữ chỗ hết hạn', message: 'Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.' })
+      navigate(`/${slug}/book`, { replace: true })
+      return
+    }
+
+    setCreating(true)
+    try {
+      if (createdBookingId && paymentDirty) {
+        try {
+          await expireUnpaidBooking(createdBookingId, true)
+        } catch {
+          // ignore
+        }
+        setCreatedBookingId(null)
+      }
+
+      const res = await createBookingFromDraft(slug)
+      if (res?.booking) {
+        createdRedeemPointsRef.current = Math.max(0, Math.floor(Number(redeemPoints || 0)))
+        setPaymentDirty(false)
+        setAttemptAmounts({
+          depositAmount: Number(res.booking.depositAmount || 0),
+          totalAmount: Number(res.booking.totalAmount || 0)
+        })
+        setCreatedBookingId(pickBookingCode(res.booking))
+        if (res.booking.depositExpiresAt) setBookingExpiresAt(res.booking.depositExpiresAt)
+      }
+
+      if (res?.payment) {
+        setPayosData(normalizePaymentPayload(res.payment))
+      } else if (res?.booking?.bookingCode) {
+        void fetchPaymentWithRetries(res.booking.bookingCode, 24, 500)
+      }
+    } catch (err) {
+      pushToast({ type: 'error', title: 'Không thể tạo mã cọc', message: err?.message || 'Vui lòng thử lại.' })
+    } finally {
+      setCreating(false)
+    }
+  }
+
   const handleTransferred = async () => {
     let bookingCode = createdBookingId || null
     if (!bookingCode) {
@@ -1183,7 +1250,7 @@ export default function CustomerPaymentPage() {
                             Thử lấy lại mã cọc
                           </button>
                         </div>
-                    ) : (payosData?.qrCodeUrl || payosData?.qrCode || payosData?.checkoutUrl) ? (
+                    ) : (!paymentDirty && (payosData?.qrCodeUrl || payosData?.qrCode || payosData?.checkoutUrl)) ? (
                       <img
                         className="w-[300px] h-[300px] rounded-2xl"
                         alt="PayOS QR"
@@ -1191,7 +1258,7 @@ export default function CustomerPaymentPage() {
                       />
                     ) : (
                         <div className="text-main/60 text-center">
-                          <p>{depositAmount > 0 ? 'Không lấy được mã QR. Vui lòng thử lấy lại mã cọc.' : 'Không cần đặt cọc.'}</p>
+                          <p>{paymentDirty ? 'Bạn đã thay đổi điểm. Vui lòng tạo lại mã cọc để cập nhật số tiền.' : (depositAmount > 0 ? 'Chưa có mã QR. Vui lòng bấm tạo mã cọc.' : 'Không cần đặt cọc.')}</p>
                           {depositAmount > 0 ? (
                             <button
                               type="button"
