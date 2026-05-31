@@ -2,6 +2,7 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import CustomerHeader from '../components/customer/CustomerHeader'
 import { useShop } from '../context/ShopContext'
+import { useToast } from '../components/ui/ToastProvider'
 
 function formatVnd(v) {
   return `${Number(v || 0).toLocaleString('vi-VN')}₫`
@@ -48,6 +49,7 @@ export default function CustomerBookingTimePage() {
   const navigate = useNavigate()
   const { slug } = useParams()
   const { shop, services, staff, bookings, bookingDraft, setBookingDraft, loadPublicShop, holdBookingSlot, getAvailableSlots, user } = useShop()
+  const { pushToast } = useToast()
   const hours = shop.hours || {}
   const openTime = hours.open || '09:00'
   const closeTime = hours.close || '20:00'
@@ -287,13 +289,13 @@ export default function CustomerBookingTimePage() {
         String(ownHoldSlot.staffId || '') === String(bookingDraft.staffId || '')
     )
     if (Array.isArray(availableSlots) && !availableSlots.includes(selectedTime) && !isOwnHeldSlot && !isOwnBookedSlot) {
-      alert('Khung giờ bạn chọn vừa kín. Vui lòng chọn giờ khác.')
+      pushToast({ type: 'warning', title: 'Khung giờ đã kín', message: 'Khung giờ bạn chọn vừa kín. Vui lòng chọn giờ khác.' })
       setSelectedTime('')
       return
     }
 
     if (!Array.isArray(availableSlots) || slotsLoading) {
-      alert('Đang cập nhật khung giờ mới nhất, vui lòng đợi một chút.')
+      pushToast({ type: 'info', title: 'Đang cập nhật', message: 'Đang cập nhật khung giờ mới nhất, vui lòng đợi một chút.' })
       return
     }
 
@@ -370,7 +372,7 @@ export default function CustomerBookingTimePage() {
       }))
       navigate(`/${slug}/book/pay`)
     } catch (err) {
-      alert(err?.message || 'Không thể giữ chỗ tạm, vui lòng thử lại')
+      pushToast({ type: 'error', title: 'Không thể giữ chỗ', message: err?.message || 'Không thể giữ chỗ tạm, vui lòng thử lại.' })
     } finally {
       setHolding(false)
     }

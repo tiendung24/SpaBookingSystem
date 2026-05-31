@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 import CustomerHeader from '../components/customer/CustomerHeader'
 import { apiRequest } from '../lib/api'
+import { useToast } from '../components/ui/ToastProvider'
 
 function formatVnd(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')}đ`
@@ -240,6 +241,7 @@ function ConfettiLayer({ active }) {
 export default function CustomerPaymentPage() {
   const navigate = useNavigate()
   const { slug } = useParams()
+  const { pushToast } = useToast()
   const paymentSnapshot = readPaymentSnapshot(slug)
   const {
     shop,
@@ -306,6 +308,7 @@ export default function CustomerPaymentPage() {
   const [restoreChecked, setRestoreChecked] = useState(false)
   const [showRestoreHold, setShowRestoreHold] = useState(false)
   const [attemptAmounts, setAttemptAmounts] = useState(paymentSnapshot?.attemptAmounts || { depositAmount: 0, totalAmount: 0 })
+  const [showExitConfirm, setShowExitConfirm] = useState(false)
   const autoBookingCalledRef = useRef(false)
   const skipExitCleanupRef = useRef(false)
   const autoRetryRef = useRef({ attempts: 0, lastAt: 0 })
@@ -358,15 +361,7 @@ export default function CustomerPaymentPage() {
         // ignore
       }
 
-      const ok = window.confirm('Bạn có chắc muốn hủy phiên thanh toán và trả lại khung giờ? Nếu thoát, phiên giữ chỗ sẽ bị hủy.')
-      if (ok) {
-        skipExitCleanupRef.current = true
-        void expireUnpaidBooking(createdBookingId, true).catch(() => {})
-        try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
-        clearPaymentSnapshot(slug)
-        resetBookingDraft()
-        navigate(`/${slug}/book`, { replace: true })
-      }
+      setShowExitConfirm(true)
     }
 
     window.addEventListener('popstate', onPopState)
@@ -713,7 +708,7 @@ export default function CustomerPaymentPage() {
 
       if (!hasHold || holdExpired) {
         if (effectiveBookingCode) return
-        window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+        pushToast({ type: 'warning', title: 'Phiên giữ chỗ hết hạn', message: 'Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.' })
         navigate(`/${slug}/book`, { replace: true })
         return
       }
@@ -834,7 +829,7 @@ export default function CustomerPaymentPage() {
             if (isExpiredHold) {
               try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
               clearPaymentSnapshot(slug)
-              window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+              pushToast({ type: 'warning', title: 'Phiên giữ chỗ hết hạn', message: 'Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.' })
               navigate(`/${slug}/book`, { replace: true })
               return
             }
@@ -843,12 +838,12 @@ export default function CustomerPaymentPage() {
               try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
               clearPaymentSnapshot(slug)
               resetBookingDraft()
-              window.alert('Khung giờ vừa bị đặt. Vui lòng chọn lại khung giờ khác.')
+              pushToast({ type: 'warning', title: 'Khung giờ đã kín', message: 'Khung giờ vừa bị đặt. Vui lòng chọn lại khung giờ khác.' })
               navigate(`/${slug}/book`, { replace: true })
               return
             }
 
-            window.alert(`Không thể giữ chỗ: ${err?.message || 'Lỗi không xác định'}`)
+            pushToast({ type: 'error', title: 'Không thể giữ chỗ', message: err?.message || 'Lỗi không xác định.' })
           }
         } finally {
           if (mounted) setCreating(false)
@@ -918,7 +913,7 @@ export default function CustomerPaymentPage() {
       if (!mounted) return
       try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
       clearPaymentSnapshot(slug)
-      window.alert('Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.')
+      pushToast({ type: 'warning', title: 'Phiên giữ chỗ hết hạn', message: 'Giữ chỗ tạm đã hết hạn. Vui lòng chọn lại khung giờ.' })
       navigate(`/${slug}/book`, { replace: true })
     }
 
@@ -997,7 +992,7 @@ export default function CustomerPaymentPage() {
     if (!expired) return
     try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
     clearPaymentSnapshot(slug)
-    window.alert('Phiên thanh toán đặt cọc đã hết hạn. Vui lòng chọn lại khung giờ.')
+    pushToast({ type: 'warning', title: 'Phiên thanh toán hết hạn', message: 'Phiên thanh toán đặt cọc đã hết hạn. Vui lòng chọn lại khung giờ.' })
     navigate(`/${slug}/book`, { replace: true })
   }, [expired, slug, navigate])
 
@@ -1016,7 +1011,7 @@ export default function CustomerPaymentPage() {
     }
 
     if (!bookingCode) {
-      window.alert('Không tìm thấy mã đặt lịch để kiểm tra thanh toán.')
+      pushToast({ type: 'error', title: 'Thiếu mã đặt lịch', message: 'Không tìm thấy mã đặt lịch để kiểm tra thanh toán.' })
       return
     }
 
@@ -1062,11 +1057,22 @@ export default function CustomerPaymentPage() {
     }
 
     if (lastError) {
-      window.alert('Hệ thống chưa kiểm tra được trạng thái thanh toán lúc này. Vui lòng đợi 10-15 giây rồi bấm lại.')
+      pushToast({ type: 'warning', title: 'Chưa kiểm tra được thanh toán', message: 'Vui lòng đợi 10-15 giây rồi bấm lại.' })
       return
     }
 
-    window.alert('Hệ thống chưa ghi nhận thanh toán. Vui lòng đợi thêm vài giây rồi thử lại.')
+    pushToast({ type: 'info', title: 'Chưa ghi nhận thanh toán', message: 'Vui lòng đợi thêm vài giây rồi thử lại.' })
+  }
+
+
+  const confirmExitPayment = () => {
+    skipExitCleanupRef.current = true
+    void expireUnpaidBooking(createdBookingId, true).catch(() => {})
+    try { sessionStorage.removeItem(`client_attempt_${slug}`) } catch {}
+    clearPaymentSnapshot(slug)
+    resetBookingDraft()
+    setShowExitConfirm(false)
+    navigate(`/${slug}/book`, { replace: true })
   }
 
   if (success) {
@@ -1230,6 +1236,19 @@ export default function CustomerPaymentPage() {
           </aside>
         </div>
       </main>
+
+      {showExitConfirm ? (
+        <div className="fixed inset-0 z-[95] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowExitConfirm(false)}>
+          <div className="w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-slate-200 p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-black text-main">Hủy phiên thanh toán?</h3>
+            <p className="text-sm text-main/60 mt-2">Nếu thoát, phiên giữ chỗ sẽ bị hủy và khung giờ được trả lại.</p>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-end">
+              <button type="button" onClick={() => setShowExitConfirm(false)} className="px-4 py-3 rounded-2xl border border-slate-200 bg-white font-semibold hover:bg-slate-50">Ở lại thanh toán</button>
+              <button type="button" onClick={confirmExitPayment} className="px-4 py-3 rounded-2xl bg-rose-600 text-white font-semibold hover:brightness-110">Xác nhận thoát</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
