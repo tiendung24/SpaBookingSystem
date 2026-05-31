@@ -1,6 +1,6 @@
 ﻿import { PayOSService } from '../../services/payos.service.js'
 import mongoose from 'mongoose'
-import { Booking, BookingSlotLock, Customer, Deposit, PayosPayment, Service, ServiceCategory, ShopStaff, ShopWorkingHour } from '../../models/index.js'
+import { Booking, BookingSlotLock, Customer, Deposit, PayosPayment, Service, ServiceCategory, Shop, ShopStaff, ShopWorkingHour } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { releaseRedeemForBooking, reserveRedeemPointsForBooking } from '../../services/loyalty.service.js'

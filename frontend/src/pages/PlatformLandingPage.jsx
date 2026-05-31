@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../lib/api'
 
-const heroImageUrl = 'https://lh3.googleusercontent.com/aida/ADBb0uhwDGZpSodoXlb4EzkEERsps1TN9DTccujJvi2s90ftR6gzYt5DI62TxGjcLhLEwhr2tpHBDonxEo9bppoU2q_HCEnFqo49BxJQKIIq5RTEXv90y-8r3YX3ycwxG0n6ScAk6RDaFZhm7bp53vD_YvFHjJSpJgnRKOfMxir7rioE5dquh43993Dh7jbq79IEwiQdorJJNoIE4HIWQMXPece322awNhRe_xLwcfcuNYgQZOPASJLEDBD7awCT'
+const heroImageUrl = 'blob:https://gemini.google.com/54653a91-10d7-41f6-a913-0fc7b282d275'
 const bookingProcessImageUrl = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBhra6yeHfGlKGWvFOIPvAo7-D40da0dcM0hGbH6kayF_663DSc_AfKideRack5vk9Q7vtpHpCCOtYDgkaoqFN8gLMj41b9b2JgMBh1m0Xe56Yd-ml-pIdNkA6kF-uqOZuW7dk-d3Zzl-tt0Z6-KwU9upepOaJxftYrNpZKsE1h4Od6chGdBlkwN3R_zyQgot8h9_UrCedoSvpTuFJcD2JYCL-apW7OHYau3cxK6N8jYv3ZEwovKoIdcRinGJdoJqjRYPnHKuWarjWd'
 
 const fallbackShops = [
