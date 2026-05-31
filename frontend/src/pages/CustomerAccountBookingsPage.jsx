@@ -292,7 +292,7 @@ export default function CustomerAccountBookingsPage() {
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusBadgeClass(item.status)}`}>{statusText(item.status)}</span>
                       </td>
                       <td className="p-4">
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">{item.paymentStatusInfo?.text || '—'}</span>
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">{item.paymentStatusInfo?.label || '—'}</span>
                       </td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-2">
@@ -377,7 +377,7 @@ export default function CustomerAccountBookingsPage() {
                   <p><strong>Tổng tiền:</strong> {fmtVnd(current.totalAmount || 0)}</p>
                   <p><strong>Còn lại tại shop:</strong> {fmtVnd(Math.max(0, Number(current.totalAmount || 0) - Number(current.depositAmount || 0)))}</p>
                   <p><strong>Trạng thái:</strong> {statusText(current.status)}</p>
-                  <p><strong>Trạng thái thanh toán:</strong> {current.paymentStatusInfo?.text || '?'}</p>
+                  <p><strong>Trạng thái thanh toán:</strong> {current.paymentStatusInfo?.label || '?'}</p>
                 </div>
               </div>
 
@@ -456,6 +456,7 @@ export default function CustomerAccountBookingsPage() {
     </div>
   )
 }
+
 
 
 
