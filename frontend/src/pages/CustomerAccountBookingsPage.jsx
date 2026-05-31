@@ -187,7 +187,7 @@ export default function CustomerAccountBookingsPage() {
         activeTab="bookings"
         address={shop.address || ''}
       />
-<div className="max-w-[1440px] mx-auto space-y-6 p-4 md:p-8 lg:p-10">
+<div className="w-full max-w-[1840px] mx-auto space-y-6 px-3 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8">
 
         <section className="glass-card rounded-2xl overflow-hidden bg-white/70">
           <div className="p-5 md:p-6 border-b border-primary/10 bg-primary/5">
@@ -234,7 +234,7 @@ export default function CustomerAccountBookingsPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1320px]">
+            <table className="w-full min-w-[1520px]">
               <thead className="bg-primary/5 border-b border-primary/10">
                 <tr className="text-left">
                   <th className="p-4 text-left font-label-bold text-label-bold text-primary">Mã booking</th>
@@ -445,6 +445,7 @@ export default function CustomerAccountBookingsPage() {
     </div>
   )
 }
+
 
 
 
