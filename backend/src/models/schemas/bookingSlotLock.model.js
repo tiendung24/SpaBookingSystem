@@ -17,7 +17,8 @@ const bookingSlotLockSchema = new mongoose.Schema(
   { versionKey: false }
 )
 
-bookingSlotLockSchema.index({ shopId: 1, staffId: 1, startTime: 1 }, { unique: true })
+bookingSlotLockSchema.index({ shopId: 1, staffId: 1, startTime: 1 })
+bookingSlotLockSchema.index({ shopId: 1, startTime: 1, endTime: 1 })
 bookingSlotLockSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 
 export const BookingSlotLock = mongoose.model('BookingSlotLock', bookingSlotLockSchema, 'booking_slot_locks')
