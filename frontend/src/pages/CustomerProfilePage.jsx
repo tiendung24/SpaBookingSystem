@@ -5,7 +5,7 @@ import CustomerHeader from '../components/customer/CustomerHeader'
 import { apiRequest } from '../lib/api'
 
 export default function CustomerProfilePage({ isModal = false, onClose } = {}) {
-  const { token, user, loadMeAndShop } = useShop()
+  const { token, user, loadMeAndShop, shop } = useShop()
   const [form, setForm] = useState({ fullName: '', phone: '', email: '' })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -84,10 +84,11 @@ export default function CustomerProfilePage({ isModal = false, onClose } = {}) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-main p-6 md:p-10">
-      <CustomerHeader />
-      <div className="max-w-3xl mx-auto space-y-6">{content}</div>
+    <div className="min-h-screen bg-slate-50 text-main">
+      <CustomerHeader shopName={shop?.name || 'LumiX'} shopSlug={shop?.slug || ''} activeTab="bookings" address={shop?.address || ''} />
+      <div className="max-w-3xl mx-auto space-y-6 p-6 md:p-10">{content}</div>
     </div>
   )
 }
+
 
