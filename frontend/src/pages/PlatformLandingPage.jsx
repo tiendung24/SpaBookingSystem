@@ -1,8 +1,10 @@
 ﻿import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../lib/api'
+import lumixLogo from '../assets/lumix-logo.png'
+import heroCoverImage from '../assets/anhbialandingpage-tong.jpg'
 
-const heroImageUrl = 'blob:https://gemini.google.com/54653a91-10d7-41f6-a913-0fc7b282d275'
+const heroImageUrl = heroCoverImage
 const bookingProcessImageUrl = 'https://lh3.googleusercontent.com/aida-public/AB6AXuBhra6yeHfGlKGWvFOIPvAo7-D40da0dcM0hGbH6kayF_663DSc_AfKideRack5vk9Q7vtpHpCCOtYDgkaoqFN8gLMj41b9b2JgMBh1m0Xe56Yd-ml-pIdNkA6kF-uqOZuW7dk-d3Zzl-tt0Z6-KwU9upepOaJxftYrNpZKsE1h4Od6chGdBlkwN3R_zyQgot8h9_UrCedoSvpTuFJcD2JYCL-apW7OHYau3cxK6N8jYv3ZEwovKoIdcRinGJdoJqjRYPnHKuWarjWd'
 
 const fallbackShops = [
@@ -91,7 +93,8 @@ export default function PlatformLandingPage() {
       <div className="lumix-platform-page">
         <header className="bg-white/80 backdrop-blur-xl border-b border-[#14677a]/10 full-width top-0 sticky z-50 shadow-sm">
           <div className="max-w-[1440px] mx-auto px-10 flex justify-between items-center h-20">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <img src={lumixLogo} alt="LumiX" className="h-11 w-auto object-contain" />
               <span className="text-2xl tracking-tight text-[#14677a] font-bold" style={{ fontFamily: 'Quicksand, sans-serif' }}>LumiX</span>
             </div>
             <nav className="hidden lg:flex items-center gap-8">
@@ -125,12 +128,12 @@ export default function PlatformLandingPage() {
 
         <main className="max-w-[1440px] mx-auto px-10">
           <section className="mb-16 -mt-12 relative z-10" id="search-section">
-            <form onSubmit={handleSearch} className="bg-white p-6 rounded-2xl shadow-xl border border-[#14677a]/5 flex flex-col lg:flex-row items-center gap-6">
-              <div className="relative flex-grow w-full">
+            <form onSubmit={handleSearch} className="bg-white p-6 rounded-2xl shadow-xl border border-[#14677a]/5 flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-3">
+              <div className="relative w-full lg:max-w-[760px]">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#14677a]">search</span>
                 <input className="bg-[#f0f3ff] border-none rounded-xl pl-12 pr-6 py-4 w-full focus:ring-2 focus:ring-[#14677a]/30 transition-all text-[#111c2c]" placeholder="Tìm kiếm cửa hàng spa/salon, địa điểm" type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
-              <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide py-1 w-full lg:w-auto">
+              <div className="flex items-center gap-3 py-1 w-full lg:w-auto lg:shrink-0">
                 <button className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#14677a] text-white text-base font-bold whitespace-nowrap shadow-sm hover:brightness-110 active:scale-95 transition-all" type="submit">
                   <span className="material-symbols-outlined text-[20px]">search</span>
                   {loading ? 'Đang tải' : 'Tìm'}

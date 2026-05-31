@@ -1,6 +1,8 @@
+﻿import { useState } from 'react'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import SystemConfigTabs from '../components/shop/SystemConfigTabs'
 import { useShop } from '../context/ShopContext'
+import { apiRequest } from '../lib/api'
 
 function slugifyVietnamese(input) {
   return String(input || '')
@@ -31,7 +33,11 @@ function isValidSlug(input) {
 }
 
 export default function ShopConfigPage() {
-  const { shop, setShop } = useShop()
+  const { shop, setShop, token, uploadImage } = useShop()
+  const [saving, setSaving] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [error, setError] = useState('')
 
   const update = (patch) => setShop((prev) => ({ ...prev, ...patch }))
 
@@ -39,6 +45,52 @@ export default function ShopConfigPage() {
   const phone = shop.phone || ''
   const slugValid = isValidSlug(slug)
   const phoneValid = isValidPhone(phone)
+
+  const handleCoverUpload = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setUploadingCover(true)
+    setError('')
+    setNotice('')
+    try {
+      const uploadedUrl = await uploadImage(file)
+      update({ coverUrl: uploadedUrl })
+      setNotice('Đã tải ảnh bìa lên. Nhớ bấm “Lưu thông tin shop” để cập nhật.')
+    } catch (err) {
+      setError(err?.message || 'Không thể tải ảnh bìa lên.')
+    } finally {
+      setUploadingCover(false)
+      event.target.value = ''
+    }
+  }
+
+  const handleSave = async () => {
+    if (!token) return
+    if (!slugValid || !phoneValid) {
+      setError('Vui lòng kiểm tra lại slug và số điện thoại trước khi lưu.')
+      setNotice('')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+    setNotice('')
+    try {
+      const payload = {
+        name: shop.name || '',
+        phone: phone || '',
+        coverUrl: shop.coverUrl || '',
+        address: shop.address || ''
+      }
+      const res = await apiRequest('/api/shop/me', { method: 'PUT', token, body: payload })
+      if (res?.shop) setShop((prev) => ({ ...prev, ...res.shop }))
+      setNotice('Đã lưu thông tin shop thành công.')
+    } catch (err) {
+      setError(err?.message || 'Không thể lưu thông tin shop.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-main">
@@ -52,7 +104,21 @@ export default function ShopConfigPage() {
         <SystemConfigTabs />
 
         <section className="glass-card bg-white/70 rounded-3xl p-6">
-          <h2 className="font-h3 text-h3 text-primary mb-4">Thông tin shop</h2>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h2 className="font-h3 text-h3 text-primary">Thông tin shop</h2>
+            <button
+              type="button"
+              className="px-5 py-3 rounded-2xl bg-primary text-white font-bold hover:brightness-110 disabled:opacity-60"
+              onClick={handleSave}
+              disabled={saving || uploadingCover}
+            >
+              {saving ? 'Đang lưu...' : 'Lưu thông tin shop'}
+            </button>
+          </div>
+
+          {notice ? <div className="mb-4 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-emerald-700">{notice}</div> : null}
+          {error ? <div className="mb-4 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-red-600">{error}</div> : null}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-bold text-main/70">Tên shop</label>
@@ -96,6 +162,32 @@ export default function ShopConfigPage() {
                 value={shop.address || ''}
                 onChange={(e) => update({ address: e.target.value })}
               />
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+            <div className="flex flex-col lg:flex-row gap-5 items-start">
+              <div className="w-full lg:w-[360px]">
+                <p className="text-sm font-bold text-main/70 mb-2">Ảnh bìa shop</p>
+                <div className="aspect-[16/9] overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  {shop.coverUrl ? (
+                    <img src={shop.coverUrl} alt="Ảnh bìa shop" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-sm text-main/50 px-6 text-center">
+                      Chưa có ảnh bìa. Tải lên để landing page và danh sách đối tác hiển thị đẹp hơn.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <p className="text-sm font-bold text-main/70">Tải ảnh bìa</p>
+                <p className="mt-1 text-sm text-main/60">Khuyến nghị ảnh ngang tỷ lệ 16:9 để hiển thị tốt ở landing page và trang cửa hàng đối tác.</p>
+                <label className="inline-flex mt-4 px-5 py-3 rounded-2xl border border-primary text-primary font-bold hover:bg-primary/5 cursor-pointer">
+                  {uploadingCover ? 'Đang tải ảnh...' : 'Chọn ảnh bìa'}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} disabled={uploadingCover || saving} />
+                </label>
+              </div>
             </div>
           </div>
         </section>
