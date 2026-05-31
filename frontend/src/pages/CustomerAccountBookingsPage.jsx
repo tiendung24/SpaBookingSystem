@@ -169,89 +169,125 @@ export default function CustomerAccountBookingsPage() {
       />
 <div className="max-w-[1440px] mx-auto space-y-6 p-4 md:p-8 lg:p-10">
 
-        <section className="bg-white rounded-2xl border border-slate-200 p-5 overflow-x-auto">
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <input
-              className="p-3 rounded-xl border min-w-[220px]"
-              placeholder="Tìm kiếm mã, dịch vụ hoặc cửa hàng"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
+        <section className="bg-white/80 backdrop-blur rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-5 md:p-6 border-b border-slate-200">
+            <div className="flex flex-col lg:flex-row lg:items-end gap-4 lg:gap-6">
+              <div className="flex-1">
+                <h2 className="text-xl md:text-2xl font-black text-main">Lịch hẹn của tôi</h2>
+                <p className="text-sm text-main/60 mt-1">Theo dõi lịch hẹn, trạng thái và thông tin thanh toán.</p>
+              </div>
 
-            <select className="p-3 rounded-xl border" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="">Tất cả trạng thái</option>
-              <option value="all">Tất cả</option>
-              <option value="pending">Chờ xác nhận</option>
-              <option value="confirmed">Đã xác nhận</option>
-              <option value="checked_in">Đang phục vụ</option>
-              <option value="completed">Hoàn thành</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative">
+                  <input
+                    className="w-full sm:w-[320px] pl-10 pr-3 py-3 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder="Tìm mã, dịch vụ hoặc cửa hàng"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                  />
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-main/40">search</span>
+                </div>
 
-            <select className="p-3 rounded-xl border" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="createdAt">Sắp xếp: Thời gian đặt (mới nhất)</option>
-              <option value="startTime">Sắp xếp: Thời gian hẹn (mới nhất)</option>
-            </select>
+                <select className="py-3 px-4 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="all">Tất cả</option>
+                  <option value="pending">Chờ xác nhận</option>
+                  <option value="confirmed">Đã xác nhận</option>
+                  <option value="checked_in">Đang phục vụ</option>
+                  <option value="completed">Hoàn thành</option>
+                  <option value="cancelled">Đã hủy</option>
+                </select>
 
-            <button className="px-4 py-2 rounded-xl border" onClick={() => { setSearchText(''); setStatusFilter(''); setSortBy('createdAt') }}>Xóa bộ lọc</button>
+                <select className="py-3 px-4 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  <option value="createdAt">Sắp xếp: Thời gian đặt (mới nhất)</option>
+                  <option value="startTime">Sắp xếp: Thời gian hẹn (mới nhất)</option>
+                </select>
+
+                <button
+                  className="py-3 px-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors font-semibold"
+                  onClick={() => { setSearchText(''); setStatusFilter(''); setSortBy('createdAt') }}
+                >
+                  Xóa bộ lọc
+                </button>
+              </div>
+            </div>
           </div>
-          <table className="w-full min-w-[1280px] text-sm">
-            <thead>
-                <tr className="bg-slate-50 text-left">
-                <th className="p-3">Mã booking</th>
-                <th className="p-3">Thời gian đặt</th>
-                <th className="p-3">Cửa hàng</th>
-                <th className="p-3">Dịch vụ</th>
-                <th className="p-3">Thời gian hẹn</th>
-                <th className="p-3">Tiền cọc</th>
-                <th className="p-3">Tổng tiền</th>
-                <th className="p-3">Còn lại</th>
-                <th className="p-3">Trạng thái</th>
-                <th className="p-3">Thanh toán</th>
-                <th className="p-3">Hành động</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {loadingBookings ? (
-                <tr><td colSpan={11} className="p-6 text-main/60">Đang tải lịch hẹn...</td></tr>
-              ) : null}
-              {items.map((item) => {
-                const code = String(item.bookingCode || '')
-                const highlight = focusCode && code === focusCode
-                const remain = Math.max(0, Number(item.totalAmount || 0) - Number(item.depositAmount || 0))
-                const canInputRefund = item.status === 'cancelled_waiting_refund_info'
 
-                return (
-                  <tr key={item._id} className={highlight ? 'bg-amber-50' : ''}>
-                    <td className="p-3 font-bold text-primary">{code || item._id}</td>
-                    <td className="p-3">{item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '?'}</td>
-                    <td className="p-3">{item.shopName || '?'}</td>
-                    <td className="p-3">{item.serviceName || '?'}</td>
-                    <td className="p-3">{item.startTime ? new Date(item.startTime).toLocaleString('vi-VN') : '?'}</td>
-                    <td className="p-3">{fmtVnd(item.depositAmount || 0)}</td>
-                    <td className="p-3">{fmtVnd(item.totalAmount || 0)}</td>
-                    <td className="p-3">{fmtVnd(remain)}</td>
-                    <td className="p-3">{statusText(item.status)}</td>
-                    <td className="p-3">{item.paymentStatusInfo?.text || '?'}</td>
-                    <td className="p-3">
-                      <div className="flex gap-2">
-                        <button className="px-3 py-1.5 rounded-lg border" onClick={() => openDetail(code)}>Xem chi tiết</button>
-                        {['pending', 'confirmed'].includes(String(item.status || '')) ? (
-                          <button className="px-3 py-1.5 rounded-lg bg-rose-600 text-white" onClick={() => cancelBooking(item)}>Hủy lịch</button>
-                        ) : null}
-                        {canInputRefund ? (
-                          <button className="px-3 py-1.5 rounded-lg bg-primary text-white" onClick={() => setActiveCode(code)}>Nhập STK nhận hoàn</button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-              {items.length === 0 ? (
-                <tr><td colSpan={11} className="p-6 text-main/60">Chưa có lịch hẹn nào.</td></tr>
-              ) : null}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1320px] text-sm">
+              <thead className="bg-slate-50 text-main/70">
+                <tr className="text-left">
+                  <th className="p-4 font-bold">Mã booking</th>
+                  <th className="p-4 font-bold">Thời gian đặt</th>
+                  <th className="p-4 font-bold">Cửa hàng</th>
+                  <th className="p-4 font-bold">Dịch vụ</th>
+                  <th className="p-4 font-bold">Thời gian hẹn</th>
+                  <th className="p-4 font-bold text-right">Tiền cọc</th>
+                  <th className="p-4 font-bold text-right">Tổng tiền</th>
+                  <th className="p-4 font-bold text-right">Còn lại</th>
+                  <th className="p-4 font-bold">Trạng thái</th>
+                  <th className="p-4 font-bold">Thanh toán</th>
+                  <th className="p-4 font-bold">Hành động</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-200">
+                {loadingBookings ? (
+                  <tr><td colSpan={11} className="p-6 text-main/60">Đang tải lịch hẹn...</td></tr>
+                ) : null}
+
+                {items.map((item) => {
+                  const code = String(item.bookingCode || '')
+                  const highlight = focusCode && code === focusCode
+                  const remain = Math.max(0, Number(item.totalAmount || 0) - Number(item.depositAmount || 0))
+                  const canInputRefund = item.status === 'cancelled_waiting_refund_info'
+
+                  return (
+                    <tr
+                      key={item._id}
+                      className={highlight
+                        ? 'bg-amber-50'
+                        : 'bg-white hover:bg-slate-50/70 transition-colors'}
+                    >
+                      <td className="p-4 font-black text-primary">{code || item._id}</td>
+                      <td className="p-4">{item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '—'}</td>
+                      <td className="p-4 font-semibold">{item.shopName || '—'}</td>
+                      <td className="p-4">{item.serviceName || '—'}</td>
+                      <td className="p-4">{item.startTime ? new Date(item.startTime).toLocaleString('vi-VN') : '—'}</td>
+                      <td className="p-4 text-right font-semibold">{fmtVnd(item.depositAmount || 0)}</td>
+                      <td className="p-4 text-right font-semibold">{fmtVnd(item.totalAmount || 0)}</td>
+                      <td className="p-4 text-right font-semibold">{fmtVnd(remain)}</td>
+                      <td className="p-4">
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-100 text-main/70 font-bold">
+                          {statusText(item.status)}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/10 text-primary font-bold">
+                          {item.paymentStatusInfo?.text || '—'}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold" onClick={() => openDetail(code)}>Xem</button>
+                          {['pending', 'confirmed'].includes(String(item.status || '')) ? (
+                            <button className="px-3 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:brightness-110" onClick={() => cancelBooking(item)}>Hủy</button>
+                          ) : null}
+                          {canInputRefund ? (
+                            <button className="px-3 py-2 rounded-xl bg-primary text-white font-semibold hover:brightness-110" onClick={() => setActiveCode(code)}>Nhập STK</button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+
+                {!loadingBookings && items.length === 0 ? (
+                  <tr><td colSpan={11} className="p-8 text-main/60">Chưa có lịch hẹn nào.</td></tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         {detailCode ? (() => {
