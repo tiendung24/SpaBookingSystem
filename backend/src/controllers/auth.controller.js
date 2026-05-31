@@ -303,7 +303,7 @@ export async function changePassword(req, res) {
 export async function forgotPassword(req, res) {
   const email = normalizeEmail(req.body?.email || '')
   // Always return success to avoid email enumeration
-  const generic = { success: true, message: 'N?u email t?n t?i, h? th?ng ?? g?i h??ng d?n ??t l?i m?t kh?u.' }
+  const generic = { success: true, message: 'Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.' }
   if (!email || !isValidEmail(email)) return res.json(generic)
 
   const user = await User.findOne({ email })
@@ -321,10 +321,11 @@ export async function forgotPassword(req, res) {
 
   const base = String(process.env.PUBLIC_FRONTEND_URL || process.env.FRONTEND_URL || process.env.PAYOS_RETURN_URL || 'http://localhost:5173').replace(/\/$/, '')
   const resetUrl = `${base}/reset-password/${rawToken}`
+  const expiresText = expiresAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
 
-  const subject = '[LumiX] ??t l?i m?t kh?u'
-  const text = `B?n v?a y?u c?u ??t l?i m?t kh?u. Truy c?p link sau ?? ti?p t?c: ${resetUrl} (h?t h?n l?c ${expiresAt.toLocaleString('vi-VN')})`
-  const html = `<p>B?n v?a y?u c?u ??t l?i m?t kh?u LumiX.</p><p><a href="${resetUrl}">B?m v?o ??y ?? ??t l?i m?t kh?u</a></p><p>Link h?t h?n l?c <strong>${expiresAt.toLocaleString('vi-VN')}</strong>.</p>`
+  const subject = '[LumiX] Đặt lại mật khẩu'
+  const text = `Bạn vừa yêu cầu đặt lại mật khẩu. Truy cập link sau để tiếp tục: ${resetUrl} (hết hạn lúc ${expiresText})`
+  const html = `<p>Bạn vừa yêu cầu đặt lại mật khẩu LumiX.</p><p><a href="${resetUrl}">Bấm vào đây để đặt lại mật khẩu</a></p><p>Link hết hạn lúc <strong>${expiresText}</strong>.</p>`
 
   await sendEmailBestEffort({ to: email, subject, text, html, meta: { userId: String(user._id), event: 'auth.forgot_password' } })
   await writeAuditLog({ actorUserId: String(user._id), action: 'auth.forgot_password', entity: 'user', entityId: String(user._id), meta: { email } })
@@ -335,8 +336,8 @@ export async function forgotPassword(req, res) {
 export async function resetPassword(req, res) {
   const token = String(req.body?.token || '').trim()
   const newPassword = String(req.body?.newPassword || '')
-  if (!token || !newPassword) throw httpError(400, 'Thi?u token ho?c m?t kh?u m?i')
-  if (newPassword.length < 6) throw httpError(400, 'M?t kh?u ph?i t? 6 k? t? tr? l?n')
+  if (!token || !newPassword) throw httpError(400, 'Thiếu token hoặc mật khẩu mới')
+  if (newPassword.length < 6) throw httpError(400, 'Mật khẩu phải từ 6 ký tự trở lên')
 
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
   const now = new Date()
@@ -345,7 +346,7 @@ export async function resetPassword(req, res) {
     passwordResetExpiresAt: { $gt: now }
   })
 
-  if (!user) throw httpError(400, 'Link ??t l?i m?t kh?u kh?ng h?p l? ho?c ?? h?t h?n')
+  if (!user) throw httpError(400, 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn')
 
   user.passwordHash = await bcrypt.hash(newPassword, 10)
   user.passwordResetTokenHash = ''

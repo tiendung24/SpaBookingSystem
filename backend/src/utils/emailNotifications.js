@@ -28,7 +28,7 @@ function logEmailEvent(level, event, meta = {}) {
 function fmtDateTimeVi(date) {
   try {
     const d = new Date(date)
-    return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(d)
+    return new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short', hour12: false }).format(d)
   } catch {
     return String(date || '')
   }
@@ -37,7 +37,7 @@ function fmtDateTimeVi(date) {
 function fmtDateVi(date) {
   try {
     const d = new Date(date)
-    return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short' }).format(d)
+    return new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short' }).format(d)
   } catch {
     return String(date || '')
   }
@@ -46,7 +46,7 @@ function fmtDateVi(date) {
 function fmtTimeVi(date) {
   try {
     const d = new Date(date)
-    return new Intl.DateTimeFormat('vi-VN', { timeStyle: 'short' }).format(d)
+    return new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', timeStyle: 'short', hour12: false }).format(d)
   } catch {
     return ''
   }
