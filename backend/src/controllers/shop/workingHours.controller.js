@@ -38,7 +38,7 @@ export async function updateWorkingHours(req, res) {
 
   const workingHours = await ShopWorkingHour.findOneAndUpdate(
     { shopId },
-    { $set: payload, $setOnInsert: { createdAt: new Date(), slotDurationMinutes: 30, maxCustomersPerSlot: 1 } },
+    { $set: payload, $setOnInsert: { createdAt: new Date(), slotDurationMinutes: 15, maxCustomersPerSlot: 1 } },
     { upsert: true, new: true }
   ).lean()
 
@@ -97,14 +97,14 @@ export async function getSlotSettings(req, res) {
   const shopId = req.auth.shopId
   const workingHours = await ShopWorkingHour.findOne({ shopId }).lean()
   res.json({
-    slotDurationMinutes: Number(workingHours?.slotDurationMinutes || 30),
+    slotDurationMinutes: 15,
     maxCustomersPerSlot: Number(workingHours?.maxCustomersPerSlot || 1)
   })
 }
 
 export async function updateSlotSettings(req, res) {
   const shopId = req.auth.shopId
-  const slotDurationMinutes = requireNumber(req.body?.slotDurationMinutes || 30, 'slotDurationMinutes', { min: 15 })
+  const slotDurationMinutes = 15
   const maxCustomersPerSlot = requireNumber(req.body?.maxCustomersPerSlot || 1, 'maxCustomersPerSlot', { min: 1 })
 
   const workingHours = await ShopWorkingHour.findOneAndUpdate(

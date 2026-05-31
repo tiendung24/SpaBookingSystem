@@ -93,11 +93,7 @@ export async function getWorkingPlan(shopId, date) {
   const isRegularDayOff = configuredWeekDays.length > 0 && !configuredWeekDays.includes(weekday)
   const isClosed = explicitlyClosed || isRegularDayOff
 
-  const slotMinutes =
-    Number(workingHours?.slotConfig?.slotMinutes) ||
-    Number(workingHours?.slotMinutes) ||
-    Number(workingHours?.slotDurationMinutes) ||
-    30
+  const slotMinutes = 15
 
   const maxConcurrent =
     Number(workingHours?.slotConfig?.maxConcurrentBookings) ||

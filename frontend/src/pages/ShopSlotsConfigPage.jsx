@@ -29,7 +29,7 @@ export default function ShopSlotsConfigPage() {
   const [openTime, setOpenTime] = useState(hours.open || '09:00')
   const [closeTime, setCloseTime] = useState(hours.close || '20:00')
   const [daysOff, setDaysOff] = useState(new Set(hours.daysOff ?? [0]))
-  const [slotDuration, setSlotDuration] = useState(Number(hours.slotDuration || 60))
+  const [slotDuration, setSlotDuration] = useState(15)
   const [capacity, setCapacity] = useState(Number(hours.capacity || 1))
   const [toastVisible, setToastVisible] = useState(false)
   const [toastMessage, setToastMessage] = useState('Đã lưu cấu hình slot thành công!')
@@ -41,7 +41,7 @@ export default function ShopSlotsConfigPage() {
     setOpenTime(hours.open || '09:00')
     setCloseTime(hours.close || '20:00')
     setDaysOff(new Set((hours.daysOff ?? [0]).map((day) => (Number(day) === 7 ? 0 : Number(day)))))
-    setSlotDuration(Number(hours.slotDuration || 60))
+    setSlotDuration(15)
     setCapacity(Number(hours.capacity || 1))
   }, [hours.open, hours.close, hours.daysOff, hours.slotDuration, hours.capacity])
 
@@ -59,7 +59,7 @@ export default function ShopSlotsConfigPage() {
   const saveConfig = async () => {
     if (!token) return
 
-    const normalizedDuration = clamp(Number(slotDuration) || 60, 15, 240)
+    const normalizedDuration = 15
     const normalizedCapacity = clamp(Number(capacity) || 1, 1, 20)
     const open = openTime || '09:00'
     const close = closeTime || '20:00'
@@ -202,23 +202,9 @@ export default function ShopSlotsConfigPage() {
 
               <div className="space-y-8">
                 <div className="space-y-3">
-                  <label className="font-label-bold text-main/70">Độ dài mỗi slot (phút)</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[30, 45, 60].map((v) => (
-                      <label key={v} className="cursor-pointer">
-                        <input
-                          className="sr-only peer"
-                          name="slot_duration"
-                          type="radio"
-                          value={v}
-                          checked={slotDuration === v}
-                          onChange={() => setSlotDuration(v)}
-                        />
-                        <div className="text-center p-3 border border-slate-300 rounded-xl peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary transition-all font-bold">
-                          {v}
-                        </div>
-                      </label>
-                    ))}
+                  <label className="font-label-bold text-main/70">Độ chia thời gian cố định</label>
+                  <div className="p-4 rounded-2xl border border-primary/10 bg-primary/5 text-primary font-bold">
+                    LumiX cố định lịch theo mốc 15 phút. Dịch vụ sẽ chiếm nhiều mốc liên tiếp theo thời lượng.
                   </div>
                 </div>
 

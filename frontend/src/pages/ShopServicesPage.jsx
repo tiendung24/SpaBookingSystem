@@ -26,7 +26,7 @@ export default function ShopServicesPage() {
   const [form, setForm] = useState({
     name: '',
     category: 'spa',
-    durationMinutes: 45,
+    durationMinutes: 60,
     priceVnd: 150000,
     visible: true,
     imageUrl: fallbackImage,
@@ -57,7 +57,7 @@ export default function ShopServicesPage() {
     setForm({
       name: '',
       category: 'spa',
-      durationMinutes: 45,
+      durationMinutes: 60,
       priceVnd: 150000,
       visible: true,
       imageUrl: fallbackImage,
@@ -91,7 +91,7 @@ export default function ShopServicesPage() {
     const formPrice = Number(form.priceVnd || 0)
 
     if (!formName) return setFormError('Vui lòng nhập tên dịch vụ.')
-    if (formDuration < 15) return setFormError('Thời gian dịch vụ tối thiểu 15 phút.')
+    if (![15, 30, 60, 90].includes(formDuration)) return setFormError('Thời lượng dịch vụ chỉ được chọn 15, 30, 60 hoặc 90 phút.')
     if (formPrice <= 0) return setFormError('Giá dịch vụ phải lớn hơn 0.')
 
     const payload = { ...form, name: formName, durationMinutes: formDuration, priceVnd: formPrice }
@@ -191,7 +191,12 @@ export default function ShopServicesPage() {
               <select className="p-3 rounded-xl border border-slate-300" value={form.category} onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}>
                 {categories.filter((c) => c.key !== 'all').map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
               </select>
-              <input className="p-3 rounded-xl border border-slate-300" type="number" min={15} placeholder="Thời gian (phút)" value={form.durationMinutes} onChange={(e) => setForm((prev) => ({ ...prev, durationMinutes: Number(e.target.value || 0) }))} />
+              <select className="p-3 rounded-xl border border-slate-300 bg-white" value={Number(form.durationMinutes || 60)} onChange={(e) => setForm((prev) => ({ ...prev, durationMinutes: Number(e.target.value) }))}>
+                <option value={15}>15 phút</option>
+                <option value={30}>30 phút</option>
+                <option value={60}>60 phút</option>
+                <option value={90}>90 phút</option>
+              </select>
               <input className="p-3 rounded-xl border border-slate-300" type="number" min={0} placeholder="Giá (VNĐ)" value={form.priceVnd} onChange={(e) => setForm((prev) => ({ ...prev, priceVnd: Number(e.target.value || 0) }))} />
 
               <div className="md:col-span-2">

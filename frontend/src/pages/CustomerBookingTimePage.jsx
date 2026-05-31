@@ -53,7 +53,7 @@ export default function CustomerBookingTimePage() {
   const hours = shop.hours || {}
   const openTime = hours.open || '09:00'
   const closeTime = hours.close || '20:00'
-  const slotDuration = Number(hours.slotDuration || 60)
+  const slotDuration = 15
   const lunchBreakStart = hours.lunchBreakStart || '12:00'
   const lunchBreakEnd = hours.lunchBreakEnd || '13:00'
   const shopCapacity = Number(hours.capacity || 1)
@@ -237,7 +237,7 @@ export default function CustomerBookingTimePage() {
 
     const start = toMinutes(openTime)
     const end = toMinutes(closeTime)
-    const duration = slotDuration
+    const duration = 15
     const lunchStart = toMinutes(lunchBreakStart)
     const lunchEnd = toMinutes(lunchBreakEnd)
 

@@ -38,9 +38,9 @@ export default function ShopOnboardingPage() {
   const { shop, setShop, services, addService, staff, addStaff, token } = useShop();
   const [step, setStep] = useState(1);
 
-  const [newService, setNewService] = useState({ name: '', priceVnd: 150000, durationMinutes: 45, category: 'spa', visible: true });
+  const [newService, setNewService] = useState({ name: '', priceVnd: 150000, durationMinutes: 60, category: 'spa', visible: true });
   const [newStaff, setNewStaff] = useState({ name: '', phone: '', role: 'tech', status: 'working', rating: 5.0, bookingEnabled: true, services: [] });
-  const [hours, setHours] = useState(shop.hours || { open: '09:00', close: '20:00', slotDuration: 60, capacity: 1 });
+  const [hours, setHours] = useState(shop.hours || { open: '09:00', close: '20:00', slotDuration: 15, capacity: 1 });
 
   const bookingLink = useMemo(() => `${window.location.origin}/${shop.slug || slugifyVietnamese(shop.name) || 'ten-tiem'}`, [shop.slug, shop.name]);
 
@@ -49,10 +49,10 @@ export default function ShopOnboardingPage() {
     return Number(digitsOnly || 0);
   };
 
-  const serviceDraftValid = newService.name.trim() && Number(newService.priceVnd) > 0 && Number(newService.durationMinutes) >= 15;
+  const serviceDraftValid = newService.name.trim() && Number(newService.priceVnd) > 0 && [15, 30, 60, 90].includes(Number(newService.durationMinutes));
   const staffPhoneNormalized = normalizePhone(newStaff.phone);
   const staffDraftValid = newStaff.name.trim() && isValidPhone(staffPhoneNormalized);
-  const hoursValid = toMinutes(hours.close) > toMinutes(hours.open) && Number(hours.capacity) >= 1 && Number(hours.slotDuration) >= 15;
+  const hoursValid = toMinutes(hours.close) > toMinutes(hours.open) && Number(hours.capacity) >= 1 ;
 
   const canNext = () => {
     if (step === 1) return services.length > 0;
@@ -113,7 +113,12 @@ export default function ShopOnboardingPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <input className="p-3 rounded-xl border border-slate-300" placeholder="Tên dịch vụ" value={newService.name} onChange={(e) => setNewService((prev) => ({ ...prev, name: e.target.value }))} />
               <input className="p-3 rounded-xl border border-slate-300" type="text" inputMode="numeric" placeholder="Giá (VNĐ)" value={newService.priceVnd} onChange={(e) => setNewService((prev) => ({ ...prev, priceVnd: toSafeNumber(e.target.value) }))} />
-              <input className="p-3 rounded-xl border border-slate-300" type="text" inputMode="numeric" placeholder="Thời gian (phút)" value={newService.durationMinutes} onChange={(e) => setNewService((prev) => ({ ...prev, durationMinutes: toSafeNumber(e.target.value) }))} />
+              <select className="p-3 rounded-xl border border-slate-300 bg-white" value={Number(newService.durationMinutes || 60)} onChange={(e) => setNewService((prev) => ({ ...prev, durationMinutes: Number(e.target.value) }))}>
+                <option value={15}>15 phút</option>
+                <option value={30}>30 phút</option>
+                <option value={60}>60 phút</option>
+                <option value={90}>90 phút</option>
+              </select>
               <button
                 type="button"
                 className="rounded-xl bg-primary text-white font-bold"
@@ -133,7 +138,7 @@ export default function ShopOnboardingPage() {
             </div>
 
             <div className="mt-5 text-xs text-main/60">
-              Dịch vụ cần có tên, giá &gt; 0 và thời lượng tối thiểu 15 phút.
+              Dịch vụ cần có tên, giá &gt; 0 và thời lượng chỉ được chọn 15/30/60/90 phút.
             </div>
 
             <div className="mt-5">
@@ -208,23 +213,14 @@ export default function ShopOnboardingPage() {
               <div>
                 <label className="text-sm font-bold text-main/70">Giờ đóng cửa</label>
                 <input className="w-full mt-1 p-3 rounded-xl border border-slate-300" type="time" value={hours.close} onChange={(e) => setHours((prev) => ({ ...prev, close: e.target.value }))} />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-main/70">Độ dài slot (phút)</label>
-                <select className="w-full mt-1 p-3 rounded-xl border border-slate-300" value={hours.slotDuration} onChange={(e) => setHours((prev) => ({ ...prev, slotDuration: Number(e.target.value) }))}>
-                  <option value={30}>30</option>
-                  <option value={45}>45</option>
-                  <option value={60}>60</option>
-                </select>
-              </div>
-              <div>
+              </div>              <div>
                 <label className="text-sm font-bold text-main/70">Sức chứa (khách/slot)</label>
                 <input className="w-full mt-1 p-3 rounded-xl border border-slate-300" type="number" min="1" value={hours.capacity} onChange={(e) => setHours((prev) => ({ ...prev, capacity: Number(e.target.value) }))} />
               </div>
             </div>
 
             <div className="mt-5 text-xs text-main/60">
-              Giờ đóng phải sau giờ mở, slot tối thiểu 15 phút và sức chứa tối thiểu 1.
+              Giờ đóng phải sau giờ mở, sức chứa tối thiểu 1.
             </div>
 
             <div className="mt-6 p-4 rounded-2xl bg-cyan-50 border border-cyan-200 text-cyan-900">

@@ -106,7 +106,7 @@ export async function createBooking(req, res) {
   if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
 
   const customer = await ensureCustomer({ name: customerName, phone })
-  const durationMinutes = Number(plan.slotMinutes || 60)
+  const durationMinutes = Number(service.durationMinutes || 60)
   const startTime = buildTimeOnDate(date, time)
   const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
 

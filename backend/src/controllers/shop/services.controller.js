@@ -3,6 +3,17 @@ import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { normalizeSlug, requireNumber, requireString, toNumber } from '../../utils/validation.js'
 
+const ALLOWED_SERVICE_DURATIONS = new Set([15, 30, 60, 90])
+
+function validateServiceDuration(durationMinutes) {
+  const value = Number(durationMinutes || 0)
+  if (!ALLOWED_SERVICE_DURATIONS.has(value)) {
+    throw httpError(400, 'Thời lượng dịch vụ chỉ được chọn 15, 30, 60 hoặc 90 phút')
+  }
+  return value
+}
+
+
 export async function getCategories(req, res) {
   const shopId = req.auth.shopId
   const items = await ServiceCategory.find({ shopId }).sort({ sortOrder: 1, createdAt: 1 }).lean()
@@ -86,7 +97,7 @@ export async function createService(req, res) {
   const serviceName = requireString(name, 'name')
   const serviceCategoryId = requireString(categoryId, 'categoryId')
   const price = requireNumber(req.body?.price ?? 0, 'price', { min: 0 })
-  const durationMinutes = requireNumber(req.body?.durationMinutes ?? 60, 'durationMinutes', { min: 15 })
+  const durationMinutes = validateServiceDuration(requireNumber(req.body?.durationMinutes ?? 60, 'durationMinutes', { min: 15 }))
   const serviceSlug = req.body?.slug ? normalizeSlug(req.body.slug) : undefined
 
   const service = await Service.create({
@@ -131,7 +142,7 @@ export async function updateService(req, res) {
   if (patch.categoryId !== undefined) patch.categoryId = requireString(patch.categoryId, 'categoryId')
   if (patch.slug !== undefined) patch.slug = patch.slug ? normalizeSlug(patch.slug) : undefined
   if (patch.price !== undefined) patch.price = requireNumber(patch.price, 'price', { min: 0 })
-  if (patch.durationMinutes !== undefined) patch.durationMinutes = requireNumber(patch.durationMinutes, 'durationMinutes', { min: 15 })
+  if (patch.durationMinutes !== undefined) patch.durationMinutes = validateServiceDuration(requireNumber(patch.durationMinutes, 'durationMinutes', { min: 15 }))
   if (patch.sortOrder !== undefined) patch.sortOrder = toNumber(patch.sortOrder)
   if (patch.shortDescription !== undefined) patch.shortDescription = String(patch.shortDescription || '')
   if (patch.detailedDescription !== undefined) patch.detailedDescription = String(patch.detailedDescription || '')

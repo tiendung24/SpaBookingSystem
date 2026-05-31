@@ -73,6 +73,48 @@ function countSlotOccupied({ overlapBookings = [], overlapLocks = [] }) {
   return Number(overlapBookings.length || 0) + Number(overlapLocks.length || 0)
 }
 
+const SYSTEM_SLOT_MINUTES = 15
+
+function buildSegments(startTime, endTime, stepMinutes = SYSTEM_SLOT_MINUTES) {
+  const segments = []
+  let cursor = new Date(startTime)
+  const endMs = new Date(endTime).getTime()
+  while (cursor.getTime() < endMs) {
+    const next = new Date(cursor.getTime() + stepMinutes * 60 * 1000)
+    segments.push({ start: new Date(cursor), end: next })
+    cursor = next
+  }
+  return segments
+}
+
+function overlapCountForRange({ rangeStart, rangeEnd, bookings = [], locks = [], staffId = null }) {
+  const bookingCount = bookings.filter((booking) => {
+    if (staffId && String(booking.staffId || '') !== String(staffId)) return false
+    const bookingStart = new Date(booking.startTime)
+    const bookingEnd = booking.endTime ? new Date(booking.endTime) : new Date(bookingStart.getTime() + 60 * 60 * 1000)
+    return rangeStart < bookingEnd && rangeEnd > bookingStart
+  }).length
+
+  const lockCount = locks.filter((lock) => {
+    if (staffId && String(lock.staffId || '') !== String(staffId)) return false
+    const lockStart = new Date(lock.startTime)
+    const lockEnd = lock.endTime ? new Date(lock.endTime) : new Date(lockStart.getTime() + 60 * 60 * 1000)
+    return rangeStart < lockEnd && rangeEnd > lockStart
+  }).length
+
+  return bookingCount + lockCount
+}
+
+function isBlockWithinCapacity({ startTime, endTime, capacity, bookings = [], locks = [] }) {
+  const segments = buildSegments(startTime, endTime, SYSTEM_SLOT_MINUTES)
+  return segments.every((segment) => overlapCountForRange({ rangeStart: segment.start, rangeEnd: segment.end, bookings, locks }) < capacity)
+}
+
+function isStaffAvailableForBlock(staff, startTime, endTime) {
+  const segments = buildSegments(startTime, endTime, SYSTEM_SLOT_MINUTES)
+  return segments.every((segment) => isStaffAvailableForSlot(staff, formatHm(segment.start)))
+}
+
 export async function getShopBySlug(req, res) {
   const shop = await findShopBySlug(req.params.slug)
   const workingHours = await ShopWorkingHour.findOne({ shopId: String(shop._id) }).lean()
@@ -87,7 +129,7 @@ export async function getShopBySlug(req, res) {
         daysOff: weekDays.length ? [0, 1, 2, 3, 4, 5, 6].filter((day) => !weekDays.includes(day)) : (shop.hours?.daysOff || []),
         lunchBreakStart: workingHours?.lunchBreakStart || shop.hours?.lunchBreakStart || '12:00',
         lunchBreakEnd: workingHours?.lunchBreakEnd || shop.hours?.lunchBreakEnd || '13:00',
-        slotDuration: Number(workingHours?.slotDurationMinutes || shop.hours?.slotDuration || 60),
+        slotDuration: SYSTEM_SLOT_MINUTES,
         capacity: Number(workingHours?.maxCustomersPerSlot || shop.hours?.capacity || 1)
       }
     }
@@ -159,7 +201,8 @@ export async function getAvailableSlots(req, res) {
   const candidateStaffs = Array.isArray(service.availableStaffIds) && service.availableStaffIds.length
     ? activeStaffs.filter((s) => service.availableStaffIds.includes(String(s._id)))
     : activeStaffs
-  const duration = Number(plan.slotMinutes || 60)
+  const slotStepMinutes = SYSTEM_SLOT_MINUTES
+  const duration = Number(service.durationMinutes || 60)
   const slots = []
 
   let cursor = buildTimeOnDate(date, plan.openTime)
@@ -170,45 +213,28 @@ export async function getAvailableSlots(req, res) {
     if (slotEnd > close) break
     const slotHm = formatHm(slotStart)
 
-    const overlapBookings = bookings.filter((booking) => {
-      const bookingStart = new Date(booking.startTime)
-      const bookingEnd = booking.endTime ? new Date(booking.endTime) : new Date(bookingStart.getTime() + 60 * 60 * 1000)
-      return slotStart < bookingEnd && slotEnd > bookingStart
-    })
-
-    const overlapLocks = activeLocks.filter((lock) => {
-      const lockStart = new Date(lock.startTime)
-      const lockEnd = lock.endTime ? new Date(lock.endTime) : new Date(lockStart.getTime() + 60 * 60 * 1000)
-      return slotStart < lockEnd && slotEnd > lockStart
-    })
-
     const slotCapacity = getSlotCapacity(plan)
-    const occupiedCount = countSlotOccupied({ overlapBookings, overlapLocks })
-    if (occupiedCount >= slotCapacity) {
-      cursor = new Date(cursor.getTime() + plan.slotMinutes * 60 * 1000)
+    if (!isBlockWithinCapacity({ startTime: slotStart, endTime: slotEnd, capacity: slotCapacity, bookings, locks: activeLocks })) {
+      cursor = new Date(cursor.getTime() + slotStepMinutes * 60 * 1000)
       continue
     }
 
     if (staffId) {
       const selected = candidateStaffs.find((s) => String(s._id) === String(staffId))
-      if (!selected || !isStaffAvailableForSlot(selected, slotHm)) {
-        cursor = new Date(cursor.getTime() + plan.slotMinutes * 60 * 1000)
+      if (!selected || !isStaffAvailableForBlock(selected, slotStart, slotEnd)) {
+        cursor = new Date(cursor.getTime() + slotStepMinutes * 60 * 1000)
         continue
       }
-      const isStaffBusy =
-        overlapBookings.some((booking) => String(booking.staffId || '') === String(staffId)) ||
-        overlapLocks.some((lock) => String(lock.staffId || '') === String(staffId))
+      const isStaffBusy = overlapCountForRange({ rangeStart: slotStart, rangeEnd: slotEnd, bookings, locks: activeLocks, staffId }) > 0
       if (!isStaffBusy) slots.push(slotHm)
     } else {
       const availableCount = candidateStaffs.filter((s) => {
-        if (!isStaffAvailableForSlot(s, slotHm)) return false
-        const busyByBooking = overlapBookings.some((b) => String(b.staffId || '') === String(s._id))
-        const busyByHold = overlapLocks.some((l) => String(l.staffId || '') === String(s._id))
-        return !busyByBooking && !busyByHold
+        if (!isStaffAvailableForBlock(s, slotStart, slotEnd)) return false
+        return overlapCountForRange({ rangeStart: slotStart, rangeEnd: slotEnd, bookings, locks: activeLocks, staffId: String(s._id) }) === 0
       }).length
       if (availableCount > 0) slots.push(slotHm)
     }
-    cursor = new Date(cursor.getTime() + plan.slotMinutes * 60 * 1000)
+    cursor = new Date(cursor.getTime() + slotStepMinutes * 60 * 1000)
   }
 
   res.json({ date, slots })
@@ -228,7 +254,7 @@ export async function holdSlot(req, res) {
   const plan = await getWorkingPlan(String(shop._id), date)
   if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
 
-  const durationMinutes = Number(plan.slotMinutes || 60)
+  const durationMinutes = Number(service.durationMinutes || 60)
   const startTime = buildTimeOnDate(date, time)
   const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
 
@@ -275,25 +301,22 @@ export async function holdSlot(req, res) {
   }).lean()
 
   const capacity = getSlotCapacity(plan)
-  if (countSlotOccupied({ overlapBookings: overlapping, overlapLocks: activeLocks }) >= capacity) {
+  if (!isBlockWithinCapacity({ startTime, endTime, capacity, bookings: overlapping, locks: activeLocks })) {
     throw httpError(409, 'Khung giờ này đã đầy theo sức chứa tối đa, vui lòng chọn giờ khác')
   }
 
   let staffId = requestedStaffId || null
-  const requestedSlotHm = String(time || '')
   if (staffId) {
     const staffExists = candidateStaffs.some((s) => String(s._id) === String(staffId))
       if (!staffExists) throw httpError(409, 'Nhân viên không khả dụng cho dịch vụ hoặc đang tạm nghỉ')
     const selected = candidateStaffs.find((s) => String(s._id) === String(staffId))
-    if (!isStaffAvailableForSlot(selected, requestedSlotHm)) throw httpError(409, 'Nhân viên không làm việc ở slot giờ này')
-    const staffBusy = overlapping.some((b) => String(b.staffId || '') === String(staffId)) || activeLocks.some((l) => String(l.staffId || '') === String(staffId))
+    if (!isStaffAvailableForBlock(selected, startTime, endTime)) throw httpError(409, 'Nhân viên không làm việc ở slot giờ này')
+    const staffBusy = overlapCountForRange({ rangeStart: startTime, rangeEnd: endTime, bookings: overlapping, locks: activeLocks, staffId }) > 0
       if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
   } else {
     const availableStaff = candidateStaffs.find((s) => {
-      if (!isStaffAvailableForSlot(s, requestedSlotHm)) return false
-      const busyByBooking = overlapping.some((b) => String(b.staffId || '') === String(s._id))
-      const busyByHold = activeLocks.some((l) => String(l.staffId || '') === String(s._id))
-      return !busyByBooking && !busyByHold
+      if (!isStaffAvailableForBlock(s, startTime, endTime)) return false
+      return overlapCountForRange({ rangeStart: startTime, rangeEnd: endTime, bookings: overlapping, locks: activeLocks, staffId: String(s._id) }) === 0
     })
       if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
     staffId = String(availableStaff._id)
@@ -346,7 +369,7 @@ export async function createBooking(req, res) {
   const plan = await getWorkingPlan(String(shop._id), date)
   if (plan.isClosed) throw httpError(409, 'Shop nghỉ vào ngày này')
 
-  const durationMinutes = Number(plan.slotMinutes || 60)
+  const durationMinutes = Number(service.durationMinutes || 60)
   const startTime = buildTimeOnDate(date, time)
   const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000)
 
@@ -422,7 +445,7 @@ export async function createBooking(req, res) {
     : activeHoldsRaw
 
   const capacity = getSlotCapacity(plan)
-  if (countSlotOccupied({ overlapBookings: overlapping, overlapLocks: activeHolds }) >= capacity) {
+  if (!isBlockWithinCapacity({ startTime, endTime, capacity, bookings: overlapping, locks: activeHolds })) {
     throw httpError(409, 'Khung giờ này đã đầy theo sức chứa tối đa, vui lòng chọn giờ khác')
   }
 
@@ -432,7 +455,6 @@ export async function createBooking(req, res) {
     : activeStaffsForBooking
 
   let staffId = requestedStaffId || null
-  const requestedSlotHm = String(time || '')
 
   if (holdLock) {
     const lockStart = new Date(holdLock.startTime).getTime()
@@ -447,17 +469,15 @@ export async function createBooking(req, res) {
     const staffExists = candidateStaffsForBooking.some((s) => String(s._id) === String(staffId))
       if (!staffExists) throw httpError(409, 'Nhân viên không khả dụng cho dịch vụ hoặc đang tạm nghỉ')
     const selected = candidateStaffsForBooking.find((s) => String(s._id) === String(staffId))
-    if (!isStaffAvailableForSlot(selected, requestedSlotHm)) throw httpError(409, 'Nhân viên không làm việc ở slot giờ này')
-    const staffBusy = overlapping.some((booking) => String(booking.staffId || '') === String(staffId))
+    if (!isStaffAvailableForBlock(selected, startTime, endTime)) throw httpError(409, 'Nhân viên không làm việc ở slot giờ này')
+    const staffBusy = overlapCountForRange({ rangeStart: startTime, rangeEnd: endTime, bookings: overlapping, locks: activeHolds, staffId }) > 0
       if (staffBusy) throw httpError(409, 'Nhân viên đã kín lịch trong khung giờ này')
   } else {
     const availableStaff = candidateStaffsForBooking.find((staff) => {
-      if (!isStaffAvailableForSlot(staff, requestedSlotHm)) return false
-      const busy = overlapping.some((booking) => String(booking.staffId || '') === String(staff._id))
-      return !busy
+      if (!isStaffAvailableForBlock(staff, startTime, endTime)) return false
+      return overlapCountForRange({ rangeStart: startTime, rangeEnd: endTime, bookings: overlapping, locks: activeHolds, staffId: String(staff._id) }) === 0
     })
     if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
-      if (!availableStaff) throw httpError(409, 'Hiện không còn nhân viên trống trong khung giờ này')
     staffId = String(availableStaff._id)
   }
 
