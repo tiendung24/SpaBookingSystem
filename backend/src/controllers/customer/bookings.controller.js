@@ -144,6 +144,7 @@ export async function myBookings(req, res) {
       staffShortBio: staff?.shortBio || '',
       staffSpecialties: staff?.specialties || [],
       shopName: shop?.name || '',
+      shopSlug: shop?.slug || '',
       depositStatus: deposit?.status || '',
       paymentStatusInfo: derivePaymentStatus({ booking, payment, deposit })
     }

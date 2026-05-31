@@ -69,7 +69,12 @@ export default function CustomerAccountBookingsPage() {
 
   const items = useMemo(() => {
     const source = Array.isArray(pageBookings) && pageBookings.length ? pageBookings : (Array.isArray(customerBookings) ? customerBookings : [])
-    const raw = source.slice()
+    const currentShopSlug = String(slug || shop?.slug || '').trim().toLowerCase()
+    const raw = source.filter((it) => {
+      if (!currentShopSlug) return true
+      const itemShopSlug = String(it.shopSlug || '').trim().toLowerCase()
+      return !itemShopSlug || itemShopSlug === currentShopSlug
+    })
     const filtered = raw.filter((it) => {
       if (searchText && searchText.trim()) {
         const q = searchText.trim().toLowerCase()
@@ -93,7 +98,7 @@ export default function CustomerAccountBookingsPage() {
     })
 
     return sorted
-  }, [pageBookings, customerBookings, searchText, statusFilter, sortBy])
+  }, [pageBookings, customerBookings, slug, shop?.slug, searchText, statusFilter, sortBy])
 
   const openDetail = (code) => {
     setDetailCode(code)
