@@ -39,54 +39,67 @@ export async function myBookings(req, res) {
   const customerId = String(req.auth.customerId || '')
   if (!customerId) return res.json({ items: [] })
 
-  const customer = await Customer.findById(customerId).lean()
-  const normalizedEmail = String(customer?.email || '').trim().toLowerCase()
-  const normalizedPhone = String(customer?.phone || '').replace(/\s+/g, '')
+  const [customer, user] = await Promise.all([
+    Customer.findById(customerId).lean(),
+    User.findById(String(req.auth.userId)).lean()
+  ])
 
-  let items = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
+  const emailSet = new Set([
+    customer?.email,
+    user?.email
+  ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean))
 
-  if (!items.length) {
-    const now = Date.now()
-    const oneYearAgo = new Date(now - 365 * 24 * 60 * 60 * 1000)
-    const legacyMatch = []
+  const phoneSet = new Set([
+    customer?.phone,
+    user?.phone
+  ].map((value) => String(value || '').replace(/\s+/g, '')).filter(Boolean))
 
-    if (normalizedEmail) legacyMatch.push({ customerEmail: normalizedEmail })
-    if (normalizedPhone) legacyMatch.push({ customerPhone: normalizedPhone })
+  const normalizedFullName = normalizePersonName(customer?.fullName || user?.fullName || '')
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
 
-    if (legacyMatch.length) {
-      await Booking.updateMany(
-        {
-          customerId: { $ne: customerId },
-          $or: legacyMatch
-        },
-        { $set: { customerId, updatedAt: new Date() } }
-      )
-      items = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
-    }
+  const directMatch = [{ customerId }]
+  emailSet.forEach((email) => directMatch.push({ customerEmail: email }))
+  phoneSet.forEach((phone) => directMatch.push({ customerPhone: phone }))
 
-    if (!items.length) {
-      const normalizedFullName = normalizePersonName(customer?.fullName || '')
-      if (normalizedFullName) {
-        const nameCandidates = await Booking.find({
-          customerId: { $ne: customerId },
-          createdAt: { $gte: oneYearAgo },
-          customerName: { $exists: true, $ne: '' }
-        }).select({ _id: 1, customerName: 1 }).lean()
+  let directItems = await Booking.find({ $or: directMatch }).sort({ createdAt: -1, startTime: -1 }).lean()
 
-        const matchedIds = nameCandidates
-          .filter((booking) => normalizePersonName(booking.customerName) === normalizedFullName)
-          .map((booking) => booking._id)
-
-        if (matchedIds.length) {
-          await Booking.updateMany(
-            { _id: { $in: matchedIds }, customerId: { $ne: customerId } },
-            { $set: { customerId, updatedAt: new Date() } }
-          )
-          items = await Booking.find({ customerId }).sort({ createdAt: -1, startTime: -1 }).lean()
-        }
-      }
-    }
+  let nameMatchedItems = []
+  if (normalizedFullName) {
+    const nameCandidates = await Booking.find({
+      createdAt: { $gte: oneYearAgo },
+      customerName: { $exists: true, $ne: '' }
+    }).lean()
+    nameMatchedItems = nameCandidates.filter((booking) => normalizePersonName(booking.customerName) === normalizedFullName)
   }
+
+  const byId = new Map()
+  ;[...directItems, ...nameMatchedItems].forEach((booking) => {
+    if (booking?._id) byId.set(String(booking._id), booking)
+  })
+
+  const matchedIds = [...byId.keys()]
+  if (matchedIds.length) {
+    await Booking.updateMany(
+      { _id: { $in: matchedIds }, customerId: { $ne: customerId } },
+      { $set: { customerId, updatedAt: new Date() } }
+    )
+  }
+
+  const items = matchedIds.length
+    ? await Booking.find({ _id: { $in: matchedIds } }).sort({ createdAt: -1, startTime: -1 }).lean()
+    : []
+
+  console.log('[customer.bookings] myBookings', {
+    userId: String(req.auth.userId || ''),
+    customerId,
+    emails: [...emailSet],
+    phones: [...phoneSet],
+    normalizedFullName,
+    directCount: directItems.length,
+    nameCount: nameMatchedItems.length,
+    finalCount: items.length
+  })
+
   const serviceIds = [...new Set(items.map((item) => String(item.serviceId || '')).filter(Boolean))]
   const staffIds = [...new Set(items.map((item) => String(item.staffId || '')).filter(Boolean))]
   const bookingIds = items.map((item) => String(item._id))
@@ -137,7 +150,6 @@ export async function myBookings(req, res) {
 
   res.json({ items: enriched })
 }
-
 
 export async function submitRefundBankInfo(req, res) {
   if (!req.auth?.userId || req.auth.role !== 'customer') throw httpError(403, 'Không có quyền truy cập')
