@@ -105,7 +105,7 @@ export default function CustomerHeader({
         </nav>
 
         <div className="flex items-center gap-3">
-          {displayAddress ? <div className="hidden xl:block text-sm text-main/60 max-w-[260px] truncate">{displayAddress}</div> : null}
+          {/* {displayAddress ? <div className="hidden xl:block text-sm text-main/60 max-w-[260px] truncate">{displayAddress}</div> : null} */}
           <div className="flex items-center gap-3 relative">
             {isAuthenticated && role === 'customer' ? (
               <Link to="/customer/bookings" className="hidden lg:flex flex-col px-3 py-1.5 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10">
