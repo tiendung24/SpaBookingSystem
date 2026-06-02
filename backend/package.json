@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "seed:fake-shops": "node scripts/seed-fake-shops.js",
     "lint": "node -e \"console.log('no-lint-yet')\""
   },
   "dependencies": {
