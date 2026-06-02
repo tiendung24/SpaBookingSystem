@@ -4,6 +4,7 @@ import CustomerSelectServicePage from './CustomerSelectServicePage'
 import { useNavigate } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 import CustomerHeader from '../components/customer/CustomerHeader'
+import { buildShopGoogleMapsUrl, getShopAddressText } from '../lib/maps'
 
 const heroImage =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuARsefIDC5KnErn7e0YLKhJ6VDKWD_Whwd3vMpSePIQhTbcW-3ir8LX_5NvArJmY8_qpqH2pFNuVaHQLY4PLoI835HlxMznHdjbr3UBB6jhvtmnXohn5AZIB9DuWeDh1th-hAUFfjO8bOYPFRhuy_Cy-WkhwRfuYq1lYY_THLyMeSyOqQPHLNGxNJmVMgFDtusyYOTuDqZ3LXXCcmKYmUgvHuswyeU9jurfwRApFrs68u8vjbwZ4stCSE-ymo9xGYNzQPJ5bbTK3JCJ'
@@ -69,6 +70,8 @@ export default function CustomerHomePage() {
   const visibleStaff = useMemo(() => staff.filter((member) => member.bookingEnabled !== false), [staff])
   const featuredStaff = visibleStaff.slice(0, 8)
   const bookUrl = `/${slug || shop.slug}/book`
+  const addressText = getShopAddressText(shop)
+  const directionsUrl = buildShopGoogleMapsUrl(shop)
 
   const serviceStats = useMemo(
     () => ({
@@ -182,7 +185,18 @@ export default function CustomerHomePage() {
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
               <span className="material-symbols-outlined text-primary">location_on</span>
               <h3 className="font-black text-main mt-3">Địa chỉ</h3>
-              <p className="text-main/60 mt-1">{shop.address || 'Chưa cập nhật địa chỉ'}</p>
+              <p className="text-main/60 mt-1">{addressText || 'Chưa cập nhật địa chỉ'}</p>
+              {directionsUrl ? (
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110 active:scale-95 transition-all"
+                >
+                  <span className="material-symbols-outlined text-[18px]">near_me</span>
+                  Chỉ đường
+                </a>
+              ) : null}
             </div>
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
               <span className="material-symbols-outlined text-primary">call</span>

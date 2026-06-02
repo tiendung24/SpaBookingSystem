@@ -1,6 +1,7 @@
 ﻿import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../lib/api'
+import { buildShopGoogleMapsUrl } from '../lib/maps'
 
 const fallbackImages = [
   'https://lh3.googleusercontent.com/aida-public/AB6AXuBu_3a1O6wyzqN-UXiVV1EOXOH0FjB95HD-HSD0qLEOrg46l1aaqyJpU283cGDugATKpYkN7Ito7bAPgo6_A-clkKtqNgvkhiHDhbrMgB9ec7hpjhpWWZzvUPVAqVHPwrlg4sTRkRuV9tHfB9CbJlfO4JmKI_yTxSVCDL7eKrq6DUxPibiVESP2CTEF5vKknSjm5IgbnDaLg1jKWi6AoatL4lKvqKLu-ytKC7JNPZUn4f3bKh1cp9tZuHbG4fI1W_b-flpxn31sLH19',
@@ -136,10 +137,20 @@ export default function PartnerShopsPage() {
                     ))}
                   </div>
                 ) : null}
-                <div className="mt-auto flex gap-3">
+                <div className="mt-auto flex flex-col sm:flex-row gap-3">
                   <Link to={`/${shop.slug}`} className="flex-1 text-center py-3 px-4 rounded-2xl border border-[#14677a]/20 text-[#14677a] font-bold hover:bg-[#14677a]/5 transition-all active:scale-95">
                     Chi tiết
                   </Link>
+                  {buildShopGoogleMapsUrl(shop) ? (
+                    <a
+                      href={buildShopGoogleMapsUrl(shop)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 text-center py-3 px-4 rounded-2xl bg-[#14677a] text-white font-bold hover:brightness-110 transition-all active:scale-95"
+                    >
+                      Chỉ đường
+                    </a>
+                  ) : null}
                 </div>
               </div>
             </article>
