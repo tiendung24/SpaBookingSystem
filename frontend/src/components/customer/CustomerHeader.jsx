@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 
 const navItems = [
+   { key: 'partner-shops', label: 'Các cửa hàng đối tác', path: '/partner-shops' },
   { key: 'services', label: 'Dịch vụ', hash: '#services' },
   { key: 'staff', label: 'Nhân sự', hash: '#staff' },
   { key: 'contact', label: 'Liên hệ', hash: '#contact' },
