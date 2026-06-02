@@ -185,18 +185,20 @@ export default function CustomerHomePage() {
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
               <span className="material-symbols-outlined text-primary">location_on</span>
               <h3 className="font-black text-main mt-3">Địa chỉ</h3>
-              <p className="text-main/60 mt-1">{addressText || 'Chưa cập nhật địa chỉ'}</p>
-              {directionsUrl ? (
-                <a
-                  href={directionsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white font-bold hover:brightness-110 active:scale-95 transition-all"
-                >
-                  <span className="material-symbols-outlined text-[18px]">near_me</span>
-                  Chỉ đường
-                </a>
-              ) : null}
+              <div className="mt-1 flex items-start justify-between gap-3">
+                <p className="text-main/60 flex-1 min-w-0">{addressText || 'Chưa cập nhật địa chỉ'}</p>
+                {directionsUrl ? (
+                  <a
+                    href={directionsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold hover:bg-primary hover:text-white active:scale-95 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">near_me</span>
+                    Chỉ đường
+                  </a>
+                ) : null}
+              </div>
             </div>
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
               <span className="material-symbols-outlined text-primary">call</span>
