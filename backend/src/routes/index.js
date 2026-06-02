@@ -1,4 +1,4 @@
-import { Router } from 'express'
+﻿import { Router } from 'express'
 
 import { publicRouter } from './public/index.js'
 import { authRouter } from './auth.js'
@@ -10,6 +10,7 @@ import { webhooksRouter } from './webhooks.js'
 import { systemRouter } from './system.js'
 import { notificationsRouter } from './notifications.js'
 import { shopsRouter } from './shops.js'
+import { addressRouter } from './address.js'
 
 export const apiRouter = Router()
 
@@ -23,3 +24,5 @@ apiRouter.use('/webhooks', webhooksRouter)
 apiRouter.use('/system', systemRouter)
 apiRouter.use('/notifications', notificationsRouter)
 apiRouter.use('/shops', shopsRouter)
+apiRouter.use('/address', addressRouter)
+

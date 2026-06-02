@@ -1,6 +1,7 @@
 ﻿import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../lib/api'
+import { getAddressText } from '../lib/maps'
 import lumixLogo from '../assets/lumix-logo.png'
 import heroCoverImage from '../assets/anhbialandingpage-tong.png'
 
@@ -15,13 +16,7 @@ const fallbackShops = [
 ]
 
 function shopAddress(shop) {
-  const address = shop?.address
-  if (typeof address === 'string') {
-    const text = address.trim()
-    return text || 'Đang cập nhật'
-  }
-  const obj = address || {}
-  return String(obj.fullText || [obj.line1, obj.district, obj.city].filter(Boolean).join(', ') || 'Đang cập nhật').trim()
+  return getAddressText(shop?.address) || 'Đang cập nhật'
 }
 
 function brandItem(icon, name) {

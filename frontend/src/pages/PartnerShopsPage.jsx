@@ -1,7 +1,7 @@
 ﻿import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../lib/api'
-import { buildShopGoogleMapsUrl } from '../lib/maps'
+import { buildShopGoogleMapsUrl, getAddressText } from '../lib/maps'
 
 const fallbackImages = [
   'https://lh3.googleusercontent.com/aida-public/AB6AXuBu_3a1O6wyzqN-UXiVV1EOXOH0FjB95HD-HSD0qLEOrg46l1aaqyJpU283cGDugATKpYkN7Ito7bAPgo6_A-clkKtqNgvkhiHDhbrMgB9ec7hpjhpWWZzvUPVAqVHPwrlg4sTRkRuV9tHfB9CbJlfO4JmKI_yTxSVCDL7eKrq6DUxPibiVESP2CTEF5vKknSjm5IgbnDaLg1jKWi6AoatL4lKvqKLu-ytKC7JNPZUn4f3bKh1cp9tZuHbG4fI1W_b-flpxn31sLH19',
@@ -13,13 +13,7 @@ const fallbackImages = [
 ]
 
 function getAddress(shop) {
-  const address = shop?.address
-  if (typeof address === 'string') {
-    const text = address.trim()
-    return text || 'Đang cập nhật địa chỉ'
-  }
-  const obj = address || {}
-  return String(obj.fullText || [obj.line1, obj.district, obj.city].filter(Boolean).join(', ') || 'Đang cập nhật địa chỉ').trim()
+  return getAddressText(shop?.address) || 'Đang cập nhật địa chỉ'
 }
 
 function getCover(shop, index) {
