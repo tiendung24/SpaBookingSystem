@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "seed:fake-shops": "node scripts/seed-fake-shops.js",
     "lint": "node -e \"console.log('no-lint-yet')\"",
-    "seed:hanoi-demo": "node scripts/seed-hanoi-demo-shops-services.js"
+    "seed:hanoi-demo": "node scripts/seed-hanoi-demo-shops-services.js",
+    "seed:hanoi-staffs": "node scripts/seed-hanoi-demo-staffs.js"
   },
   "dependencies": {
     "@payos/node": "^1.0.6",
