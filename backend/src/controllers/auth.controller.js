@@ -188,13 +188,14 @@ export async function customerRegister(req, res) {
   const passwordText = String(password || '')
   const fullNameText = String(fullName || '').trim()
 
-  if (!normalizedEmail || !passwordText) throw httpError(400, 'Thiếu thông tin đăng ký')
+  if (!normalizedEmail || !normalizedPhone || !passwordText) throw httpError(400, 'Thiếu email, số điện thoại hoặc mật khẩu')
   if (!isValidEmail(normalizedEmail)) throw httpError(400, 'Email không hợp lệ')
   if (passwordText.length < 6) throw httpError(400, 'Mật khẩu phải từ 6 ký tự trở lên')
-  if (normalizedPhone && !isValidPhone(normalizedPhone)) throw httpError(400, 'Số điện thoại không hợp lệ')
+  if (!isValidPhone(normalizedPhone)) throw httpError(400, 'Số điện thoại không hợp lệ')
 
-  const existed = await User.findOne({ email: normalizedEmail }).lean()
-  if (existed) throw httpError(409, 'Email đã tồn tại')
+  const existed = await User.findOne({ $or: [{ email: normalizedEmail }, { phone: normalizedPhone }] }).lean()
+  if (existed?.email === normalizedEmail) throw httpError(409, 'Email đã tồn tại')
+  if (existed?.phone === normalizedPhone) throw httpError(409, 'Số điện thoại đã tồn tại')
 
   let customer = await Customer.findOne({ email: normalizedEmail })
   if (!customer) {

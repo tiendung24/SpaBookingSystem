@@ -36,12 +36,12 @@ export default function CustomerRegisterPage() {
       const email = String(form.email || '').trim().toLowerCase()
       const password = String(form.password || '')
 
-      if (!fullName || !email || !password) throw new Error('Vui lòng nhập đầy đủ họ tên, email và mật khẩu')
+      if (!fullName || !phone || !email || !password) throw new Error('Vui lòng điền đầy đủ thông tin')
       if (!isValidEmail(email)) throw new Error('Email không hợp lệ')
-      if (phone && !isValidPhone(phone)) throw new Error('Số điện thoại không đúng định dạng')
+      if (!isValidPhone(phone)) throw new Error('Số điện thoại không đúng định dạng')
       if (password.length < 6) throw new Error('Mật khẩu phải có ít nhất 6 ký tự')
 
-      await registerCustomer({ fullName, phone: phone || undefined, email, password })
+      await registerCustomer({ fullName, phone, email, password })
       navigate('/login', { state: { flash: 'Đăng ký thành công. Vui lòng đăng nhập.' } })
     } catch (err) {
       setError(err?.message || 'Đăng ký thất bại')
@@ -67,7 +67,7 @@ export default function CustomerRegisterPage() {
               <form className="space-y-4" onSubmit={onSubmit}>
                 {error ? <p className="text-sm text-red-600">{error}</p> : null}
                 <input name="fullName" value={form.fullName} onChange={onChange} placeholder="Họ và tên" className="w-full p-3 rounded-xl border border-slate-300" required />
-                <input name="phone" value={form.phone} onChange={onChange} placeholder="Số điện thoại (không bắt buộc)" className="w-full p-3 rounded-xl border border-slate-300" />
+                <input name="phone" value={form.phone} onChange={onChange} placeholder={'S\u1ed1 \u0111i\u1ec7n tho\u1ea1i'} className="w-full p-3 rounded-xl border border-slate-300" required />
                 <input name="email" type="email" value={form.email} onChange={onChange} placeholder="Email" className="w-full p-3 rounded-xl border border-slate-300" required />
                 <input name="password" type="password" value={form.password} onChange={onChange} placeholder="Mật khẩu" className="w-full p-3 rounded-xl border border-slate-300" required />
                 <button disabled={submitting} className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-60" type="submit">

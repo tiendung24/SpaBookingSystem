@@ -28,11 +28,6 @@ function isValidPhone(input) {
   return /^(?:\+84|0)\d{9,10}$/.test(input)
 }
 
-function isValidSlug(input) {
-  if (!input) return true
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input)
-}
-
 function itemId(item) {
   return String(item?.id ?? item?.code ?? item?._id ?? item?.provinceId ?? item?.communeId ?? '')
 }
@@ -64,9 +59,9 @@ export default function ShopConfigPage() {
 
   const update = (patch) => setShop((prev) => ({ ...prev, ...patch }))
 
-  const slug = shop.slug || ''
+  const previewSlug = slugifyVietnamese(shop.name || '')
+  const slug = previewSlug || shop.slug || ''
   const phone = shop.phone || ''
-  const slugValid = isValidSlug(slug)
   const phoneValid = isValidPhone(phone)
 
   const fullAddress = useMemo(
@@ -172,8 +167,8 @@ export default function ShopConfigPage() {
 
   const handleSave = async () => {
     if (!token) return
-    if (!slugValid || !phoneValid) {
-      setError('Vui lòng kiểm tra lại slug và số điện thoại trước khi lưu.')
+    if (!phoneValid) {
+      setError('Vui lòng kiểm tra lại số điện thoại trước khi lưu.')
       setNotice('')
       return
     }
@@ -231,21 +226,20 @@ export default function ShopConfigPage() {
               <input
                 className="w-full mt-1 p-3 rounded-xl border border-slate-300"
                 value={shop.name || ''}
-                onChange={(event) => update({ name: event.target.value })}
+                onChange={(event) => update({ name: event.target.value, slug: slugifyVietnamese(event.target.value) })}
               />
             </div>
 
             <div>
               <label className="text-sm font-bold text-main/70">Slug</label>
               <input
-                className={`w-full mt-1 p-3 rounded-xl border ${slugValid ? 'border-slate-300' : 'border-red-300'}`}
+                className="w-full mt-1 p-3 rounded-xl border border-slate-300 bg-slate-100 text-main/70 cursor-not-allowed"
                 value={slug}
-                onChange={(event) => update({ slug: slugifyVietnamese(event.target.value) })}
-                placeholder="vd: spa-quan-1"
+                readOnly
+                tabIndex={-1}
+                placeholder={'slug theo tên shop, không chỉnh tay được'}
               />
-              <p className={`mt-1 text-xs ${slugValid ? 'text-main/60' : 'text-red-600'}`}>
-                {slugValid ? 'Slug chỉ gồm a-z, 0-9 và dấu -.' : 'Slug không hợp lệ. Vui lòng chỉ dùng a-z, 0-9 và dấu -.'}
-              </p>
+              <p className="mt-1 text-xs text-main/60">{'Slug tự động sinh theo tên shop và không chỉnh tay.'}</p>
             </div>
 
             <div>
