@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/ui/ToastProvider';
 
 export default function ShopWalletPage() {
-  const { shop, walletTransactions, topupWallet, bookings, loadMeAndShop, token } = useShop();
+  const { shop, setShop, walletTransactions, topupWallet, bookings, loadMeAndShop, token } = useShop();
   const { pushToast } = useToast();
   const [searchParams] = useSearchParams();
   const [cardTransform, setCardTransform] = useState('perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)');
@@ -16,6 +16,26 @@ export default function ShopWalletPage() {
   const walletBalance = Number(shop.wallet?.balance || 0);
   const walletMinBalance = Number(shop.wallet?.minBalance || 100000);
   const isWalletHealthy = walletBalance >= walletMinBalance;
+
+  const refreshWalletBalance = async () => {
+    if (!token) return null;
+    try {
+      const res = await apiRequest('/api/shop/wallet', { token });
+      const walletData = res?.wallet || res || {};
+      setShop((prev) => ({
+        ...prev,
+        wallet: {
+          balance: Number(walletData.balance || 0),
+          escrow: Number(walletData.escrowBalance || 0),
+          minBalance: Number(walletData.minBalance || prev.wallet?.minBalance || 100000)
+        }
+      }));
+      return walletData;
+    } catch (err) {
+      console.warn('[ShopWalletPage] refresh wallet failed', err);
+      return null;
+    }
+  };
   const previousWalletHealthyRef = useRef(isWalletHealthy);
 
   const transactions = useMemo(() => {
@@ -156,7 +176,7 @@ export default function ShopWalletPage() {
         if (!mounted) return
         const refreshedStatus = String(data?.status || incomingStatus || '').toLowerCase()
         if (refreshedStatus === 'success' || refreshedStatus === 'paid' || refreshedStatus === 'completed') {
-          await loadMeAndShop(token).catch(() => null)
+          await Promise.all([loadMeAndShop(token).catch(() => null), refreshWalletBalance()])
           setTopupStatusText('Thanh toán đã được ghi nhận. Ví đã cập nhật và link đặt lịch đã hoạt động lại.')
           pushToast({
             type: 'success',
@@ -239,7 +259,7 @@ export default function ShopWalletPage() {
               if (st === 'success' || st === 'paid' || st === 'completed') {
                 clearInterval(topupPollRef.current);
                 topupPollRef.current = null;
-                try { await loadMeAndShop(token) } catch {}
+                try { await Promise.all([loadMeAndShop(token), refreshWalletBalance()]) } catch {}
                 setTopupStatusText('Thanh toán đã được ghi nhận. Ví đã cập nhật và link đặt lịch đã hoạt động lại.');
                 pushToast({
                   type: 'success',
