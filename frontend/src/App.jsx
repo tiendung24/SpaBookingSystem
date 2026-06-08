@@ -62,7 +62,7 @@ function App() {
             <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
             <Route path="/customer/register" element={<GuestOnly><CustomerRegisterPage /></GuestOnly>} />
             <Route path="/forgot-password" element={<GuestOnly><ForgotPasswordPage /></GuestOnly>} />
-            <Route path="/reset-password/:token" element={<GuestOnly><ResetPasswordPage /></GuestOnly>} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
             <Route path="/shop/dashboard" element={<RequireRole allow={['shop']}><ShopDashboardPage /></RequireRole>} />
             <Route path="/shop/onboarding" element={<RequireRole allow={['shop']}><ShopOnboardingPage /></RequireRole>} />

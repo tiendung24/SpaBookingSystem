@@ -1,4 +1,4 @@
-﻿/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../lib/api'
 import { AUTH_EXPIRED_EVENT, clearStoredAuth, getStoredRole, getStoredToken, setStoredAuth, emitAuthExpired } from '../lib/auth'
@@ -508,6 +508,7 @@ export function ShopProvider({ children }) {
         currentPath.startsWith('/login') ||
         currentPath.startsWith('/register') ||
         currentPath.startsWith('/forgot-password') ||
+        currentPath.startsWith('/reset-password') ||
         /^\/[^/]+(\/book(\/time|\/pay)?)?$/.test(currentPath)
       if (!isPublicPath) {
         sessionStorage.setItem('lumix_flash_message', 'Phiên đã hết hạn. Vui lòng đăng nhập lại.')
@@ -1031,10 +1032,3 @@ export function useShop() {
   if (!ctx) throw new Error('useShop must be used within ShopProvider')
   return ctx
 }
-
-
-
-
-
-
-

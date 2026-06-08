@@ -38,7 +38,7 @@ export default function ForgotPasswordForm() {
           <p className="text-main">Nếu email tồn tại, LumiX sẽ gửi hướng dẫn đặt lại mật khẩu.</p>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-          <p className="text-green-700 font-medium">Vui lòng kiểm tra hộp thư (và cả Spam).</p>
+          <p className="text-green-700 font-medium">Vui lòng kiểm tra hộp thư, kể cả mục Spam.</p>
         </div>
         <Link to="/login" className="inline-block text-primary hover:text-primary/80 font-semibold transition-colors">
           Quay lại đăng nhập

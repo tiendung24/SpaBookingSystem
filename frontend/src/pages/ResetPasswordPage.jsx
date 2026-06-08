@@ -40,8 +40,8 @@ export default function ResetPasswordPage() {
 
         {done ? (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-green-700">
-              Đặt lại mật khẩu thành công. Đang chuyển về đăng nhập...
-            </div>
+            Đặt lại mật khẩu thành công. Đang chuyển về đăng nhập...
+          </div>
         ) : (
           <form className="space-y-4" onSubmit={onSubmit}>
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
