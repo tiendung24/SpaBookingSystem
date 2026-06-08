@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import SystemConfigTabs from '../components/shop/SystemConfigTabs'
 import { useShop } from '../context/ShopContext'
@@ -27,6 +27,13 @@ function isValidPhone(input) {
   if (!input) return true
   return /^(?:\+84|0)\d{9,10}$/.test(input)
 }
+
+const BUSINESS_TYPE_OPTIONS = [
+  { value: 'spa-salon', label: 'Spa/Salon' },
+  { value: 'nail', label: 'Nail' },
+  { value: 'goi-dau-duong-sinh', label: 'Gội đầu dưỡng sinh' },
+  { value: 'cham-soc-da', label: 'Chăm sóc da' }
+]
 
 function itemId(item) {
   return String(item?.id ?? item?.code ?? item?._id ?? item?.provinceId ?? item?.communeId ?? '')
@@ -58,6 +65,16 @@ export default function ShopConfigPage() {
   const [addressError, setAddressError] = useState('')
 
   const update = (patch) => setShop((prev) => ({ ...prev, ...patch }))
+
+  const toggleBusinessType = (value) => {
+    setShop((prev) => {
+      const current = Array.isArray(prev.businessTypes) ? prev.businessTypes : []
+      const next = current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+      return { ...prev, businessTypes: next }
+    })
+  }
 
   const previewSlug = slugifyVietnamese(shop.name || '')
   const slug = previewSlug || shop.slug || ''
@@ -181,6 +198,7 @@ export default function ShopConfigPage() {
         name: shop.name || '',
         phone: phone || '',
         coverUrl: shop.coverUrl || '',
+        businessTypes: Array.isArray(shop.businessTypes) ? shop.businessTypes : [],
         address: buildAddressPayload()
       }
       const res = await apiRequest('/api/shop/me', { method: 'PUT', token, body: payload })
@@ -240,6 +258,25 @@ export default function ShopConfigPage() {
                 placeholder={'slug theo tên shop, không chỉnh tay được'}
               />
               <p className="mt-1 text-xs text-main/60">{'Slug tự động sinh theo tên shop và không chỉnh tay.'}</p>
+            </div>
+
+            <div className="md:col-span-2 rounded-2xl border border-slate-200 p-4 bg-white/70">
+              <p className="text-sm font-bold text-main/70 mb-3">{'Lo\u1ea1i h\u00ecnh shop'}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                {BUSINESS_TYPE_OPTIONS.map((option) => {
+                  const active = Array.isArray(shop.businessTypes) && shop.businessTypes.includes(option.value)
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => toggleBusinessType(option.value)}
+                      className={`px-4 py-2 rounded-xl border text-sm font-bold text-left transition-all ${active ? 'bg-primary text-white border-primary' : 'bg-white text-main border-slate-200 hover:border-primary/40'}`}
+                    >
+                      {option.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <div>

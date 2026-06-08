@@ -40,6 +40,8 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
+const SHOP_BUSINESS_TYPES = new Set(['spa-salon', 'nail', 'goi-dau-duong-sinh', 'cham-soc-da'])
+
 function isValidSlug(slug) {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length >= 3 && slug.length <= 80
 }
@@ -86,7 +88,7 @@ async function loginByRole(req, role) {
 }
 
 export async function shopRegister(req, res) {
-  const { fullName, phone, email, password, shopName, slug } = req.body || {}
+  const { fullName, phone, email, password, shopName, slug, businessTypes } = req.body || {}
 
   const normalizedPhone = normalizePhone(phone)
   const normalizedEmail = email ? normalizeEmail(email) : ''
@@ -94,6 +96,9 @@ export async function shopRegister(req, res) {
   const shopNameText = String(shopName || '').trim()
   const fullNameText = String(fullName || '').trim()
   const passwordText = String(password || '')
+  const normalizedBusinessTypes = Array.from(new Set((Array.isArray(businessTypes) ? businessTypes : [])
+    .map((item) => normalizeSlug(item))
+    .filter((item) => SHOP_BUSINESS_TYPES.has(item))))
 
   if (!normalizedPhone || !passwordText || !shopNameText || !normalizedSlug) {
     throw httpError(400, 'Thiếu thông tin đăng ký')
@@ -109,6 +114,9 @@ export async function shopRegister(req, res) {
   }
   if (!isValidSlug(normalizedSlug)) {
     throw httpError(400, 'Slug không hợp lệ (3-80 ký tự, chỉ gồm a-z, 0-9 và dấu -)')
+  }
+  if (normalizedBusinessTypes.length === 0) {
+    throw httpError(400, 'Vui lòng chọn ít nhất một loại hình shop')
   }
 
   const existedQuery = [{ phone: normalizedPhone }]
@@ -137,6 +145,7 @@ export async function shopRegister(req, res) {
     slug: normalizedSlug,
     phone: normalizedPhone,
     email: normalizedEmail || undefined,
+    businessTypes: normalizedBusinessTypes,
     status: 'active',
     onlineBookingEnabled: true,
     createdAt: new Date(),

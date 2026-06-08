@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
-
 function slugifyVietnamese(input) {
   if (!input) return ''
   return input
@@ -13,7 +12,7 @@ function slugifyVietnamese(input) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-')
-}
+    }
 
 function normalizePhone(input) {
   return String(input || '')
@@ -30,6 +29,13 @@ function isValidEmail(input) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input)
 }
 
+const BUSINESS_TYPE_OPTIONS = [
+  { value: 'spa-salon', label: 'Spa/Salon' },
+  { value: 'nail', label: 'Nail' },
+  { value: 'goi-dau-duong-sinh', label: 'Gội đầu dưỡng sinh' },
+  { value: 'cham-soc-da', label: 'Chăm sóc da' }
+]
+
 export default function RegisterForm() {
   const navigate = useNavigate()
   const { registerShop } = useShop()
@@ -40,6 +46,7 @@ export default function RegisterForm() {
     password: '',
     shopName: '',
     category: '',
+    businessTypes: [],
     slug: '',
     address: ''
   })
@@ -72,6 +79,16 @@ export default function RegisterForm() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const toggleBusinessType = (value) => {
+    setFormData((prev) => {
+      const current = Array.isArray(prev.businessTypes) ? prev.businessTypes : []
+      const next = current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+      return { ...prev, businessTypes: next }
+    })
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
@@ -83,6 +100,7 @@ export default function RegisterForm() {
     const emailText = formData.email ? String(formData.email).toLowerCase().trim() : ''
     const slugSanitized = slugifyVietnamese(formData.slug || shopNameText)
     const passwordText = String(formData.password || '')
+    const selectedBusinessTypes = Array.isArray(formData.businessTypes) ? formData.businessTypes : []
 
     if (!ownerNameText || !shopNameText || !phoneNormalized || !passwordText) {
       setError('Vui lòng nhập đầy đủ thông tin bắt buộc')
@@ -109,6 +127,11 @@ export default function RegisterForm() {
       setSubmitting(false)
       return
     }
+    if (selectedBusinessTypes.length === 0) {
+      setError('Vui lòng chọn ít nhất một loại hình shop')
+      setSubmitting(false)
+      return
+    }
 
     try {
       await registerShop({
@@ -117,7 +140,8 @@ export default function RegisterForm() {
         email: emailText || undefined,
         password: passwordText,
         shopName: shopNameText,
-        slug: slugSanitized
+        slug: slugSanitized,
+        businessTypes: selectedBusinessTypes
       })
       navigate('/login')
     } catch (err) {
@@ -140,6 +164,24 @@ export default function RegisterForm() {
         <input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="Email công việc" className="w-full p-3 rounded-xl border border-slate-300" />
         <input name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Mật khẩu" className="w-full p-3 rounded-xl border border-slate-300" required />
         <input name="shopName" value={formData.shopName} onChange={handleChange} placeholder="Tên tiệm" className="w-full p-3 rounded-xl border border-slate-300" required />
+        <div className="rounded-2xl border border-slate-200 p-4 bg-white/60">
+          <p className="text-sm font-bold text-main/70 mb-3">Loại hình shop</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {BUSINESS_TYPE_OPTIONS.map((option) => {
+              const active = formData.businessTypes.includes(option.value)
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => toggleBusinessType(option.value)}
+                  className={`px-4 py-2 rounded-xl border text-sm font-bold text-left transition-all ${active ? 'bg-primary text-white border-primary' : 'bg-white text-main border-slate-200 hover:border-primary/40'}`}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
         <input name="slug" value={formData.slug} onChange={handleChange} placeholder="slug shop (vd: my-spa-name)" className="w-full p-3 rounded-xl border border-slate-300" required />
         <p className="text-xs text-main/70 -mt-1">Link đặt lịch của bạn: <span className="font-bold text-primary">{bookingLinkPreview}</span></p>
         <input name="address" value={formData.address} onChange={handleChange} placeholder="Địa chỉ tiệm" className="w-full p-3 rounded-xl border border-slate-300" />
