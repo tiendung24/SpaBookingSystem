@@ -1,4 +1,4 @@
-﻿import 'dotenv/config'
+import 'dotenv/config'
 import dotenv from 'dotenv'
 import bcrypt from 'bcryptjs'
 import mongoose from 'mongoose'
@@ -22,10 +22,18 @@ import {
 dotenv.config({ path: new URL('../.env', import.meta.url) })
 
 const FALLBACK_COVER = 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80'
+const STAFF_PHONES = ['0983476201', '0983476202', '0983476203', '0974862201', '0974862202', '0962387401', '0962387402']
 const FALLBACK_SERVICE_IMAGES = [
   'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1000&q=80',
   'https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1000&q=80'
+  'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=1000&q=80',
+  'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&w=1000&q=80',
+  'https://images.unsplash.com/photo-1610992015732-2449b76344bc?auto=format&fit=crop&w=1000&q=80',
+  'https://diva.edu.vn/wp-content/uploads/2024/09/tho-nail-trang-tri-mong-cho-khach-hang.jpg',
+  'https://images.unsplash.com/photo-1599948128020-9a44505b0d1b?auto=format&fit=crop&w=1000&q=80',
+  'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1000&q=80',
+  'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=1000&q=80',
+  'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1000&q=80'
 ]
 const STAFF_IMAGES = [
   'https://cdn.pixabay.com/photo/2020/08/31/03/21/girl-5531217_1280.jpg',
@@ -55,9 +63,10 @@ const SHOP_DEFS = [
     slug: 'vanlavi',
     shopName: 'VanLavi',
     ownerName: 'Vân Lavi',
-    email: 'vanlavi@lumix',
+    email: 'vanlavi.lumix@gmail.com',
     phone: '0981591604',
     businessTypes: ['nail'],
+    coverUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1200&q=80',
     address: {
       provinceId: '01', provinceName: 'Thành phố Hà Nội', communeId: 'hoa-lac-1', communeName: 'Hòa Lạc', detail: 'Hòa Lạc (Gần điện máy xanh)', fullAddress: 'Hòa Lạc (Gần điện máy xanh), Hòa Lạc, Thành phố Hà Nội'
     },
@@ -65,16 +74,17 @@ const SHOP_DEFS = [
     staffCount: 3,
     bookingCount: 2,
     prices: [50000, 30000, 30000, 50000, 100000, 80000, 150000, 110000, 100000, 80000],
-    customer: { fullName: 'Khách VanLavi', phone: '0911111111', email: 'khach.vanlavi@lumix.fake' },
+    customer: { fullName: 'Nguyễn Thị Linh', phone: '0983476364', email: 'nguyenthilinh.demo@gmail.com' },
     bookingStarts: ['2026-06-09T09:30:00+07:00', '2026-06-10T14:00:00+07:00']
   },
   {
     slug: 'tiem-nail-minh-huyen',
     shopName: 'Tiệm Nail Minh Huyền',
     ownerName: 'Nguyễn Minh Huyền',
-    email: 'minhhuyen@lumix',
+    email: 'minhhuyen.lumix@gmail.com',
     phone: '0975211435',
     businessTypes: ['nail'],
+    coverUrl: 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=1200&q=80',
     address: {
       provinceId: '01', provinceName: 'Thành phố Hà Nội', communeId: 'hoa-lac-2', communeName: 'Hòa Lạc', detail: 'Quán điện thoại Nam Anh gần cổng phụ FPT', fullAddress: 'Quán điện thoại Nam Anh gần cổng phụ FPT, Hòa Lạc, Thành phố Hà Nội'
     },
@@ -82,16 +92,17 @@ const SHOP_DEFS = [
     staffCount: 2,
     bookingCount: 1,
     prices: [55000, 35000, 35000, 55000, 105000, 85000, 155000, 115000, 105000, 85000],
-    customer: { fullName: 'Khách Minh Huyền', phone: '0922222222', email: 'khach.minhhuyen@lumix.fake' },
+    customer: { fullName: 'Trần Ngọc Mai', phone: '0974862153', email: 'tranngocmai.demo@gmail.com' },
     bookingStarts: ['2026-06-09T10:30:00+07:00']
   },
   {
     slug: 'spa-thu-trang',
     shopName: 'Spa Thu Trang',
     ownerName: 'Thu Trang',
-    email: 'thutrang@lumix',
+    email: 'thutrang.lumix@gmail.com',
     phone: '0343751247',
     businessTypes: ['spa-salon'],
+    coverUrl: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=1200&q=80',
     address: {
       provinceId: '01', provinceName: 'Thành phố Hà Nội', communeId: 'hoa-lac-3', communeName: 'Hòa Lạc', detail: 'Số 18 Khu TĐC Bắc, Hòa Lạc, Hà Nội', fullAddress: 'Số 18 Khu TĐC Bắc, Hòa Lạc, Hà Nội, Hòa Lạc, Thành phố Hà Nội'
     },
@@ -99,7 +110,7 @@ const SHOP_DEFS = [
     staffCount: 2,
     bookingCount: 1,
     prices: [60000, 40000, 40000, 60000, 110000, 90000, 160000, 120000, 110000, 90000],
-    customer: { fullName: 'Khách Thu Trang', phone: '0933333333', email: 'khach.thutrang@lumix.fake' },
+    customer: { fullName: 'Phạm Thanh Hương', phone: '0962387415', email: 'phamthanhhuong.demo@gmail.com' },
     bookingStarts: ['2026-06-10T15:00:00+07:00']
   }
 ]
@@ -159,7 +170,7 @@ async function seedOneShop(def, shopIndex) {
     businessTypes: def.businessTypes,
     description: `${def.shopName} là cửa hàng demo tại Hòa Lạc, phục vụ khách đặt lịch trên LumiX.`,
     logoUrl: '',
-    coverUrl: FALLBACK_COVER,
+    coverUrl: def.coverUrl || FALLBACK_COVER,
     status: 'active',
     onlineBookingEnabled: true,
     depositConfig: { enabled: true, type: 'fixed', value: 50000, cancelHours: 4 },
@@ -227,12 +238,13 @@ async function seedOneShop(def, shopIndex) {
   }
 
   const staffList = []
+  const staffOffset = SHOP_DEFS.slice(0, shopIndex).reduce((sum, item) => sum + item.staffCount, 0)
   for (let i = 0; i < def.staffCount; i += 1) {
     const staff = await ShopStaff.create({
       shopId: String(shop._id),
       userId: '',
       fullName: `${def.ownerName.split(' ')[0]} ${['An', 'Vy', 'Linh', 'Trang', 'My', 'Lan', 'Ngọc'][shopIndex + i]}`,
-      phone: '',
+      phone: STAFF_PHONES[(staffOffset + i) % STAFF_PHONES.length],
       avatarUrl: STAFF_IMAGES[(shopIndex * 2 + i) % STAFF_IMAGES.length],
       shortBio: `Kỹ thuật viên ${def.businessTypes[0] === 'spa-salon' ? 'chăm sóc thư giãn' : 'nail'} tỉ mỉ và giàu kinh nghiệm.`,
       bio: `Nhân sự nòng cốt của ${def.shopName}, phong cách phục vụ nhẹ nhàng, chỉn chu và đúng giờ.`,
