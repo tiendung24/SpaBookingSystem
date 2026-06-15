@@ -4,12 +4,6 @@ import { useShop } from '../context/ShopContext';
 import { apiRequest } from '../lib/api';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/ui/ToastProvider';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import ShopSidebar from '../components/shop/ShopSidebar';
-import { useShop } from '../context/ShopContext';
-import { apiRequest } from '../lib/api';
-import { useSearchParams } from 'react-router-dom';
-import { useToast } from '../components/ui/ToastProvider';
 
 export default function ShopWalletPage() {
   const { shop, setShop, walletTransactions, topupWallet, bookings, loadMeAndShop, token } = useShop();
