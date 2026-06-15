@@ -13,32 +13,6 @@ import * as AdminPayoutsController from '../../controllers/admin/payout.controll
 
 export const adminRouter = Router()
 
-adminRouter.get('/shops/debug-stats', async (req, res) => {
-  const { Shop, Booking, Deposit } = await import('../../models/index.js');
-  const shop = await Shop.findOne({ name: 'Nail Minh Hải' }).lean();
-  if (!shop) return res.json({ error: 'Shop not found' });
-  const shopIdStr = String(shop._id);
-  const shopIdObj = shop._id;
-
-  const bookingsStr = await Booking.find({ shopId: shopIdStr, status: 'completed' }).lean();
-  const bookingsObj = await Booking.find({ shopId: shopIdObj, status: 'completed' }).lean();
-
-  const aggStr = await Booking.aggregate([
-    { $match: { shopId: shopIdStr } },
-    { $group: { _id: '$shopId', depositBookings: { $sum: { $cond: [{ $gt: [{ $ifNull: ['$depositAmount', 0] }, 0] }, 1, 0] } } } }
-  ]);
-
-  res.json({
-    shopIdStr,
-    bookingsStrCount: bookingsStr.length,
-    bookingsObjCount: bookingsObj.length,
-    aggStr,
-    sampleBooking: bookingsStr[0] || bookingsObj[0]
-  });
-});
-
-adminRouter.get('/shops/rebuild-fake-bookings', asyncHandler(AdminShopsController.rebuildFakeBookings))
-
 adminRouter.use(requireAuth, requireRole(['admin', 'super_admin']))
 
 /**
