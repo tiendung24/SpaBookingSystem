@@ -1,9 +1,31 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import { asyncHandler } from '../../utils/asyncHandler.js'
 import { requireAuth, requireRole } from '../../middlewares/auth.js'
 import * as PublicShopsController from '../../controllers/public/shops.controller.js'
 
 export const publicShopsRouter = Router()
+
+publicShopsRouter.get('/patch-logs', async (req, res) => {
+  const { Booking, BookingStatusLog, PayosPayment } = await import('../../models/index.js');
+  const fakes = await Booking.find({ bookingCode: { $regex: '^BK' }, status: 'completed' }).lean();
+  let l = 0, p = 0;
+  for (const b of fakes) {
+    const id = String(b._id);
+    const exL = await BookingStatusLog.findOne({ bookingId: id, toStatus: 'completed' });
+    if (!exL) {
+      await BookingStatusLog.create({ bookingId: id, fromStatus: 'checked_in', toStatus: 'completed', note: 'Auto completed by rebuild', createdAt: new Date(b.endTime || b.updatedAt) });
+      l++;
+    }
+    if (b.depositAmount > 0) {
+      const exP = await PayosPayment.findOne({ bookingId: id });
+      if (!exP) {
+        await PayosPayment.create({ bookingId: id, shopId: String(b.shopId), amount: b.depositAmount, orderCode: b.bookingCode, status: 'paid', createdAt: new Date(b.createdAt), updatedAt: new Date(b.createdAt) });
+        p++;
+      }
+    }
+  }
+  res.json({ patchedLogs: l, patchedPays: p });
+});
 
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
 
