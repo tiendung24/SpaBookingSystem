@@ -257,6 +257,17 @@ export default function AdminPartnersPage() {
           <AdminHeaderNav />
         </div>
         <div className="flex gap-3 items-center">
+          <button className="bg-amber-100 text-amber-700 px-4 py-3 rounded-xl font-bold shadow-sm hover:bg-amber-200 transition-colors" onClick={async () => {
+            try {
+              const base = import.meta.env.VITE_API_BASE_URL || window.location.origin
+              const res = await fetch(`${base.startsWith('http') ? base : window.location.origin}/api/admin/shops/sync-50k`, {
+                headers: { Authorization: `Bearer ${token}` }
+              })
+              const data = await res.json()
+              if (!res.ok) throw new Error(data.message || 'Lỗi đồng bộ')
+              alert(`Thành công! Cập nhật ${data.servicesUpdated} dịch vụ và ${data.bookingsUpdated} bookings.`)
+            } catch (err) { alert(err.message) }
+          }}>Đồng bộ 50k</button>
           <button className="bg-white border border-slate-200 text-primary px-5 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2" onClick={handleExportExcel} disabled={exporting}>
             <span className="material-symbols-outlined">{exporting ? 'hourglass_empty' : 'download'}</span>
             {exporting ? 'Đang xuất...' : 'Xuất Excel'}
