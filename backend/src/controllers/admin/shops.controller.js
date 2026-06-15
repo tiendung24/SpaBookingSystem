@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import ExcelJS from 'exceljs'
-import { Booking, Deposit, PayosPayment, PlatformFee, RefundRequest, Service, Shop, User, Wallet, WalletTransaction } from '../../models/index.js'
+import { Booking, Deposit, PayosPayment, PlatformFee, RefundRequest, Service, Shop, User, Wallet, WalletTransaction, ShopStaff } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { derivePaymentStatus } from '../../utils/paymentStatus.js'
