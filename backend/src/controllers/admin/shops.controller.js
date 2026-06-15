@@ -427,3 +427,148 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
+
+export async function seedScheduleBookings(req, res) {
+  const fakeNames = ["Nguyễn Thị Lan", "Trần Thu Hà", "Lê Thị Mai", "Phạm Bích Ngọc", "Hoàng Kim Chi", "Vũ Thanh Hằng", "Đặng Thùy Dung", "Bùi Thu Thủy", "Đỗ Mai Anh", "Ngô Phương Thảo", "Dương Thu Hiền", "Lý Bích Loan", "Trịnh Ánh Nguyệt", "Đoàn Thanh Hương", "Đinh Tuyết Mai", "Lâm Mỹ Linh"];
+  const randomName = () => fakeNames[Math.floor(Math.random() * fakeNames.length)];
+  const randomPhone = () => '09' + Math.floor(10000000 + Math.random() * 90000000);
+
+  const schedule = [
+    {
+      shopName: /Nail Minh Hải/i,
+      bookings: [
+        { date: '2026-06-19T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-20T00:00:00+07:00', services: ['Nails chân'] },
+        { date: '2026-06-25T00:00:00+07:00', services: ['Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Nail Thu Ốc/i,
+      bookings: [
+        { date: '2026-06-18T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-21T00:00:00+07:00', services: ['Nails tay', 'Nails tay'] },
+        { date: '2026-06-24T00:00:00+07:00', services: ['Nails tay', 'Nails tay'] },
+        { date: '2026-06-27T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-29T00:00:00+07:00', services: ['Nails tay', 'Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Liên Facial/i,
+      bookings: [
+        { date: '2026-06-17T00:00:00+07:00', services: ['Làm da mặt'] },
+        { date: '2026-06-18T00:00:00+07:00', services: ['Gội đầu', 'Gội đầu'] },
+        { date: '2026-06-21T00:00:00+07:00', services: ['Gội đầu'] },
+        { date: '2026-06-22T00:00:00+07:00', services: ['Gội đầu', 'Gội đầu'] },
+        { date: '2026-06-25T00:00:00+07:00', services: ['Gội đầu', 'Gội đầu'] },
+        { date: '2026-06-27T00:00:00+07:00', services: ['Làm da mặt', 'Làm da mặt'] },
+        { date: '2026-06-29T00:00:00+07:00', services: ['Nặn mụn'] },
+      ]
+    },
+    {
+      shopName: /Nơ Nail/i,
+      bookings: [
+        { date: '2026-06-18T00:00:00+07:00', services: ['Nails'] },
+        { date: '2026-06-21T00:00:00+07:00', services: ['Combo tay chân'] },
+        { date: '2026-06-22T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-25T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-28T00:00:00+07:00', services: ['Nails tay', 'Nails tay'] },
+      ]
+    },
+    {
+      shopName: /VanLavi/i,
+      bookings: [
+        { date: '2026-06-16T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-20T00:00:00+07:00', services: ['Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Minh Huyền/i,
+      bookings: [
+        { date: '2026-06-19T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-23T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-27T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-29T00:00:00+07:00', services: ['Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Spa Thu Trang/i,
+      bookings: [
+        { date: '2026-06-17T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-20T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-24T00:00:00+07:00', services: ['Nails tay'] },
+        { date: '2026-06-28T00:00:00+07:00', services: ['Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Ngọc Thơ/i,
+      bookings: [
+        { date: '2026-06-17T00:00:00+07:00', services: ['Nails tay', 'Nails tay', 'Nails chân'] },
+        { date: '2026-06-20T00:00:00+07:00', services: ['Nails chân'] },
+        { date: '2026-06-25T00:00:00+07:00', services: ['Nails tay'] },
+      ]
+    }
+  ];
+
+  let totalAdded = 0;
+
+  for (const shopDef of schedule) {
+    const shop = await Shop.findOne({ name: shopDef.shopName });
+    if (!shop) continue;
+
+    const allServices = await Service.find({ shopId: String(shop._id) }).lean();
+    if (!allServices.length) continue;
+
+    const findService = (hint) => {
+      const h = hint.toLowerCase();
+      let matched = null;
+      if (h.includes('gội')) matched = allServices.find(s => s.name.toLowerCase().includes('gội'));
+      else if (h.includes('mặt') || h.includes('da') || h.includes('mụn')) matched = allServices.find(s => s.name.toLowerCase().includes('da') || s.name.toLowerCase().includes('thanh lọc'));
+      else if (h.includes('nối mi')) matched = allServices.find(s => s.name.toLowerCase().includes('mi'));
+      else matched = allServices.find(s => s.name.toLowerCase().includes('sửa form') || s.name.toLowerCase().includes('gel') || s.name.toLowerCase().includes('combo'));
+      
+      return matched || allServices[0]; 
+    };
+
+    const staffs = await ShopStaff.find({ shopId: String(shop._id), role: 'staff' }).lean();
+    const staffId = staffs.length ? String(staffs[0]._id) : undefined;
+
+    for (const b of shopDef.bookings) {
+      let currentHour = 9; 
+      for (const svcName of b.services) {
+        const svc = findService(svcName);
+        if (!svc) continue;
+
+        const customerName = randomName();
+        const customerPhone = randomPhone();
+
+        const startDate = new Date(b.date);
+        startDate.setUTCHours(currentHour - 7, 30, 0, 0); 
+        const duration = svc.duration || 60;
+        const endDate = new Date(startDate.getTime() + duration * 60000);
+
+        const bookingCode = 'BK' + Math.floor(100000 + Math.random() * 900000);
+
+        await Booking.create({
+          bookingCode,
+          shopId: String(shop._id),
+          serviceId: String(svc._id),
+          staffId,
+          customerName,
+          customerPhone,
+          startTime: startDate,
+          endTime: endDate,
+          status: 'completed',
+          totalAmount: svc.price || 100000,
+          depositAmount: 0,
+          createdAt: new Date(startDate.getTime() - 24 * 3600000), 
+          updatedAt: startDate
+        });
+
+        currentHour += 2; 
+        totalAdded++;
+      }
+    }
+  }
+
+  res.json({ message: 'Hoàn tất sinh booking', totalAdded });
+}
