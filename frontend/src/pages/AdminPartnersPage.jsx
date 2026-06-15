@@ -297,7 +297,7 @@ export default function AdminPartnersPage() {
                   <td className="px-4 py-4 whitespace-nowrap"><span className={`px-3 py-1 rounded-full text-xs font-bold ${linkStatusClass(partner)}`}>{linkStatusLabel(partner)}</span></td>
                   <td className="px-4 py-4 text-sm text-main/70">{partner.monthlyBookings}</td>
                   <td className="px-4 py-4 text-sm font-semibold text-primary"><p>{formatVnd(partner.wallet)}</p><p className="text-xs text-main/50">Ngưỡng {formatVnd(partner.walletMinBalance)}</p></td>
-                  <td className="px-4 py-4 text-right"><Link className="px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-bold" to={`/admin/partners/${partner.id}`}>Xem chi tiết</Link></td>
+                  <td className="px-4 py-4 text-right"><Link className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-main transition-colors" to={`/admin/partners/${partner.id}`} title="Xem chi tiết"><span className="material-symbols-outlined text-[20px]">visibility</span></Link></td>
                 </tr>
               ))}
             </tbody>
