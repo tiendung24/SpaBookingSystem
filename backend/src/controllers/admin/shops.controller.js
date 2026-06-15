@@ -407,17 +407,3 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
-
-export async function syncServiceDetails(req, res) {
-  const services = await Service.find({});
-  let updated = 0;
-  for (const sv of services) {
-    sv.durationMinutes = [30, 45, 60, 90][Math.floor(Math.random() * 4)];
-    sv.description = 'Dịch vụ chăm sóc sắc đẹp cao cấp, sử dụng sản phẩm chất lượng.';
-    sv.shortDescription = 'Dịch vụ chăm sóc sắc đẹp cao cấp.';
-    sv.detailedDescription = 'Quy trình thực hiện chuyên nghiệp, bài bản. Bao gồm các bước làm sạch, chăm sóc chuyên sâu và hoàn thiện bằng các sản phẩm cao cấp, đảm bảo an toàn và hiệu quả tốt nhất cho khách hàng.';
-    await sv.save();
-    updated++;
-  }
-  res.json({ message: 'Hoàn tất cập nhật dịch vụ', updated });
-}
