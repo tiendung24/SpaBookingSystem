@@ -13,8 +13,6 @@ import * as AdminPayoutsController from '../../controllers/admin/payout.controll
 
 export const adminRouter = Router()
 
-adminRouter.get('/shops/sync-staff-images', asyncHandler(AdminShopsController.syncStaffImages))
-
 adminRouter.use(requireAuth, requireRole(['admin', 'super_admin']))
 
 /**
