@@ -433,83 +433,77 @@ export async function rebuildFakeBookings(req, res) {
   // CONFIG: Hard-coded service pools per shop (bảng của bạn)
   // ============================================================
   const SHOP_CONFIG = {
-    'Li\u00ean Facial Spa': {
-      pattern: /Li\u00ean Facial/i,
+    'Liên Facial Spa': {
+      shopName: 'Liên Facial Spa',
       groups: {
-        g\u1ed9i: [
-          'G\u1ed9i Th\u1ea3o D\u01b0\u1ee3c (C\u01a1 B\u1ea3n)',
-          'G\u1ed9i \u0110\u1ea7u B\u00f4ng B\u01b0\u1edfi',
-          'G\u1ed9i D\u01b0\u1ee1ng Sinh B\u00f4ng B\u01b0\u1edfi / H\u1ea1 Tr\u1eafng',
-          'G\u1ed9i D\u01b0\u1ee1ng Sinh Th\u1ee7 \u0110\u1ea1o Thang',
-          'G\u1ed9i D\u01b0\u1ee1ng Sinh Ti\u00eau Chu\u1ea9n Nh\u00e0 H\u00e0',
+        gội: [
+          'Gội Thảo Dược (Cơ Bản)',
+          'Gội Đầu Bông Bưởi',
+          'Gội Dưỡng Sinh Bông Bưởi / Hạ Trắng',
+          'Gội Dưỡng Sinh Thủ Đạo Thang',
+          'Gội Dưỡng Sinh Tiêu Chuẩn Nhà Hà',
         ],
         da: [
-          'Thanh L\u1ecdc L\u00e0n Da Organic / Organic Sensitive',
-          'Thanh L\u1ecdc D\u01b0\u1ee1ng S\u00e1ng Chuy\u00ean S\u00e2u Micro Vital / Collagen Sensitive',
-          'Combo S\u00e1ng Da Ch\u1ed1ng L\u00e3o H\u00f3a Elite Peptide / Stem Cell Extract',
-          'Combo Gi\u1ea3m N\u00e1m + C\u1ea5p \u1ea8m Plant Cell Darksort',
-          'Combo C\u1ea5p \u1ea8m Ch\u1ed1ng L\u00e3o H\u00f3a Aqua Silky',
-          'Combo Detox - C\u1ea5p \u1ea8m - S\u00e1ng Da Luxury 4',
+          'Thanh Lọc Làn Da Organic / Organic Sensitive',
+          'Thanh Lọc Dưỡng Sáng Chuyên Sâu Micro Vital / Collagen Sensitive',
+          'Combo Sáng Da Chống Lão Hóa Elite Peptide / Stem Cell Extract',
+          'Combo Giảm Nám + Cấp Ẩm Plant Cell Darksort',
+          'Combo Cấp Ẩm Chống Lão Hóa Aqua Silky',
+          'Combo Detox - Cấp Ẩm - Sáng Da Luxury 4',
         ],
-      }
+      },
     },
-    'Nail Minh H\u1ea3i': {
-      pattern: /Nail Minh H\u1ea3i/i,
-      skipTypes: ['g\u1ed9i', 'mi'],
+    'Nail Minh Hải': {
+      shopName: 'Nail Minh Hải',
+      skipTypes: ['gội', 'mi'],
       groups: {
-        nail: ['S\u01a1n Biab', 'Combo S\u01a1n Gel + Th\u1ea1ch', 'French / Ombre'],
-      }
+        nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'French / Ombre'],
+      },
     },
-    'Nail Thu \u1ed0c': {
-      pattern: /Nail Thu \u1ed0c/i,
+    'Nail Thu Ốc': {
+      shopName: 'Nail Thu Ốc',
       groups: {
-        nail: ['S\u01a1n Biab', 'Combo S\u01a1n Gel + Th\u1ea1ch', 'Combo S\u01a1n M\u1eaft M\u00e8o + Tr\u00e1ng G\u01b0\u01a1ng', 'French / Ombre'],
-      }
+        nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'Combo Sơn Mắt Mèo + Tráng Gương', 'French / Ombre'],
+      },
     },
-    'N\u01a1 Nail': {
-      pattern: /N\u01a1 Nail/i,
+    'Nơ Nail': {
+      shopName: 'Nơ Nail',
       groups: {
-        nail: ['S\u01a1n Biab', 'Combo S\u01a1n Gel + Th\u1ea1ch', 'French / Ombre', 'Fill Gel'],
-      }
+        nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'French / Ombre', 'Fill Gel'],
+      },
     },
     'VanLavi': {
-      pattern: /VanLavi/i,
+      shopName: 'VanLavi',
       groups: {
-        nail: ['S\u01a1n Biab', 'Combo S\u01a1n Gel + Th\u1ea1ch'],
-      }
+        nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch'],
+      },
     },
-    'Ti\u1ec7m Nail Minh Huy\u1ec1n': {
-      pattern: /Minh Huy\u1ec1n/i,
+    'Tiệm Nail Minh Huyền': {
+      shopName: 'Tiệm Nail Minh Huyền',
       groups: {
-        nail: ['S\u01a1n Biab', 'Fill Gel', 'Combo S\u01a1n Gel + Th\u1ea1ch'],
-      }
+        nail: ['Sơn Biab', 'Fill Gel', 'Combo Sơn Gel + Thạch'],
+      },
     },
     'Spa Thu Trang': {
-      pattern: /Spa Thu Trang/i,
+      shopName: 'Spa Thu Trang',
       groups: {
-        nail: ['S\u01a1n Biab', 'Combo S\u01a1n Gel + Th\u1ea1ch', 'French / Ombre'],
-      }
+        nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'French / Ombre'],
+      },
     },
-    'Ng\u1ecdc Th\u01a1': {
-      pattern: /Ng\u1ecdc Th\u01a1/i,
-      skipTypes: ['g\u1ed9i', 'mi'],
+    'Ngọc Thơ': {
+      shopName: 'Ngọc Thơ',
+      skipTypes: ['gội', 'mi'],
       groups: {
-        nail: ['S\u01a1n Biab', 'Combo S\u01a1n Gel + Th\u1ea1ch', 'French / Ombre', 'Charm (\u0111\u00ednh \u0111\u00e1)'],
-      }
+        nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'French / Ombre', 'Charm (đính đá)'],
+      },
     },
   };
 
   // Mapping: từ khóa trong bảng lịch -> group key
-  const classifyBooking = (svcHint, shopCfg) => {
-    const h = svcHint.toLowerCase();
-    if (h.includes('g\u1ed9i')) return 'g\u1ed9i';
-    if (h.includes('mi') || h.includes('n\u1ed1i')) return 'mi';
-    if (h.includes('da') || h.includes('m\u1eb7t') || h.includes('m\u1ee5n')) return 'da';
-    return 'nail'; // mặc định
-  };
+  // (không dùng nữa vì hint đã là group key trực tiếp)
 
   // ============================================================
-  // SCHEDULE (y chang bảng của bạn, bỏ booking dịch vụ thiếu)
+  // SCHEDULE
   // ============================================================
   const schedule = [
     { shopKey: 'Nail Minh H\u1ea3i', bookings: [
@@ -597,7 +591,7 @@ export async function rebuildFakeBookings(req, res) {
     const cfg = SHOP_CONFIG[shopDef.shopKey];
     if (!cfg) continue;
 
-    const shop = await Shop.findOne({ name: cfg.pattern });
+    const shop = await Shop.findOne({ name: cfg.shopName });
     if (!shop) continue;
 
     // Build name->service map from Atlas
