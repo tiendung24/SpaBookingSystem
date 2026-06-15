@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import ExcelJS from 'exceljs'
 import { Booking, Deposit, PayosPayment, PlatformFee, RefundRequest, Service, Shop, User, Wallet, WalletTransaction } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
@@ -29,7 +30,7 @@ async function ensureUniqueSlug(baseSlug) {
   throw httpError(409, 'Không thể tạo slug duy nhất')
 }
 
-async function attachWalletStats(shops) {
+export async function attachWalletStats(shops) {
   const list = Array.isArray(shops) ? shops : [shops]
   const shopIds = list.filter(Boolean).map((shop) => String(shop._id))
   if (!shopIds.length) return shops
@@ -316,4 +317,92 @@ export async function getShopStatistics(req, res) {
       completedRate: total ? completed / total : 0
     }
   })
+}
+
+export async function exportExcel(req, res) {
+  const query = {}
+  if (req.query.status && req.query.status !== 'all') query.status = req.query.status
+  const shops = await Shop.find(query).sort({ createdAt: -1 }).lean()
+  const enrichedShops = await attachWalletStats(shops)
+
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = 'LumiX Admin'
+  workbook.created = new Date()
+
+  const overviewSheet = workbook.addWorksheet('Tổng quan')
+  overviewSheet.columns = [
+    { header: 'Mã Shop', key: 'id', width: 25 },
+    { header: 'Tên Shop', key: 'shopName', width: 30 },
+    { header: 'Chủ Shop', key: 'owner', width: 25 },
+    { header: 'Khu vực', key: 'district', width: 20 },
+    { header: 'Trạng thái', key: 'status', width: 15 },
+    { header: 'Booking thành công', key: 'monthlyBookings', width: 20 },
+    { header: 'Số dư ví', key: 'wallet', width: 20 },
+  ]
+  overviewSheet.getRow(1).font = { bold: true }
+
+  for (const shop of enrichedShops) {
+    let district = 'Chưa cập nhật'
+    if (typeof shop?.address === 'string') district = shop.address
+    else if (shop?.address) district = shop.address.district || shop.address.city || shop.address.province || 'Chưa cập nhật'
+
+    let statusText = 'Đang hoạt động'
+    if (shop.status === 'pending') statusText = 'Chờ duyệt'
+    if (shop.status === 'locked') statusText = 'Đã khóa'
+    if (shop.status === 'inactive') statusText = 'Tạm ngưng'
+
+    overviewSheet.addRow({
+      id: String(shop._id),
+      shopName: shop.name || '—',
+      owner: shop.ownerName || 'Chưa cập nhật',
+      district,
+      status: statusText,
+      monthlyBookings: shop.stats?.completedBookings || 0,
+      wallet: shop.wallet?.balance || 0
+    })
+  }
+
+  for (const shop of enrichedShops) {
+    let sheetName = String(shop.name || 'Shop').substring(0, 25).replace(/[*?:\/\[\]]/g, '')
+    if (!sheetName) sheetName = String(shop._id).substring(0, 10)
+    let counter = 1
+    let finalSheetName = sheetName
+    while (workbook.getWorksheet(finalSheetName)) {
+      finalSheetName = `${sheetName.substring(0, 22)}(${counter})`
+      counter++
+    }
+
+    const shopSheet = workbook.addWorksheet(finalSheetName)
+    shopSheet.columns = [
+      { header: 'Mã Booking', key: 'id', width: 25 },
+      { header: 'Tên Khách', key: 'customer', width: 25 },
+      { header: 'Ngày giờ hẹn', key: 'startTime', width: 20 },
+      { header: 'Tổng tiền', key: 'totalAmount', width: 15 },
+      { header: 'Tiền cọc', key: 'deposit', width: 15 },
+      { header: 'Trạng thái', key: 'status', width: 15 },
+    ]
+    shopSheet.getRow(1).font = { bold: true }
+
+    const bookings = await Booking.find({ shopId: String(shop._id) }).sort({ createdAt: -1 }).lean()
+    for (const b of bookings) {
+      let statusText = 'Đang chờ'
+      if (b.status === 'completed') statusText = 'Hoàn thành'
+      if (b.status === 'cancelled' || b.status === 'canceled') statusText = 'Đã hủy'
+      if (b.status === 'no_show') statusText = 'Không đến'
+
+      shopSheet.addRow({
+        id: String(b._id),
+        customer: b.customerName || 'Khách',
+        startTime: b.startTime ? new Date(b.startTime) : '',
+        totalAmount: b.totalAmount || 0,
+        deposit: b.depositAmount || 0,
+        status: statusText
+      })
+    }
+  }
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  res.setHeader('Content-Disposition', 'attachment; filename="LumiX-Partners.xlsx"')
+  await workbook.xlsx.write(res)
+  res.end()
 }

@@ -106,6 +106,7 @@ export default function AdminPartnersPage() {
   const [partners, setPartners] = useState([])
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('all')
+  const [exporting, setExporting] = useState(false)
   const shouldOpenCreateForm = searchParams.get('create') === '1'
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
@@ -218,6 +219,35 @@ export default function AdminPartnersPage() {
     }
   }
 
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true)
+      const base = import.meta.env.VITE_API_BASE_URL || window.location.origin
+      const url = new URL('/api/admin/shops/export-excel', base.startsWith('http') ? base : window.location.origin)
+      if (status !== 'all') url.searchParams.set('status', status)
+      if (query) url.searchParams.set('keyword', query)
+      
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error('Không thể xuất file Excel')
+      
+      const blob = await res.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = `LumiX-Partners-${new Date().toISOString().slice(0,10)}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      pushToast({ type: 'error', message: error.message || 'Lỗi xuất excel' })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <AdminLayout>
       <header className="flex flex-col md:flex-row justify-between gap-4">
@@ -226,7 +256,13 @@ export default function AdminPartnersPage() {
           <p className="text-main/70">Duyệt shop mới, theo dõi chất lượng và kiểm soát trạng thái hợp tác.</p>
           <AdminHeaderNav />
         </div>
-        <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform" onClick={openCreateForm}>+ Thêm đối tác</button>
+        <div className="flex gap-3 items-center">
+          <button className="bg-white border border-slate-200 text-primary px-5 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2" onClick={handleExportExcel} disabled={exporting}>
+            <span className="material-symbols-outlined">{exporting ? 'hourglass_empty' : 'download'}</span>
+            {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+          </button>
+          <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform" onClick={openCreateForm}>+ Thêm đối tác</button>
+        </div>
       </header>
 
       {shouldOpenCreateForm && (
