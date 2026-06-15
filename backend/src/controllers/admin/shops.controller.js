@@ -329,12 +329,22 @@ export async function exportExcel(req, res) {
   workbook.creator = 'LumiX Admin'
   workbook.created = new Date()
 
+  const formatExcelDate = (d) => {
+    if (!d) return '';
+    return new Date(d).toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false
+    });
+  };
+
   const overviewSheet = workbook.addWorksheet('Tổng quan')
   overviewSheet.columns = [
     { header: 'Mã Shop', key: 'id', width: 25 },
     { header: 'Tên Shop', key: 'shopName', width: 30 },
     { header: 'Chủ Shop', key: 'owner', width: 25 },
-    { header: 'Khu vực', key: 'district', width: 20 },
+    { header: 'Khu vực', key: 'district', width: 30 },
     { header: 'Trạng thái', key: 'status', width: 15 },
     { header: 'Booking thành công', key: 'monthlyBookings', width: 20 },
     { header: 'Số dư ví', key: 'wallet', width: 20 },
@@ -344,7 +354,10 @@ export async function exportExcel(req, res) {
   for (const shop of enrichedShops) {
     let district = 'Chưa cập nhật'
     if (typeof shop?.address === 'string') district = shop.address
-    else if (shop?.address) district = shop.address.district || shop.address.city || shop.address.province || 'Chưa cập nhật'
+    else if (shop?.address) {
+      district = shop.address.district || shop.address.fullAddress || shop.address.street || shop.address.city || shop.address.province || JSON.stringify(shop.address)
+      if (district === '{}') district = 'Chưa cập nhật'
+    }
 
     let statusText = 'Đang hoạt động'
     if (shop.status === 'pending') statusText = 'Chờ duyệt'
@@ -376,9 +389,10 @@ export async function exportExcel(req, res) {
     shopSheet.columns = [
       { header: 'Mã booking', key: 'bookingCode', width: 25 },
       { header: 'Khách hàng', key: 'customer', width: 25 },
+      { header: 'SĐT Khách', key: 'customerPhone', width: 15 },
       { header: 'Dịch vụ', key: 'service', width: 30 },
-      { header: 'Thời gian hẹn', key: 'startTime', width: 20 },
-      { header: 'Thời gian đặt', key: 'createdAt', width: 20 },
+      { header: 'Thời gian hẹn', key: 'startTime', width: 25 },
+      { header: 'Thời gian đặt', key: 'createdAt', width: 25 },
       { header: 'Tiền cọc', key: 'deposit', width: 15 },
       { header: 'Tiền dịch vụ', key: 'totalAmount', width: 15 },
       { header: 'Còn lại', key: 'remaining', width: 15 },
@@ -387,13 +401,19 @@ export async function exportExcel(req, res) {
     shopSheet.getRow(1).font = { bold: true }
 
     const bookings = await Booking.find({ shopId: String(shop._id) }).sort({ createdAt: -1 }).lean()
+    const serviceIds = [...new Set(bookings.map((b) => String(b.serviceId || '')).filter(Boolean))]
+    const services = serviceIds.length ? await Service.find({ _id: { $in: serviceIds } }).lean() : []
+    const serviceById = new Map(services.map((s) => [String(s._id), s]))
+
     for (const b of bookings) {
+      const srv = serviceById.get(String(b.serviceId || ''))
       shopSheet.addRow({
         bookingCode: b.bookingCode || String(b._id),
         customer: b.customerName || 'Khách',
-        service: b.serviceName || '—',
-        startTime: b.startTime ? new Date(b.startTime) : '',
-        createdAt: b.createdAt ? new Date(b.createdAt) : '',
+        customerPhone: b.customerPhone || '—',
+        service: srv ? srv.name : '—',
+        startTime: formatExcelDate(b.startTime),
+        createdAt: formatExcelDate(b.createdAt),
         deposit: b.depositAmount || 0,
         totalAmount: b.totalAmount || 0,
         remaining: (b.totalAmount || 0) - (b.depositAmount || 0),
