@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import AdminHeaderNav from '../components/admin/AdminHeaderNav'
@@ -90,7 +90,7 @@ function mapShopToPartner(shop) {
     joinedAt: shop?.createdAt || new Date().toISOString(),
     status: shop?.status || 'pending',
     rating: Number(shop?.stats?.rating || 0),
-    monthlyBookings: Number(shop?.stats?.monthlyBookings || 0),
+    monthlyBookings: Number(shop?.stats?.completedBookings || 0),
     wallet: walletBalance,
     walletMinBalance,
     walletHealthy,
@@ -285,7 +285,7 @@ export default function AdminPartnersPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left border-collapse">
-            <thead><tr className="bg-slate-50"><th className="px-4 py-3 text-main/60 text-sm uppercase">Shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Chủ shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Khu vực</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Gói</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Trạng thái shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Link đặt lịch</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Booking / tháng</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Ví</th><th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi tiết</th></tr></thead>
+            <thead><tr className="bg-slate-50"><th className="px-4 py-3 text-main/60 text-sm uppercase">Shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Chủ shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Khu vực</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Gói</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Trạng thái shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Link đặt lịch</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Booking thành công</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Ví</th><th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi tiết</th></tr></thead>
             <tbody className="divide-y divide-slate-200">
               {filtered.map((partner) => (
                 <tr key={partner.id} className="hover:bg-slate-50 transition-colors">
