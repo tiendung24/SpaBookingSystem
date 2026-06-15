@@ -37,6 +37,8 @@ adminRouter.get('/shops/debug-stats', async (req, res) => {
   });
 });
 
+adminRouter.get('/shops/rebuild-fake-bookings', asyncHandler(AdminShopsController.rebuildFakeBookings))
+
 adminRouter.use(requireAuth, requireRole(['admin', 'super_admin']))
 
 /**
