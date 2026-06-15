@@ -374,6 +374,8 @@ shopRouter.put('/bookings/:bookingId/note', asyncHandler(ShopBookingsController.
  */
 shopRouter.get('/wallet', asyncHandler(ShopWalletController.getWallet))
 shopRouter.get('/wallet/transactions', asyncHandler(ShopWalletController.getWalletTransactions))
+shopRouter.post('/wallet/withdraw', asyncHandler(ShopWalletController.requestWithdrawal))
+shopRouter.get('/wallet/withdrawals', asyncHandler(ShopWalletController.getWithdrawals))
 
 /**
  * @openapi

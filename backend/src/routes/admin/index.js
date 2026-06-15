@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import { asyncHandler } from '../../utils/asyncHandler.js'
 import { requireAuth, requireRole } from '../../middlewares/auth.js'
 import * as AdminDashboardController from '../../controllers/admin/dashboard.controller.js'
@@ -9,6 +9,7 @@ import * as AdminRefundsController from '../../controllers/admin/refunds.control
 import * as AdminFraudController from '../../controllers/admin/fraud.controller.js'
 import * as AdminNotificationsController from '../../controllers/admin/notifications.controller.js'
 import * as AdminSettingsController from '../../controllers/admin/settings.controller.js'
+import * as AdminPayoutsController from '../../controllers/admin/payout.controller.js'
 
 export const adminRouter = Router()
 
@@ -153,6 +154,10 @@ adminRouter.get('/transactions', asyncHandler(AdminWalletsController.getTransact
 adminRouter.get('/transactions/:transactionId', asyncHandler(AdminWalletsController.getTransactionById))
 adminRouter.get('/platform-fees', asyncHandler(AdminWalletsController.getPlatformFees))
 adminRouter.get('/platform-fees/statistics', asyncHandler(AdminWalletsController.getPlatformFeesStats))
+
+adminRouter.get('/payouts', asyncHandler(AdminPayoutsController.getPayouts))
+adminRouter.post('/payouts/:payoutId/approve', asyncHandler(AdminPayoutsController.approvePayout))
+adminRouter.post('/payouts/:payoutId/reject', asyncHandler(AdminPayoutsController.rejectPayout))
 
 /**
  * @openapi

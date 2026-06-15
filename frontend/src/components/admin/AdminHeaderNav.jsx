@@ -1,10 +1,11 @@
-﻿import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 const items = [
   { to: '/admin/dashboard', label: 'Tổng quan' },
   { to: '/admin/partners', label: 'Đối tác' },
   { to: '/admin/approvals', label: 'Duyệt shop' },
   { to: '/admin/finance', label: 'Tài chính' },
+  { to: '/admin/payouts', label: 'Rút tiền' },
   { to: '/admin/risk', label: 'Rủi ro' },
   { to: '/admin/support', label: 'Hỗ trợ' },
   { to: '/admin/settings', label: 'Cấu hình' }

@@ -5,6 +5,7 @@ export const ShopPayout = createModel('ShopPayout', 'shop_payouts', {
   amount: Number,
   bankInfo: Object,
   status: { type: String, index: true },
+  rejectReason: String,
   createdAt: Date,
   updatedAt: Date
 })

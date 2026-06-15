@@ -4,6 +4,12 @@ import { useShop } from '../context/ShopContext';
 import { apiRequest } from '../lib/api';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/ui/ToastProvider';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import ShopSidebar from '../components/shop/ShopSidebar';
+import { useShop } from '../context/ShopContext';
+import { apiRequest } from '../lib/api';
+import { useSearchParams } from 'react-router-dom';
+import { useToast } from '../components/ui/ToastProvider';
 
 export default function ShopWalletPage() {
   const { shop, setShop, walletTransactions, topupWallet, bookings, loadMeAndShop, token } = useShop();
@@ -12,6 +18,13 @@ export default function ShopWalletPage() {
   const [cardTransform, setCardTransform] = useState('perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)');
   const [topupAmount, setTopupAmount] = useState(200000);
   const [qrVisible, setQrVisible] = useState(false);
+
+  const [withdrawVisible, setWithdrawVisible] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawBank, setWithdrawBank] = useState('');
+  const [withdrawAccount, setWithdrawAccount] = useState('');
+  const [withdrawName, setWithdrawName] = useState('');
+  const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
 
   const walletBalance = Number(shop.wallet?.balance || 0);
   const walletMinBalance = Number(shop.wallet?.minBalance || 100000);
@@ -44,9 +57,12 @@ export default function ShopWalletPage() {
       const isFee = txType === 'platform_fee' || txType === 'fee'
       const isEscrow = txType.startsWith('escrow_')
       const isPenalty = txType === 'penalty'
+      const isPayout = txType === 'payout_request'
       const typeMeta =
         txType === 'topup'
           ? { label: 'Nạp tiền', icon: 'add', cls: 'bg-emerald-100 text-emerald-800', amtCls: 'text-emerald-600 font-bold', sign: '+' }
+          : isPayout
+            ? { label: 'Rút tiền', icon: 'payments', cls: 'bg-indigo-100 text-indigo-800', amtCls: 'text-indigo-600 font-bold', sign: '-' }
           : isFee
             ? { label: 'Phí dịch vụ', icon: 'receipt_long', cls: 'bg-blue-100 text-blue-800', amtCls: 'text-main', sign: '' }
             : isEscrow
@@ -294,6 +310,39 @@ export default function ShopWalletPage() {
     topupRefreshedRef.current = false;
   };
 
+  const handleWithdraw = async () => {
+    const amt = Number(withdrawAmount);
+    if (!amt || amt <= 0) return pushToast({ type: 'error', title: 'Lỗi', message: 'Số tiền không hợp lệ' });
+    if (!withdrawBank || !withdrawAccount || !withdrawName) return pushToast({ type: 'error', title: 'Lỗi', message: 'Vui lòng nhập đủ thông tin ngân hàng' });
+    if (walletBalance - amt < walletMinBalance) {
+      return pushToast({ type: 'error', title: 'Lỗi', message: `Số dư không đủ. Cần duy trì tối thiểu ${walletMinBalance.toLocaleString('vi-VN')}đ` });
+    }
+
+    setSubmittingWithdraw(true);
+    try {
+      await apiRequest('/api/shop/wallet/withdraw', {
+        method: 'POST',
+        token,
+        body: {
+          amount: amt,
+          bankInfo: {
+            bankName: withdrawBank,
+            accountNumber: withdrawAccount,
+            accountName: withdrawName
+          }
+        }
+      });
+      pushToast({ type: 'success', title: 'Thành công', message: 'Đã gửi yêu cầu rút tiền' });
+      setWithdrawVisible(false);
+      setWithdrawAmount('');
+      refreshWalletBalance();
+    } catch (err) {
+      pushToast({ type: 'error', title: 'Lỗi', message: err.message || 'Không thể tạo yêu cầu rút tiền' });
+    } finally {
+      setSubmittingWithdraw(false);
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (topupPollRef.current) {
@@ -376,9 +425,14 @@ export default function ShopWalletPage() {
                 <span className="font-body-sm text-body-sm opacity-80">Số hiệu ví</span>
                 <span className="font-label-bold text-label-bold">LMX-{shop.id?.substring(0, 8).toUpperCase() || '8899-2422'}</span>
               </div>
-              <button onClick={createPayosQr} className="bg-cyan-100 text-cyan-900 font-label-bold text-label-bold px-5 py-3 rounded-xl hover:bg-cyan-200 transition-all shadow-lg">
-                Nạp tiền (PayOS)
-              </button>
+              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
+                <button onClick={() => setWithdrawVisible(true)} className="bg-white/20 text-white border border-white/40 font-label-bold text-label-bold px-5 py-3 rounded-xl hover:bg-white/30 transition-all shadow-lg backdrop-blur-md">
+                  Rút tiền
+                </button>
+                <button onClick={createPayosQr} className="bg-cyan-100 text-cyan-900 font-label-bold text-label-bold px-5 py-3 rounded-xl hover:bg-cyan-200 transition-all shadow-lg">
+                  Nạp tiền (PayOS)
+                </button>
+              </div>
             </div>
           </div>
 
@@ -557,6 +611,42 @@ export default function ShopWalletPage() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {withdrawVisible && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-h3 text-h3 text-primary">Yêu cầu rút tiền</h3>
+                <p className="text-sm text-main/70">Số dư khả dụng: {(walletBalance - walletMinBalance > 0 ? walletBalance - walletMinBalance : 0).toLocaleString('vi-VN')}đ</p>
+              </div>
+              <button type="button" className="text-main/60 hover:text-main" onClick={() => setWithdrawVisible(false)}>✕</button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="text-sm font-bold text-main/70">Số tiền rút (VNĐ)</label>
+                <input className="w-full p-3 rounded-xl border border-slate-300" type="number" placeholder="Ví dụ: 500000" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-main/70">Ngân hàng (Ví dụ: Vietcombank, MBBank)</label>
+                <input className="w-full p-3 rounded-xl border border-slate-300" type="text" value={withdrawBank} onChange={(e) => setWithdrawBank(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-main/70">Số tài khoản</label>
+                <input className="w-full p-3 rounded-xl border border-slate-300" type="text" value={withdrawAccount} onChange={(e) => setWithdrawAccount(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-main/70">Tên chủ tài khoản</label>
+                <input className="w-full p-3 rounded-xl border border-slate-300" type="text" value={withdrawName} onChange={(e) => setWithdrawName(e.target.value)} />
+              </div>
+              <button type="button" disabled={submittingWithdraw} className="w-full py-3 mt-4 rounded-xl bg-primary text-white font-bold disabled:opacity-50" onClick={handleWithdraw}>
+                {submittingWithdraw ? 'Đang xử lý...' : 'Gửi yêu cầu rút tiền'}
+              </button>
             </div>
           </div>
         </div>

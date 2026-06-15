@@ -1,4 +1,4 @@
-import { Deposit, PayosPayment, PlatformFee, Shop, Wallet, WalletTransaction } from '../../models/index.js'
+import { Deposit, PayosPayment, PlatformFee, Shop, ShopPayout, Wallet, WalletTransaction } from '../../models/index.js'
 import { PayOSService } from '../../services/payos.service.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
@@ -195,3 +195,65 @@ export async function getTransactionById(req, res) {
   if (!transaction) throw httpError(404, 'Không tìm thấy giao dịch')
   res.json({ transaction })
 }
+
+export async function requestWithdrawal(req, res) {
+  const shopId = req.auth.shopId
+  const amount = Number(req.body?.amount || 0)
+  const bankInfo = req.body?.bankInfo || {}
+
+  if (!amount || amount <= 0) throw httpError(400, 'Số tiền rút không hợp lệ')
+  if (!bankInfo.bankName || !bankInfo.accountNumber || !bankInfo.accountName) {
+    throw httpError(400, 'Thiếu thông tin ngân hàng')
+  }
+
+  const wallet = await Wallet.findOne({ shopId })
+  if (!wallet) throw httpError(404, 'Không tìm thấy ví')
+
+  const minBalance = Number(wallet.minBalance || 100000)
+  if (Number(wallet.balance || 0) - amount < minBalance) {
+    throw httpError(400, `Số dư không đủ. Cần duy trì tối thiểu ${minBalance.toLocaleString('vi-VN')}đ trong ví.`)
+  }
+
+  // Đóng băng số tiền (trừ luôn khỏi balance)
+  wallet.balance -= amount
+  await wallet.save()
+
+  // Tạo record ShopPayout
+  const payout = await ShopPayout.create({
+    shopId,
+    amount,
+    bankInfo,
+    status: 'pending',
+    createdAt: new Date(),
+    updatedAt: new Date()
+  })
+
+  // Tạo WalletTransaction
+  await WalletTransaction.create({
+    shopId,
+    walletId: String(wallet._id),
+    type: 'payout_request',
+    amount: -amount,
+    description: `Yêu cầu rút tiền về ${bankInfo.bankName} - ${bankInfo.accountNumber}`,
+    refId: String(payout._id),
+    status: 'pending',
+    createdAt: new Date()
+  })
+
+  await writeAuditLog({
+    actorUserId: req.auth.userId,
+    action: 'shop.wallet_withdraw_request',
+    entity: 'shop_payout',
+    entityId: String(payout._id),
+    meta: { shopId, amount }
+  })
+
+  res.status(201).json({ payout })
+}
+
+export async function getWithdrawals(req, res) {
+  const shopId = req.auth.shopId
+  const items = await ShopPayout.find({ shopId }).sort({ createdAt: -1 }).lean()
+  res.json({ items })
+}
+

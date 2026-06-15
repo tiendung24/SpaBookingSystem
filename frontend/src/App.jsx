@@ -34,6 +34,7 @@ import AdminTicketDetailPage from './pages/AdminTicketDetailPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
 import AdminRefundsPage from './pages/AdminRefundsPage'
 import AdminBookingDetailPage from './pages/AdminBookingDetailPage'
+import AdminPayoutsPage from './pages/AdminPayoutsPage'
 
 import CustomerHomePage from './pages/CustomerHomePage'
 import CustomerServiceDetailPage from './pages/CustomerServiceDetailPage'
@@ -90,6 +91,7 @@ function App() {
             <Route path="/admin/support/:id" element={<RequireRole allow={['admin']}><AdminTicketDetailPage /></RequireRole>} />
             <Route path="/admin/settings" element={<RequireRole allow={['admin']}><AdminSettingsPage /></RequireRole>} />
             <Route path="/admin/refunds" element={<RequireRole allow={['admin']}><AdminRefundsPage /></RequireRole>} />
+            <Route path="/admin/payouts" element={<RequireRole allow={['admin']}><AdminPayoutsPage /></RequireRole>} />
 
             <Route path="/customer/bookings" element={<RequireRole allow={['customer']}><CustomerAccountBookingsPage /></RequireRole>} />
             <Route path="/customer/profile" element={<RequireRole allow={['customer']}><CustomerProfilePage /></RequireRole>} />
