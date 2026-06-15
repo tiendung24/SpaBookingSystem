@@ -410,7 +410,7 @@ export async function exportExcel(req, res) {
 
 export async function syncFakeServices(req, res) {
   const shopNames = ['Ngọc Thơ', 'Minh Huyền', 'VanLavi', 'Nơ Nail', 'Thu Ốc', 'Minh Hải'];
-  const shops = await Shop.find({ shopName: { $in: shopNames.map(name => new RegExp(name, 'i')) } });
+  const shops = await Shop.find({ name: { $in: shopNames.map(n => new RegExp(n, 'i')) } });
   
   if (!shops.length) {
     const allShops = await Shop.find({}).select('shopName').lean();
@@ -437,7 +437,7 @@ export async function syncFakeServices(req, res) {
   for (const shop of shops) {
     const shopId = String(shop._id);
     const offset = [0, 5000, 10000][Math.floor(Math.random() * 3)];
-    logs.push(`Processing Shop: ${shop.shopName} (offset: +${offset})`);
+    logs.push(`Processing Shop: ${shop.name} (offset: +${offset})`);
 
     await Service.deleteMany({ shopId });
     
