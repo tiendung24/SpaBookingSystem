@@ -46,6 +46,18 @@ export async function approvePayout(req, res) {
     throw httpError(400, `Không thể duyệt yêu cầu đang ở trạng thái: ${payout.status}`)
   }
 
+  // Trừ tiền trong ví khi duyệt
+  const wallet = await Wallet.findOne({ shopId: payout.shopId })
+  if (!wallet) throw httpError(404, 'Không tìm thấy ví của shop')
+  
+  const minBalance = Number(wallet.minBalance || 100000)
+  if (Number(wallet.balance || 0) - payout.amount < minBalance) {
+    throw httpError(400, `Shop không đủ số dư để duyệt rút tiền (cần duy trì tối thiểu ${minBalance.toLocaleString('vi-VN')}đ)`)
+  }
+
+  wallet.balance -= payout.amount
+  await wallet.save()
+
   payout.status = 'completed'
   payout.updatedAt = new Date()
   await payout.save()
@@ -88,12 +100,7 @@ export async function rejectPayout(req, res) {
     { $set: { status: 'rejected' } }
   )
 
-  // Hoàn tiền lại cho ví
-  const wallet = await Wallet.findOne({ shopId: payout.shopId })
-  if (wallet) {
-    wallet.balance += payout.amount
-    await wallet.save()
-  }
+  // Không cần hoàn tiền vì tiền chưa bị trừ khi shop gửi yêu cầu
 
   await writeAuditLog({
     actorUserId: req.auth.userId,

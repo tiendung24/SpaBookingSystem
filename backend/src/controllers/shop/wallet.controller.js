@@ -214,9 +214,9 @@ export async function requestWithdrawal(req, res) {
     throw httpError(400, `Số dư không đủ. Cần duy trì tối thiểu ${minBalance.toLocaleString('vi-VN')}đ trong ví.`)
   }
 
-  // Đóng băng số tiền (trừ luôn khỏi balance)
-  wallet.balance -= amount
-  await wallet.save()
+  // DO NOT deduct balance here yet, wait for admin approval
+  // wallet.balance -= amount
+  // await wallet.save()
 
   // Tạo record ShopPayout
   const payout = await ShopPayout.create({
