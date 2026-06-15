@@ -85,7 +85,7 @@ function mapShopToPartner(shop) {
     shopName: shop?.name || '—',
     owner: shop?.ownerName || 'Chưa cập nhật',
     phone: shop?.phone || '',
-    district: shop?.address?.district || shop?.address?.city || 'Chưa cập nhật',
+    district: typeof shop?.address === 'string' ? shop.address : (shop?.address?.district || shop?.address?.city || shop?.address?.province || 'Chưa cập nhật'),
     plan: shop?.plan || 'Cơ bản',
     joinedAt: shop?.createdAt || new Date().toISOString(),
     status: shop?.status || 'pending',
@@ -285,14 +285,13 @@ export default function AdminPartnersPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left border-collapse">
-            <thead><tr className="bg-slate-50"><th className="px-4 py-3 text-main/60 text-sm uppercase">Shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Chủ shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Khu vực</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Gói</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Trạng thái shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Link đặt lịch</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Booking thành công</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Ví</th><th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi tiết</th></tr></thead>
+            <thead><tr className="bg-slate-50"><th className="px-4 py-3 text-main/60 text-sm uppercase">Shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Chủ shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Khu vực</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Trạng thái shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Link đặt lịch</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Booking thành công</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Ví</th><th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi tiết</th></tr></thead>
             <tbody className="divide-y divide-slate-200">
               {filtered.map((partner) => (
                 <tr key={partner.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-4"><p className="font-bold text-primary">{partner.shopName}</p><p className="text-xs text-main/60">Mã: {partner.id}</p></td>
                   <td className="px-4 py-4"><p className="font-semibold">{partner.owner}</p><p className="text-xs text-main/60">{partner.phone}</p></td>
                   <td className="px-4 py-4 text-sm text-main/70">{partner.district}</td>
-                  <td className="px-4 py-4 text-sm text-main/70">{partner.plan}</td>
                   <td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-xs font-bold ${statusClass(partner.status)}`}>{statusLabel(partner.status)}</span></td>
                   <td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-xs font-bold ${linkStatusClass(partner)}`}>{linkStatusLabel(partner)}</span></td>
                   <td className="px-4 py-4 text-sm text-main/70">{partner.monthlyBookings}</td>

@@ -34,7 +34,8 @@ async function attachWalletStats(shops) {
   const shopIds = list.filter(Boolean).map((shop) => String(shop._id))
   if (!shopIds.length) return shops
 
-  const [wallets, bookingAgg, depositAgg, feeAgg, refundAgg] = await Promise.all([
+  const ownerIds = list.map((shop) => String(shop.ownerId || '')).filter(Boolean)
+  const [wallets, bookingAgg, depositAgg, feeAgg, refundAgg, users] = await Promise.all([
     Wallet.find({ shopId: { $in: shopIds } }).lean(),
     Booking.aggregate([
       { $match: { shopId: { $in: shopIds } } },
@@ -72,13 +73,15 @@ async function attachWalletStats(shops) {
     RefundRequest.aggregate([
       { $match: { shopId: { $in: shopIds }, status: { $in: ['success', 'paid'] } } },
       { $group: { _id: '$shopId', depositRefundedToCustomer: { $sum: '$amount' } } }
-    ])
+    ]),
+    ownerIds.length ? User.find({ _id: { $in: ownerIds } }).select({ fullName: 1, phone: 1 }).lean() : []
   ])
   const walletByShopId = new Map(wallets.map((wallet) => [String(wallet.shopId), wallet]))
   const bookingByShopId = new Map(bookingAgg.map((item) => [String(item._id), item]))
   const depositByShopId = new Map(depositAgg.map((item) => [String(item._id), item]))
   const feeByShopId = new Map(feeAgg.map((item) => [String(item._id), item]))
   const refundByShopId = new Map(refundAgg.map((item) => [String(item._id), item]))
+  const userMap = new Map(users.map((user) => [String(user._id), user.fullName || user.phone || 'Chưa cập nhật']))
   const defaultMin = Number(process.env.SHOP_WALLET_MIN_BALANCE || 100000)
 
   const mapped = list.map((shop) => {
@@ -93,6 +96,7 @@ async function attachWalletStats(shops) {
     const refundStats = refundByShopId.get(String(shop._id)) || {}
     return {
       ...shop,
+      ownerName: userMap.get(String(shop.ownerId)) || 'Chưa cập nhật',
       wallet: wallet || { shopId: String(shop._id), balance: 0, minBalance: defaultMin, escrowBalance: 0, status: 'active' },
       stats: {
         ...(shop.stats || {}),
