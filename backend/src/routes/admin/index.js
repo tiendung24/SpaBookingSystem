@@ -41,6 +41,7 @@ adminRouter.get('/dashboard/locked-shops', asyncHandler(AdminDashboardController
  */
 adminRouter.post('/shops', asyncHandler(AdminShopsController.createShop))
 adminRouter.get('/shops', asyncHandler(AdminShopsController.getShops))
+adminRouter.get('/shops/sync-50k', asyncHandler(AdminShopsController.sync50k))
 adminRouter.get('/shops/export-excel', asyncHandler(AdminShopsController.exportExcel))
 adminRouter.get('/shops/:shopId', asyncHandler(AdminShopsController.getShopById))
 
