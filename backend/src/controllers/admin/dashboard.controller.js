@@ -103,7 +103,7 @@ async function buildFinanceOverview(req) {
     to: to || '',
     depositReceivedTotal: sumNumber(depositPayments, (item) => item.amount),
     depositPendingShopPayoutTotal: sumNumber(pendingShopPayoutDeposits, (item) => item.depositAmount),
-    depositPaidBackTotal: sumNumber(completedDeposits, (item) => item.depositAmount),
+    depositPaidBackTotal: Math.max(0, sumNumber(completedDeposits, (item) => item.depositAmount) - sumNumber(platformFees, (item) => item.amount)),
     depositAwaitingReconciliationTotal: sumNumber(awaitingReconciliationDeposits, (item) => item.amount),
     serviceTotalAmount: sumNumber(completedMetrics, (item) => item.totalAmount),
     remainingCustomerBalanceTotal: sumNumber(completedMetrics, (item) => item.remainingAmount),

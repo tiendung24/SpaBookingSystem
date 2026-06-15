@@ -1,4 +1,4 @@
-﻿import bcrypt from 'bcryptjs'
+import bcrypt from 'bcryptjs'
 import { Booking, Deposit, PayosPayment, PlatformFee, RefundRequest, Service, Shop, User, Wallet, WalletTransaction } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
@@ -106,7 +106,7 @@ async function attachWalletStats(shops) {
         depositBookings: Number(bookingStats.depositBookings || 0),
         depositReceived: Number(depositStats.depositReceived || 0),
         depositWaitingForShop: Number(depositStats.depositWaitingForShop || 0),
-        depositPaidToShop: Number(depositStats.depositPaidToShop || 0),
+        depositPaidToShop: Math.max(0, Number(depositStats.depositPaidToShop || 0) - Number(feeStats.platformFeeCollected || 0)),
         platformFeeCollected: Number(feeStats.platformFeeCollected || 0),
         depositRefundedToCustomer: Number(refundStats.depositRefundedToCustomer || 0),
         depositPendingReconcile: Math.max(0, Number(depositStats.depositReceived || 0) - Number(depositStats.depositPaidToShop || 0) - Number(refundStats.depositRefundedToCustomer || 0)),

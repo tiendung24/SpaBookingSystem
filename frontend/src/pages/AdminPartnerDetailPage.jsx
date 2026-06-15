@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import AdminHeaderNav from '../components/admin/AdminHeaderNav'
 import AdminLayout from '../components/admin/AdminLayout'
@@ -317,7 +317,7 @@ export default function AdminPartnerDetailPage() {
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Tổng cọc đã hoàn khách</p><p className="text-2xl font-bold text-rose-600 mt-1">{formatVnd(kpis.depositRefundedToCustomer)}</p></article>
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Cọc chờ đối soát</p><p className="text-2xl font-bold text-amber-700 mt-1">{formatVnd(kpis.depositPendingReconcile)}</p></article>
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Tổng tiền dịch vụ</p><p className="text-2xl font-bold text-primary mt-1">{formatVnd(kpis.totalServiceAmount)}</p></article>
-        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Khách còn phải trả</p><p className="text-2xl font-bold text-primary mt-1">{formatVnd(kpis.customerRemainingAmount)}</p></article>
+        <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Khách đã trả tại shop</p><p className="text-2xl font-bold text-primary mt-1">{formatVnd(kpis.customerRemainingAmount)}</p></article>
 
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Cọc chờ trả shop</p><p className="text-2xl font-bold text-amber-700 mt-1">{formatVnd(kpis.depositWaitingForShop)}</p></article>
         <article className="glass-card bg-white rounded-3xl p-6"><p className="text-sm text-main/60">Cọc đã trả shop</p><p className="text-2xl font-bold text-emerald-600 mt-1">{formatVnd(kpis.depositPaidToShop)}</p></article>

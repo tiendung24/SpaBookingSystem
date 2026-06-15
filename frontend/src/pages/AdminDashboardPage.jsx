@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../components/admin/AdminLayout'
 import AdminHeaderNav from '../components/admin/AdminHeaderNav'
@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
     { label: 'Cọc đã trả shop', value: formatVnd(stats.finance.depositPaidBackTotal), tone: 'text-emerald-600' },
     { label: 'Cọc chờ đối soát', value: formatVnd(stats.finance.depositAwaitingReconciliationTotal), tone: 'text-sky-700' },
     { label: 'Tổng tiền dịch vụ', value: formatVnd(stats.finance.serviceTotalAmount), tone: 'text-primary' },
-    { label: 'Khách còn phải trả', value: formatVnd(stats.finance.remainingCustomerBalanceTotal), tone: 'text-fuchsia-700' },
+    { label: 'Khách đã trả tại shop', value: formatVnd(stats.finance.remainingCustomerBalanceTotal), tone: 'text-fuchsia-700' },
     { label: 'Phí nền tảng đã thu', value: formatVnd(stats.finance.platformFeeTotal), tone: 'text-rose-600' },
     { label: 'Tổng số dư ví ảo shop', value: formatVnd(stats.finance.totalVirtualWalletBalance), tone: 'text-emerald-600' },
     { label: 'Booking hoàn thành', value: String(stats.finance.totalCompletedBookings || 0), tone: 'text-primary' },
