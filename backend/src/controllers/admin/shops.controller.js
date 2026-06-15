@@ -407,3 +407,79 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
+
+export async function syncFakeServices(req, res) {
+  const shopNames = ['Ngọc Thơ', 'Minh Huyền', 'VanLavi', 'Nơ Nail', 'Thu Ốc', 'Minh Hải'];
+  const shops = await Shop.find({ name: { $in: shopNames.map(n => new RegExp(n, 'i')) } });
+  
+  if (!shops.length) {
+    const allShops = await Shop.find({}).select('name').lean();
+    return res.json({ message: 'Không tìm thấy shop nào.', allShops: allShops.map(s => s.name) });
+  }
+
+  const baseServices = [
+    { name: 'Nhật da + sửa form móng', duration: 30, price: 50000, shortDescription: 'Vệ sinh và tạo dáng móng cơ bản', description: 'Làm sạch da chết quanh móng, cắt da thừa, dũa và chỉnh form móng gọn gàng, giúp móng khỏe và đẹp trước khi thực hiện các dịch vụ khác.', type: 'default' },
+    { name: 'Tạo cấu móng', duration: 30, price: 50000, shortDescription: 'Tạo độ cong tự nhiên cho móng', description: 'Điều chỉnh bề mặt móng, tạo đường cong C-Curve giúp móng nhìn dày dặn, chắc khỏe và sang trọng hơn.', type: 'default' },
+    { name: 'Úp Base', duration: 45, price: 100000, shortDescription: 'Tăng độ cứng cho móng tự nhiên', description: 'Phủ lớp base chuyên dụng giúp bảo vệ móng thật, hạn chế gãy và tạo nền hoàn hảo cho các bước sơn tiếp theo.', type: 'default' },
+    { name: 'Fill Gel', duration: 60, price: 70000, priceRange: [70000, 80000, 90000, 100000], shortDescription: 'Dặm lại phần móng gel mọc dài', description: 'Bổ sung gel vào phần chân móng đã mọc ra sau một thời gian sử dụng, giúp bộ móng đều đẹp như mới mà không cần làm lại toàn bộ.', type: 'default' },
+    { name: 'Đắp Gel Móng Ngắn', duration: 90, price: 150000, shortDescription: 'Nối và tạo form móng ngắn', description: 'Sử dụng gel chuyên dụng để kéo dài hoặc gia cố móng, phù hợp khách muốn bộ móng tự nhiên, nhẹ tay.', type: 'default' },
+    { name: 'Đắp Gel Móng Nối', duration: 120, price: 250000, shortDescription: 'Nối móng dài theo yêu cầu', description: 'Thiết kế độ dài và form móng theo sở thích khách hàng, giúp tạo nền cho các mẫu nail nghệ thuật phức tạp.', type: 'default' },
+    { name: 'Sơn Biab', duration: 60, price: 180000, shortDescription: 'Sơn dưỡng cứng móng cao cấp', description: 'Sử dụng BIAB (Builder In A Bottle) giúp tăng độ chắc khỏe cho móng thật, hạn chế gãy xước và vẫn giữ vẻ tự nhiên.', type: 'default' },
+    { name: 'Combo Sơn Gel + Thạch', duration: 75, price: 100000, shortDescription: 'Sơn gel kết hợp hiệu ứng thạch', description: 'Mang lại màu sắc trong trẻo, bóng đẹp, phù hợp phong cách nhẹ nhàng, nữ tính.', type: 'default' },
+    { name: 'Combo Sơn Mắt Mèo + Tráng Gương', duration: 90, price: 150000, priceRange: [150000, 160000, 170000, 180000], shortDescription: 'Hiệu ứng nail nổi bật', description: 'Kết hợp hiệu ứng mắt mèo ánh kim và tráng gương phản chiếu tạo vẻ sang trọng, bắt sáng mạnh.', type: 'default' },
+    { name: 'French / Ombre', duration: 90, price: 80000, shortDescription: 'Thiết kế nail kinh điển', description: 'French đầu móng hoặc Ombre chuyển màu nhẹ nhàng, phù hợp phong cách thanh lịch và tinh tế.', type: 'default' },
+    { name: 'Charm (đính đá)', duration: 20, price: 50000, shortDescription: 'Trang trí nổi bật cho móng', description: 'Đính charm, đá hoặc phụ kiện nail cao cấp giúp bộ móng trở nên sang trọng và độc đáo hơn.', type: 'default' }
+  ];
+
+  let logs = [];
+  let totalBookingsUpdated = 0;
+
+  for (const shop of shops) {
+    const shopId = String(shop._id);
+    const offset = [0, 5000, 10000][Math.floor(Math.random() * 3)];
+    logs.push(`Processing Shop: ${shop.name} (offset: +${offset})`);
+
+    // We don't delete services here to not break other things if they rely on it, but we can delete them.
+    await Service.deleteMany({ shopId });
+    
+    const newServicesData = baseServices.map(s => {
+      let finalPrice = s.price;
+      if (s.priceRange) {
+        finalPrice = s.priceRange[Math.floor(Math.random() * s.priceRange.length)];
+      } else {
+        finalPrice += offset;
+      }
+      const newS = { ...s, shopId, price: finalPrice };
+      delete newS.priceRange;
+      return newS;
+    });
+
+    const insertedServices = await Service.insertMany(newServicesData);
+    
+    const bookings = await Booking.find({ shopId });
+    let bookingsUpdated = 0;
+
+    for (const b of bookings) {
+      // Pick 1 random service
+      const randS = insertedServices[Math.floor(Math.random() * insertedServices.length)];
+      
+      b.serviceId = String(randS._id);
+      b.totalAmount = randS.price;
+      const depositAmount = Math.min(Number(b.depositAmount || 0), randS.price);
+      b.depositAmount = depositAmount;
+      b.remainingAmount = randS.price - depositAmount;
+      await b.save();
+      bookingsUpdated++;
+    }
+
+    totalBookingsUpdated += bookingsUpdated;
+    logs.push(`- Created 11 services. Updated ${bookingsUpdated} bookings.`);
+  }
+
+  res.json({
+    message: 'Hoàn tất cập nhật lần 2',
+    totalShops: shops.length,
+    totalBookingsUpdated,
+    logs
+  });
+}
