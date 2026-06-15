@@ -13,8 +13,6 @@ import * as AdminPayoutsController from '../../controllers/admin/payout.controll
 
 export const adminRouter = Router()
 
-adminRouter.get('/shops/sync-admin-owners', asyncHandler(AdminShopsController.syncAdminOwners))
-
 adminRouter.use(requireAuth, requireRole(['admin', 'super_admin']))
 
 /**

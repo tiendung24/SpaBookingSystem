@@ -407,32 +407,3 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
-
-export async function syncAdminOwners(req, res) {
-  const shopData = [
-    { regex: /Nail Minh Hải/i, ownerName: 'Nguyễn Minh Hải (chủ shop)' },
-    { regex: /Nail Thu Ốc/i, ownerName: 'Thu Ốc (chủ shop)' },
-    { regex: /Liên Facial/i, ownerName: 'Liên (chủ shop)' },
-    { regex: /Nơ Nail/i, ownerName: 'Hải Yến (chủ shop)' },
-    { regex: /VanLavi/i, ownerName: 'Vân Lavi (chủ shop)' },
-    { regex: /Nail Minh Huyền/i, ownerName: 'Nguyễn Minh Huyền (chủ shop)' },
-    { regex: /Spa Thu Trang/i, ownerName: 'ThuTrang (chủ shop)' },
-    { regex: /Ngọc Thơ/i, ownerName: 'Ngọc Thơ (chủ shop)' },
-  ];
-
-  let updated = 0;
-  for (let i = 0; i < shopData.length; i++) {
-    const info = shopData[i];
-    const shop = await Shop.findOne({ name: info.regex });
-    if (!shop) continue;
-
-    const user = await User.findById(shop.ownerId);
-    if (user) {
-      user.fullName = info.ownerName;
-      await user.save();
-      updated++;
-    }
-  }
-
-  res.json({ message: 'Hoàn tất cập nhật tên user', updated });
-}
