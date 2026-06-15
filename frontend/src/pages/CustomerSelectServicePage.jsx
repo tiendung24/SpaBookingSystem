@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 import CustomerHeader from '../components/customer/CustomerHeader'
@@ -18,6 +18,17 @@ const categoryLabels = {
 const serviceFallbackImage = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop'
 const staffFallbackImage = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop'
 
+function staffRoleLabel(role) {
+  if (role === 'tech') return 'Kỹ thuật viên'
+  return role || 'Kỹ thuật viên'
+}
+
+function staffExperienceLabel(member) {
+  const directYears = Number(member?.experienceYears || member?.yearsExperience || 0)
+  if (Number.isFinite(directYears) && directYears > 0) return `${directYears}+ năm`
+  return 'Đang cập nhật'
+}
+
 export default function CustomerSelectServicePage({ isModal = false, onClose, onNext } = {}) {
   const navigate = useNavigate()
   const { slug } = useParams()
@@ -27,6 +38,8 @@ export default function CustomerSelectServicePage({ isModal = false, onClose, on
   const [query, setQuery] = useState('')
   const [selectedServiceId, setSelectedServiceId] = useState(bookingDraft.serviceId || null)
   const [selectedStaffId, setSelectedStaffId] = useState(bookingDraft.staffId || 'random')
+  const [serviceDetail, setServiceDetail] = useState(null)
+  const [staffDetail, setStaffDetail] = useState(null)
 
   useEffect(() => {
     if (!slug) return
@@ -186,9 +199,14 @@ export default function CustomerSelectServicePage({ isModal = false, onClose, on
                         <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[18px] text-primary">schedule</span><span>{service.durationMinutes} phút</span></div>
                         <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[18px] text-primary">payments</span><span>{formatVnd(service.priceVnd)}</span></div>
                       </div>
-                      <button type="button" onClick={() => setSelectedServiceId(service.id)} className={`w-full py-3 rounded-2xl font-bold transition-all active:scale-[0.98] ${selected ? 'bg-primary text-white' : 'bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white'}`}>
-                        {selected ? 'Đã chọn' : 'Chọn'}
-                      </button>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setServiceDetail(service)} className={`w-1/2 py-3 rounded-2xl font-bold transition-all bg-white border-2 border-primary/20 text-primary hover:bg-primary/5`}>
+                          Xem chi tiết
+                        </button>
+                        <button type="button" onClick={() => setSelectedServiceId(service.id)} className={`w-1/2 py-3 rounded-2xl font-bold transition-all active:scale-[0.98] ${selected ? 'bg-primary text-white' : 'bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white'}`}>
+                          {selected ? 'Đã chọn' : 'Chọn'}
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
@@ -230,6 +248,7 @@ export default function CustomerSelectServicePage({ isModal = false, onClose, on
                       </div>
                       <span className="font-bold text-center text-main">{m.name}</span>
                       <span className="text-xs text-main/60 font-bold">{m.role || 'Chuyên viên'}</span>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setStaffDetail(m); }} className="mt-1 px-3 py-1 bg-primary/5 text-primary text-xs font-bold rounded-full hover:bg-primary/15 transition-colors">Chi tiết</button>
                       {!canDoService ? <span className="text-[11px] px-2 py-1 rounded-full bg-red-100 text-red-700 font-bold">Không phụ trách dịch vụ này</span> : null}
                       {!worksThisSlot ? <span className="text-[11px] px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">Không làm slot này</span> : null}
                     </button>
@@ -298,6 +317,116 @@ export default function CustomerSelectServicePage({ isModal = false, onClose, on
           <p className="text-xs text-main/60">© 2026 LumiX Partner. Powered by LumiX.</p>
         </div>
       </footer>
+
+      {serviceDetail ? (
+        <div
+          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setServiceDetail(null)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img className="w-full h-72 object-cover rounded-t-3xl" src={serviceDetail.imageUrl || serviceFallbackImage} alt={serviceDetail.name} />
+            <div className="p-6 space-y-4">
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <p className="text-xs font-bold text-secondary uppercase tracking-widest">Chi tiết dịch vụ</p>
+                  <h3 className="text-2xl font-black text-main mt-1">{serviceDetail.name}</h3>
+                </div>
+                <button type="button" onClick={() => setServiceDetail(null)} className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-main font-bold">
+                  ✕
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-primary/5 p-4">
+                  <p className="text-xs text-main/50">Giá dịch vụ</p>
+                  <p className="font-black text-primary">{formatVnd(serviceDetail.priceVnd)}</p>
+                </div>
+                <div className="rounded-2xl bg-primary/5 p-4">
+                  <p className="text-xs text-main/50">Thời gian dự kiến</p>
+                  <p className="font-black text-primary">{serviceDetail.durationMinutes} phút</p>
+                </div>
+              </div>
+              <p className="text-main/70 leading-relaxed whitespace-pre-line break-words">
+                {serviceDetail.detailedDescription || serviceDetail.shortDescription || 'Shop chưa cập nhật mô tả chi tiết cho dịch vụ này.'}
+              </p>
+              <button className="block w-full py-4 rounded-2xl bg-primary text-white text-center font-bold mt-4" type="button" onClick={() => {
+                setSelectedServiceId(serviceDetail.id || serviceDetail._id)
+                setServiceDetail(null)
+              }}>
+                Chọn dịch vụ này
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {staffDetail ? (
+        <div
+          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setStaffDetail(null)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex items-center gap-4">
+                <img className="w-24 h-24 rounded-3xl object-cover border border-slate-200" src={staffDetail.avatar || staffFallbackImage} alt={staffDetail.name} />
+                <div>
+                  <p className="text-xs font-bold text-secondary uppercase tracking-widest">Chi tiết nhân sự</p>
+                  <h3 className="text-2xl font-black text-main mt-1">{staffDetail.name}</h3>
+                  <p className="text-sm text-main/60 font-bold">{staffRoleLabel(staffDetail.role)}</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setStaffDetail(null)} className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-main font-bold">
+                ✕
+              </button>
+            </div>
+            <div className="mt-6 space-y-5">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-primary/5 p-4">
+                  <p className="text-xs text-main/50">Vai trò</p>
+                  <p className="font-black text-primary">{staffRoleLabel(staffDetail.role)}</p>
+                </div>
+                <div className="rounded-2xl bg-primary/5 p-4">
+                  <p className="text-xs text-main/50">Kinh nghiệm</p>
+                  <p className="font-black text-primary">{staffExperienceLabel(staffDetail)}</p>
+                </div>
+              </div>
+
+              {staffDetail.specialties?.length ? (
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <p className="text-sm font-bold text-main/70 mb-2">Chuyên môn</p>
+                  <div className="flex flex-wrap gap-2">
+                    {staffDetail.specialties.map((item) => (
+                      <span key={item} className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-sm font-bold text-main/70 mb-2">Giới thiệu</p>
+                <p className="text-main/70 leading-relaxed whitespace-pre-line break-words">
+                  {staffDetail.bio || staffDetail.shortBio || 'Shop chưa cập nhật giới thiệu chi tiết cho nhân sự này.'}
+                </p>
+              </div>
+              <button className="block w-full py-4 rounded-2xl bg-primary text-white text-center font-bold mt-4" type="button" onClick={() => {
+                const canDoService = staffCanDoSelectedService(staffDetail)
+                if (canDoService) {
+                  setSelectedStaffId(staffDetail.id || staffDetail._id)
+                  setStaffDetail(null)
+                }
+              }}>
+                {staffCanDoSelectedService(staffDetail) ? 'Chọn nhân sự này' : 'Không phụ trách dịch vụ đang chọn'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 
