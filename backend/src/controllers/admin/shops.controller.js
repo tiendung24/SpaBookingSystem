@@ -1,4 +1,4 @@
-﻿import bcrypt from 'bcryptjs'
+import bcrypt from 'bcryptjs'
 import ExcelJS from 'exceljs'
 import { Booking, Deposit, PayosPayment, PlatformFee, RefundRequest, Service, Shop, User, Wallet, WalletTransaction, ShopStaff } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
@@ -426,4 +426,200 @@ export async function exportExcel(req, res) {
   res.setHeader('Content-Disposition', 'attachment; filename="LumiX-Partners.xlsx"')
   await workbook.xlsx.write(res)
   res.end()
+}
+
+export async function rebuildFakeBookings(req, res) {
+  const DEPOSIT_AMOUNT = 50000;
+
+  // Per-shop service pools (bảng của bạn)
+  const SHOP_CONFIG = {
+    'Liên Facial Spa': {
+      shopName: 'Liên Facial Spa',
+      groups: {
+        gội: ['Gội Thảo Dược (Cơ Bản)', 'Gội Đầu Bông Bưởi', 'Gội Dưỡng Sinh Bông Bưởi / Hạ Trắng', 'Gội Dưỡng Sinh Thủ Đạo Thang', 'Gội Dưỡng Sinh Tiêu Chuẩn Nhà Hà'],
+        da: ['Thanh Lọc Làn Da Organic / Organic Sensitive', 'Thanh Lọc Dưỡng Sáng Chuyên Sâu Micro Vital / Collagen Sensitive', 'Combo Sáng Da Chống Lão Hóa Elite Peptide / Stem Cell Extract', 'Combo Giảm Nám + Cấp Ẩm Plant Cell Darksort', 'Combo Cấp Ẩm Chống Lão Hóa Aqua Silky', 'Combo Detox - Cấp Ẩm - Sáng Da Luxury 4'],
+      },
+    },
+    'Nail Minh Hải': { shopName: 'Nail Minh Hải', skipTypes: ['gội', 'mi'], groups: { nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'French / Ombre'] } },
+    'Nail Thu Ốc': { shopName: 'Nail Thu Ốc', groups: { nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'Combo Sơn Mắt Mèo + Tráng Gương', 'French / Ombre'] } },
+    'Nơ Nail': { shopName: 'Nơ Nail', groups: { nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'French / Ombre', 'Fill Gel'] } },
+    'VanLavi': { shopName: 'VanLavi', groups: { nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch'] } },
+    'Tiệm Nail Minh Huyền': { shopName: 'Tiệm Nail Minh Huyền', groups: { nail: ['Sơn Biab', 'Fill Gel', 'Combo Sơn Gel + Thạch'] } },
+    'Spa Thu Trang': { shopName: 'Spa Thu Trang', groups: { nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'French / Ombre'] } },
+    'Ngọc Thơ': { shopName: 'Ngọc Thơ', skipTypes: ['gội', 'mi'], groups: { nail: ['Sơn Biab', 'Combo Sơn Gel + Thạch', 'French / Ombre', 'Charm (đính đá)'] } },
+  };
+
+  const schedule = [
+    { shopKey: 'Nail Minh Hải', bookings: [{ date: '2026-06-19', hints: ['nail'] }, { date: '2026-06-20', hints: ['nail'] }, { date: '2026-06-25', hints: ['nail'] }] },
+    { shopKey: 'Nail Thu Ốc', bookings: [{ date: '2026-06-18', hints: ['nail'] }, { date: '2026-06-20', hints: ['nail', 'nail'] }, { date: '2026-06-22', hints: ['nail', 'nail'] }, { date: '2026-06-24', hints: ['nail'] }, { date: '2026-06-26', hints: ['nail', 'nail'] }] },
+    { shopKey: 'Liên Facial Spa', bookings: [{ date: '2026-06-17', hints: ['da'] }, { date: '2026-06-18', hints: ['gội', 'gội'] }, { date: '2026-06-21', hints: ['gội'] }, { date: '2026-06-22', hints: ['gội', 'gội'] }, { date: '2026-06-25', hints: ['gội', 'gội'] }, { date: '2026-06-27', hints: ['da', 'da'] }, { date: '2026-06-29', hints: ['da'] }] },
+    { shopKey: 'Nơ Nail', bookings: [{ date: '2026-06-18', hints: ['nail'] }, { date: '2026-06-21', hints: ['nail'] }, { date: '2026-06-22', hints: ['nail'] }, { date: '2026-06-25', hints: ['nail'] }, { date: '2026-06-28', hints: ['nail', 'nail'] }] },
+    { shopKey: 'VanLavi', bookings: [{ date: '2026-06-16', hints: ['nail'] }, { date: '2026-06-20', hints: ['nail'] }] },
+    { shopKey: 'Tiệm Nail Minh Huyền', bookings: [{ date: '2026-06-19', hints: ['nail'] }, { date: '2026-06-23', hints: ['nail'] }, { date: '2026-06-27', hints: ['nail'] }, { date: '2026-06-29', hints: ['nail'] }] },
+    { shopKey: 'Spa Thu Trang', bookings: [{ date: '2026-06-17', hints: ['nail'] }, { date: '2026-06-20', hints: ['nail'] }, { date: '2026-06-24', hints: ['nail'] }, { date: '2026-06-28', hints: ['nail'] }] },
+    { shopKey: 'Ngọc Thơ', bookings: [{ date: '2026-06-17', hints: ['nail', 'nail', 'nail'] }, { date: '2026-06-20', hints: ['nail'] }, { date: '2026-06-25', hints: ['nail'] }] },
+  ];
+
+  // Get platform fee
+  const mongooseModule = await import('mongoose');
+  const mongoose = mongooseModule.default || mongooseModule;
+  let setting = null;
+  try { const SystemSetting = mongoose.model('SystemSetting'); setting = await SystemSetting.findOne({ key: 'platform_fee_per_completed_booking' }).lean(); } catch (e) {}
+  const feeAmount = Number(setting?.value || 10000);
+
+  // Cleanup old fake data
+  const oldFake = await Booking.find({ bookingCode: { $regex: '^BK' }, status: 'completed' }).lean();
+  const oldIds = oldFake.map(b => String(b._id));
+  if (oldIds.length > 0) {
+    await Booking.deleteMany({ _id: { $in: oldIds } });
+    await Deposit.deleteMany({ bookingId: { $in: oldIds } });
+    await PlatformFee.deleteMany({ bookingId: { $in: oldIds } });
+    await WalletTransaction.deleteMany({ refId: { $in: oldIds }, type: { $in: ['platform_fee', 'escrow_release_auto'] } });
+  }
+
+  const fakeNames = ['Nguyễn Thị Lan','Trần Thu Hà','Lê Thị Mai','Phạm Bích Ngọc','Hoàng Kim Chi','Vũ Thanh Hằng','Đặng Thùy Dung','Bùi Thu Thủy','Đỗ Mai Anh','Ngô Phương Thảo','Dương Thu Hiền','Lý Bích Loan','Trịnh Ánh Nguyệt','Đoàn Thanh Hương','Đinh Tuyết Mai','Lâm Mỹ Linh','Vương Tố Uyên','Hồ Bích Ngọc','Châu Khải Phong','Trần Ngọc Ánh'];
+  const randName = () => fakeNames[Math.floor(Math.random() * fakeNames.length)];
+  const randPhone = () => '09' + Math.floor(10000000 + Math.random() * 90000000);
+
+  let totalAdded = 0;
+  let totalSkipped = 0;
+
+  for (const shopDef of schedule) {
+    const cfg = SHOP_CONFIG[shopDef.shopKey];
+    if (!cfg) continue;
+    const shop = await Shop.findOne({ name: cfg.shopName });
+    if (!shop) continue;
+
+    const allServices = await Service.find({ shopId: String(shop._id) }).lean();
+    const svcByName = {};
+    for (const s of allServices) svcByName[s.name] = s;
+
+    const staffs = await ShopStaff.find({ shopId: String(shop._id), role: 'staff' }).lean();
+    const staffId = staffs.length ? String(staffs[0]._id) : undefined;
+
+    // Anti-duplicate rotation per group
+    const shuffled = {};
+    const ptrs = {};
+    for (const [grp, pool] of Object.entries(cfg.groups || {})) {
+      shuffled[grp] = [...pool].sort(() => Math.random() - 0.5);
+      ptrs[grp] = 0;
+    }
+    const pick = (grp) => {
+      const pool = shuffled[grp];
+      if (!pool || !pool.length) return null;
+      const name = pool[ptrs[grp]++ % pool.length];
+      return svcByName[name] || null;
+    };
+
+    for (const b of shopDef.bookings) {
+      for (const hint of b.hints) {
+        if (cfg.skipTypes && cfg.skipTypes.includes(hint)) { totalSkipped++; continue; }
+        const svc = pick(hint);
+        if (!svc) { totalSkipped++; continue; }
+
+        // Timing
+        const baseCreatedAt = new Date(`${b.date}T00:00:00+07:00`);
+        baseCreatedAt.setUTCHours(8 + Math.floor(Math.random() * 14) - 7, Math.floor(Math.random() * 60), 0, 0);
+        const startTime = new Date(baseCreatedAt);
+        startTime.setDate(startTime.getDate() + 1 + Math.floor(Math.random() * 3));
+        startTime.setUTCHours(9 + Math.floor(Math.random() * 11) - 7, Math.floor(Math.random() * 60), 0, 0);
+        const endTime = new Date(startTime.getTime() + (svc.durationMinutes || 60) * 60000);
+        const bookingCode = 'BK' + Math.floor(100000 + Math.random() * 900000);
+
+        // 1. CREATE BOOKING with deposit
+        const newBooking = await Booking.create({
+          bookingCode,
+          shopId: String(shop._id),
+          serviceId: String(svc._id),
+          staffId,
+          customerName: randName(),
+          customerPhone: randPhone(),
+          startTime,
+          endTime,
+          status: 'completed',
+          totalAmount: svc.price || 100000,
+          depositAmount: DEPOSIT_AMOUNT,
+          originalDepositAmount: DEPOSIT_AMOUNT,
+          createdAt: baseCreatedAt,
+          updatedAt: startTime,
+        });
+
+        const bookingId = String(newBooking._id);
+        const shopId = String(shop._id);
+
+        // 2. CREATE DEPOSIT RECORD (released_to_shop — booking đã hoàn thành)
+        await Deposit.create({
+          bookingId,
+          shopId,
+          amount: DEPOSIT_AMOUNT,
+          status: 'released_to_shop',
+          createdAt: baseCreatedAt,
+          updatedAt: startTime,
+        });
+
+        // 3. UPDATE WALLET
+        const wallet = await Wallet.findOneAndUpdate(
+          { shopId },
+          { $setOnInsert: { minBalance: 0, escrowBalance: 0, status: 'active' }, $set: { updatedAt: new Date() } },
+          { upsert: true, new: true }
+        );
+        let bal = Number(wallet.balance || 0);
+
+        // Deposit về shop (+50k)
+        bal += DEPOSIT_AMOUNT;
+        // Trừ phí nền tảng (-10k)
+        bal -= feeAmount;
+
+        // Auto-topup nếu ví vẫn âm sau khi cộng cọc
+        if (bal < 100000) {
+          bal += 200000;
+          await WalletTransaction.create({
+            shopId, walletId: String(wallet._id),
+            type: 'admin_adjustment', amount: 200000,
+            description: 'Tự động nạp quỹ duy trì số dư > 100k',
+            refId: 'auto_topup_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            status: 'success', createdAt: new Date(startTime.getTime() - 2000),
+          });
+        }
+        wallet.balance = bal;
+        await wallet.save();
+
+        // 4. WALLET TRANSACTION: escrow_release_auto +50k
+        await WalletTransaction.create({
+          shopId, walletId: String(wallet._id),
+          type: 'escrow_release_auto',
+          amount: DEPOSIT_AMOUNT,
+          description: `Cọc được giải phóng cho booking ${bookingCode}`,
+          refId: bookingId,
+          status: 'success',
+          createdAt: new Date(startTime.getTime() + 1000),
+        });
+
+        // 5. PLATFORM FEE record + WALLET TRANSACTION: platform_fee -10k
+        await PlatformFee.create({
+          shopId, bookingId,
+          amount: feeAmount,
+          createdAt: new Date(startTime.getTime() + 2000),
+        });
+        await WalletTransaction.create({
+          shopId, walletId: String(wallet._id),
+          type: 'platform_fee',
+          amount: -feeAmount,
+          description: `Trừ phí nền tảng cho booking ${bookingCode}`,
+          refId: bookingId,
+          status: 'success',
+          createdAt: new Date(startTime.getTime() + 2000),
+        });
+
+        totalAdded++;
+      }
+    }
+  }
+
+  res.json({
+    message: 'Hoàn tất tái tạo booking với cọc 50k đầy đủ logic',
+    deleted: oldIds.length,
+    totalAdded,
+    totalSkipped,
+  });
 }
