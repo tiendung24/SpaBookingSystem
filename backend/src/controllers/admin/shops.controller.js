@@ -407,3 +407,32 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
+
+export async function syncLienSpaImages(req, res) {
+  const shop = await Shop.findOne({ name: { $regex: /Liên Facial/i } });
+  if (!shop) return res.json({ message: 'Không tìm thấy shop Liên Facial Spa' });
+
+  const shopId = String(shop._id);
+  const services = await Service.find({ shopId });
+
+  let updated = 0;
+  for (const s of services) {
+    if (s.categoryId === 'Gội Đầu Dưỡng Sinh') {
+      s.imageUrl = 'https://images.unsplash.com/photo-1562322140-8baeececf3df?q=80&w=1200&auto=format&fit=crop';
+    } else if (s.categoryId === 'Facial') {
+      s.imageUrl = 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?q=80&w=1200&auto=format&fit=crop';
+    } else if (s.categoryId === 'Spa Foot') {
+      s.imageUrl = 'https://images.unsplash.com/photo-1519415510236-718bdfcd89c5?q=80&w=1200&auto=format&fit=crop';
+    } else if (s.categoryId === 'Spa Body') {
+      s.imageUrl = 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=1200&auto=format&fit=crop';
+    } else if (s.categoryId === 'VIP List') {
+      s.imageUrl = 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?q=80&w=1200&auto=format&fit=crop';
+    } else {
+      s.imageUrl = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop';
+    }
+    await s.save();
+    updated++;
+  }
+
+  res.json({ message: 'Hoàn tất cập nhật ảnh cho Liên Facial Spa', total: updated });
+}
