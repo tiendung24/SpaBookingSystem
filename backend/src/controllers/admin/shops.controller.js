@@ -429,7 +429,8 @@ export async function exportExcel(req, res) {
 }
 
 export async function syncFakeBookingFinancials(req, res) {
-  const mongoose = require('mongoose');
+  const mongooseModule = await import('mongoose');
+  const mongoose = mongooseModule.default || mongooseModule;
   let setting = null;
   try {
     const SystemSetting = mongoose.model('SystemSetting');
