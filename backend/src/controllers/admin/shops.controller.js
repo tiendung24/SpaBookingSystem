@@ -407,31 +407,3 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
-
-export async function syncImages(req, res) {
-  const serviceImageMap = {
-    'Nhật da + sửa form móng': 'https://www.lemon8-app.com/seo/image?item_id=7586493241954058770&index=1&sign=0e4c2c9a6e7243ff594ef40efaf90e8f',
-    'Tạo cấu móng': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT2e-D8d3tubzO1rKqBcHgTiaHQHtlR9vYxpNNa_AgDprcgzZlSJy1xw6Mj&s=10',
-    'Úp Base': 'https://atnnail.com/cdn/shop/products/255029366_1058357754898299_5683354082305173610_n_8c90764a-d944-4700-ae47-cffa06d1ac27.jpg?v=1722371631&width=960',
-    'Fill Gel': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTyHKMMBhSMYsk8h5JTYj2va7JYMek4Nx59x4zmcdOEOZp74T6kAHvhQoHj&s=10',
-    'Đắp Gel Móng Ngắn': 'https://tiki.vn/blog/wp-content/uploads/2023/01/fGf9mm5S923gV4EyQDVQMvxirROtXWvVfvmWpKligZxkD0IdTmB_SBLWwuOJHLy9K-7Z7AvEDXaY-WzjHper3Jw-XYd1Ea6IvTq8ct4v57T0gvA5TBKE5vxhTOfERwl_Ea8xlsVaLM9J-lLSOoYE2P-_cs8cwVLeT0DQIduMvPzEHsuSK01y-0Kf3qg1fQ.png',
-    'Đắp Gel Móng Nối': 'https://fmconcept.vn/thumbs/450x510x1/upload/product/thiet-ke-chua-co-ten-28-9758.png',
-    'Sơn Biab': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRW8kWAci7p7-91gIik8iwxshX13U4aV2n_XTDbfn4huQNN0Cq9TuMriF8&s=10',
-    'Combo Sơn Gel + Thạch': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQSyU0p_7Qbgj_WY__H8Qo82f8evoipxy4X71X2a9Y5aw&s=10',
-    'Combo Sơn Mắt Mèo + Tráng Gương': 'https://myanhbeauty.vn/upload/sanpham/large/son-mat-meo---son-nhu---trang-guong-full-mong-tay-1665473919-3d78c7.jpg',
-    'French / Ombre': 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDtlYy4R6XlzqorWgrdI4HmQGnSOvzH_GkNeM194DtsA&s=10',
-    'Charm (đính đá)': 'https://chosaigon24h.vn/upload/sanpham/charm-da-nail-hinh-trai-tim-dinh-mong-tay-10v-1147-1669111138-0b875b.jpg'
-  };
-
-  let servicesUpdated = 0;
-  const services = await Service.find({});
-  for (const s of services) {
-    if (serviceImageMap[s.name]) {
-      s.imageUrl = serviceImageMap[s.name];
-      await s.save();
-      servicesUpdated++;
-    }
-  }
-
-  res.json({ message: 'Hoàn tất cập nhật ảnh dịch vụ', servicesUpdated });
-}
