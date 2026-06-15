@@ -409,11 +409,12 @@ export async function exportExcel(req, res) {
 }
 
 export async function syncFakeServices(req, res) {
-  const shopNames = ['Ngọc Thơ', 'Tiệm Nail Minh Huyền', 'VanLavi', 'Nơ Nail', 'Nail Thu Ốc', 'Nail Minh Hải'];
+  const shopNames = ['Ngọc Thơ', 'Minh Huyền', 'VanLavi', 'Nơ Nail', 'Thu Ốc', 'Minh Hải'];
   const shops = await Shop.find({ shopName: { $in: shopNames.map(name => new RegExp(name, 'i')) } });
   
   if (!shops.length) {
-    return res.json({ message: 'Không tìm thấy shop nào.' });
+    const allShops = await Shop.find({}).select('shopName').lean();
+    return res.json({ message: 'Không tìm thấy shop nào.', allShops: allShops.map(s => s.shopName) });
   }
 
   const baseServices = [
