@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import CustomerSelectServicePage from './CustomerSelectServicePage'
 import { useNavigate } from 'react-router-dom'
@@ -66,7 +66,7 @@ export default function CustomerHomePage() {
 
   const isCorrectSlug = !slug || slug === shop.slug
   const visibleServices = useMemo(() => services.filter((item) => item.visible), [services])
-  const featuredServices = visibleServices.slice(0, 6)
+  const featuredServices = visibleServices
   const visibleStaff = useMemo(() => staff.filter((member) => member.bookingEnabled !== false), [staff])
   const featuredStaff = visibleStaff.slice(0, 8)
   const bookUrl = `/${slug || shop.slug}/book`
