@@ -5,6 +5,7 @@ import AdminHeaderNav from '../components/admin/AdminHeaderNav'
 import { useShop } from '../context/ShopContext'
 import { useToast } from '../components/ui/ToastProvider'
 import { apiRequest } from '../lib/api'
+import { getAddressText } from '../lib/maps'
 
 function formatVnd(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')}đ`
@@ -85,7 +86,7 @@ function mapShopToPartner(shop) {
     shopName: shop?.name || '—',
     owner: shop?.ownerName || 'Chưa cập nhật',
     phone: shop?.phone || '',
-    district: typeof shop?.address === 'string' ? shop.address : (shop?.address?.district || shop?.address?.city || shop?.address?.province || 'Chưa cập nhật'),
+    district: getAddressText(shop?.address) || 'Chưa cập nhật',
     plan: shop?.plan || 'Cơ bản',
     joinedAt: shop?.createdAt || new Date().toISOString(),
     status: shop?.status || 'pending',
