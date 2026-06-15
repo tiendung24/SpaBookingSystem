@@ -407,3 +407,21 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
+
+export async function syncStaffImages(req, res) {
+  const avatars = [
+    'https://diva.edu.vn/wp-content/uploads/2024/05/nen-hoc-nghe-spa-hay-nail-16.png',
+    'https://cdn.pixabay.com/photo/2020/08/31/03/21/girl-5531217_1280.jpg'
+  ];
+  const shops = await Shop.find({});
+  let staffUpdated = 0;
+  for (const shop of shops) {
+    const staffList = await ShopStaff.find({ shopId: String(shop._id) });
+    for (let i = 0; i < staffList.length; i++) {
+      staffList[i].avatarUrl = avatars[i % 2];
+      await staffList[i].save();
+      staffUpdated++;
+    }
+  }
+  res.json({ message: 'Hoàn tất cập nhật ảnh nhân viên', staffUpdated });
+}
