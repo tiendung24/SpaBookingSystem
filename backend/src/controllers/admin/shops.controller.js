@@ -407,3 +407,54 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
+
+export async function syncFakeStaff(req, res) {
+  const shops = await Shop.find({});
+  let totalBookingsUpdated = 0;
+  let totalServicesUpdated = 0;
+  const logs = [];
+
+  const staffNames = ["Thanh Hương", "Lan Anh", "Thu Huyền", "Minh Ngọc", "Kim Dung", "Hồng Đào", "Ngọc Mai", "Phương Trinh", "Thảo My", "Hải Yến"];
+
+  for (const shop of shops) {
+    const shopId = String(shop._id);
+    
+    // Delete existing staff
+    await ShopStaff.deleteMany({ shopId });
+    
+    // Create 2 new staff
+    const name1 = staffNames[Math.floor(Math.random() * staffNames.length)];
+    let name2 = staffNames[Math.floor(Math.random() * staffNames.length)];
+    while (name2 === name1) name2 = staffNames[Math.floor(Math.random() * staffNames.length)];
+
+    const staffDocs = await ShopStaff.insertMany([
+      { shopId, fullName: name1, role: 'staff', status: 'active', createdAt: new Date(), updatedAt: new Date() },
+      { shopId, fullName: name2, role: 'staff', status: 'active', createdAt: new Date(), updatedAt: new Date() }
+    ]);
+
+    const staffIds = staffDocs.map(s => String(s._id));
+
+    // Update all services to have these 2 staff
+    const sUpdate = await Service.updateMany({ shopId }, { $set: { availableStaffIds: staffIds } });
+    totalServicesUpdated += sUpdate.modifiedCount;
+
+    // Update all bookings to assign one of the 2 staff
+    const bookings = await Booking.find({ shopId });
+    let bUpdated = 0;
+    for (const b of bookings) {
+      b.staffId = staffIds[Math.floor(Math.random() * 2)];
+      await b.save();
+      bUpdated++;
+    }
+    totalBookingsUpdated += bUpdated;
+    logs.push(`Shop ${shop.name}: Created 2 staff (${name1}, ${name2}). Updated ${bUpdated} bookings.`);
+  }
+
+  res.json({
+    message: 'Hoàn tất cập nhật 2 nhân viên cho mỗi shop',
+    totalShops: shops.length,
+    totalBookingsUpdated,
+    totalServicesUpdated,
+    logs
+  });
+}
