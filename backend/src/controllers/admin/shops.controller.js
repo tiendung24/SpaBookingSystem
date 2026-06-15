@@ -14,7 +14,6 @@ import {
   normalizeSlug,
   requireString
 } from '../../utils/validation.js'
-import { derivePaymentStatus } from '../../utils/paymentStatus.js'
 
 function generatePassword() {
   return Math.random().toString(36).slice(2, 10)
