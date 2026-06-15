@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs'
 import { Booking, Deposit, PayosPayment, PlatformFee, RefundRequest, Service, Shop, User, Wallet, WalletTransaction } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
+import { derivePaymentStatus } from '../../utils/paymentStatus.js'
 import { buildShopStatusEmailForShop, sendEmailBestEffort } from '../../utils/emailNotifications.js'
 import {
   isValidEmail,
@@ -374,29 +375,30 @@ export async function exportExcel(req, res) {
 
     const shopSheet = workbook.addWorksheet(finalSheetName)
     shopSheet.columns = [
-      { header: 'Mã Booking', key: 'id', width: 25 },
-      { header: 'Tên Khách', key: 'customer', width: 25 },
-      { header: 'Ngày giờ hẹn', key: 'startTime', width: 20 },
-      { header: 'Tổng tiền', key: 'totalAmount', width: 15 },
+      { header: 'Mã booking', key: 'bookingCode', width: 25 },
+      { header: 'Khách hàng', key: 'customer', width: 25 },
+      { header: 'Dịch vụ', key: 'service', width: 30 },
+      { header: 'Thời gian hẹn', key: 'startTime', width: 20 },
+      { header: 'Thời gian đặt', key: 'createdAt', width: 20 },
       { header: 'Tiền cọc', key: 'deposit', width: 15 },
-      { header: 'Trạng thái', key: 'status', width: 15 },
+      { header: 'Tiền dịch vụ', key: 'totalAmount', width: 15 },
+      { header: 'Còn lại', key: 'remaining', width: 15 },
+      { header: 'Trạng thái thanh toán', key: 'status', width: 25 },
     ]
     shopSheet.getRow(1).font = { bold: true }
 
     const bookings = await Booking.find({ shopId: String(shop._id) }).sort({ createdAt: -1 }).lean()
     for (const b of bookings) {
-      let statusText = 'Đang chờ'
-      if (b.status === 'completed') statusText = 'Hoàn thành'
-      if (b.status === 'cancelled' || b.status === 'canceled') statusText = 'Đã hủy'
-      if (b.status === 'no_show') statusText = 'Không đến'
-
       shopSheet.addRow({
-        id: String(b._id),
+        bookingCode: b.bookingCode || String(b._id),
         customer: b.customerName || 'Khách',
+        service: b.serviceName || '—',
         startTime: b.startTime ? new Date(b.startTime) : '',
-        totalAmount: b.totalAmount || 0,
+        createdAt: b.createdAt ? new Date(b.createdAt) : '',
         deposit: b.depositAmount || 0,
-        status: statusText
+        totalAmount: b.totalAmount || 0,
+        remaining: (b.totalAmount || 0) - (b.depositAmount || 0),
+        status: derivePaymentStatus(b).label
       })
     }
   }
