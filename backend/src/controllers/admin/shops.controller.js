@@ -427,3 +427,217 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
+
+export async function rebuildFakeBookings(req, res) {
+  const mongooseModule = await import('mongoose');
+  const mongoose = mongooseModule.default || mongooseModule;
+  
+  let setting = null;
+  try {
+    const SystemSetting = mongoose.model('SystemSetting');
+    setting = await SystemSetting.findOne({ key: 'platform_fee_per_completed_booking' }).lean();
+  } catch(e) {}
+  const feeAmount = Number(setting?.value || 10000);
+
+  const oldFakeBookings = await Booking.find({ bookingCode: /^BK/, status: 'completed' }).lean();
+  const oldFakeBookingIds = oldFakeBookings.map(b => String(b._id));
+
+  if (oldFakeBookingIds.length > 0) {
+    await Booking.deleteMany({ _id: { $in: oldFakeBookingIds } });
+    await PlatformFee.deleteMany({ bookingId: { $in: oldFakeBookingIds } });
+    await WalletTransaction.deleteMany({ refId: { $in: oldFakeBookingIds }, type: 'platform_fee' });
+  }
+
+  const fakeNames = ["Nguyễn Thị Lan", "Trần Thu Hà", "Lê Thị Mai", "Phạm Bích Ngọc", "Hoàng Kim Chi", "Vũ Thanh Hằng", "Đặng Thùy Dung", "Bùi Thu Thủy", "Đỗ Mai Anh", "Ngô Phương Thảo", "Dương Thu Hiền", "Lý Bích Loan", "Trịnh Ánh Nguyệt", "Đoàn Thanh Hương", "Đinh Tuyết Mai", "Lâm Mỹ Linh"];
+  const randomName = () => fakeNames[Math.floor(Math.random() * fakeNames.length)];
+  const randomPhone = () => '09' + Math.floor(10000000 + Math.random() * 90000000);
+  
+  const schedule = [
+    {
+      shopName: /Nail Minh Hải/i,
+      bookings: [
+        { date: '2026-06-19', services: ['Nails tay'] },
+        { date: '2026-06-20', services: ['Nails chân'] },
+        { date: '2026-06-25', services: ['Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Nail Thu Ốc/i,
+      bookings: [
+        { date: '2026-06-18', services: ['Nails tay'] },
+        { date: '2026-06-21', services: ['Nails tay', 'Nails tay'] },
+        { date: '2026-06-24', services: ['Nails tay', 'Nails tay'] },
+        { date: '2026-06-27', services: ['Nails tay'] },
+        { date: '2026-06-29', services: ['Nails tay', 'Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Liên Facial/i,
+      bookings: [
+        { date: '2026-06-17', services: ['Làm da mặt'] },
+        { date: '2026-06-18', services: ['Gội đầu', 'Gội đầu'] },
+        { date: '2026-06-21', services: ['Gội đầu'] },
+        { date: '2026-06-22', services: ['Gội đầu', 'Gội đầu'] },
+        { date: '2026-06-25', services: ['Gội đầu', 'Gội đầu'] },
+        { date: '2026-06-27', services: ['Làm da mặt', 'Làm da mặt'] },
+        { date: '2026-06-29', services: ['Nặn mụn'] },
+      ]
+    },
+    {
+      shopName: /Nơ Nail/i,
+      bookings: [
+        { date: '2026-06-18', services: ['Nails'] },
+        { date: '2026-06-21', services: ['Combo tay chân'] },
+        { date: '2026-06-22', services: ['Nails tay'] },
+        { date: '2026-06-25', services: ['Nails tay'] },
+        { date: '2026-06-28', services: ['Nails tay', 'Nails tay'] },
+      ]
+    },
+    {
+      shopName: /VanLavi/i,
+      bookings: [
+        { date: '2026-06-16', services: ['Nails tay'] },
+        { date: '2026-06-20', services: ['Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Minh Huyền/i,
+      bookings: [
+        { date: '2026-06-19', services: ['Nails tay'] },
+        { date: '2026-06-23', services: ['Nails tay'] },
+        { date: '2026-06-27', services: ['Nails tay'] },
+        { date: '2026-06-29', services: ['Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Spa Thu Trang/i,
+      bookings: [
+        { date: '2026-06-17', services: ['Nails tay'] },
+        { date: '2026-06-20', services: ['Nails tay'] },
+        { date: '2026-06-24', services: ['Nails tay'] },
+        { date: '2026-06-28', services: ['Nails tay'] },
+      ]
+    },
+    {
+      shopName: /Ngọc Thơ/i,
+      bookings: [
+        { date: '2026-06-17', services: ['Nails tay', 'Nails tay', 'Nails chân'] },
+        { date: '2026-06-20', services: ['Nails chân'] },
+        { date: '2026-06-25', services: ['Nails tay'] },
+      ]
+    }
+  ];
+
+  let totalAdded = 0;
+
+  for (const shopDef of schedule) {
+    const shop = await Shop.findOne({ name: shopDef.shopName });
+    if (!shop) continue;
+
+    const allServices = await Service.find({ shopId: String(shop._id) }).lean();
+    if (!allServices.length) continue;
+
+    const findService = (hint) => {
+      const h = hint.toLowerCase();
+      let matched = null;
+      if (h.includes('gội')) matched = allServices.find(s => s.name.toLowerCase().includes('gội'));
+      else if (h.includes('mặt') || h.includes('da') || h.includes('mụn')) matched = allServices.find(s => s.name.toLowerCase().includes('da') || s.name.toLowerCase().includes('thanh lọc'));
+      else if (h.includes('nối mi')) matched = allServices.find(s => s.name.toLowerCase().includes('mi'));
+      else matched = allServices.find(s => s.name.toLowerCase().includes('sửa form') || s.name.toLowerCase().includes('gel') || s.name.toLowerCase().includes('combo'));
+      return matched || allServices[0]; 
+    };
+
+    const staffs = await ShopStaff.find({ shopId: String(shop._id), role: 'staff' }).lean();
+    const staffId = staffs.length ? String(staffs[0]._id) : undefined;
+
+    for (const b of shopDef.bookings) {
+      for (const svcName of b.services) {
+        const svc = findService(svcName);
+        if (!svc) continue;
+
+        const baseCreatedAt = new Date(`${b.date}T00:00:00+07:00`);
+        const createdHour = 8 + Math.floor(Math.random() * 14);
+        const createdMin = Math.floor(Math.random() * 60);
+        baseCreatedAt.setUTCHours(createdHour - 7, createdMin, 0, 0);
+
+        const addDays = 1 + Math.floor(Math.random() * 3);
+        const startHour = 9 + Math.floor(Math.random() * 11);
+        const startMin = Math.floor(Math.random() * 60);
+        
+        const startTime = new Date(baseCreatedAt.getTime());
+        startTime.setDate(startTime.getDate() + addDays);
+        startTime.setUTCHours(startHour - 7, startMin, 0, 0);
+
+        const duration = svc.duration || 60;
+        const endTime = new Date(startTime.getTime() + duration * 60000);
+
+        const bookingCode = 'BK' + Math.floor(100000 + Math.random() * 900000);
+
+        const newBooking = await Booking.create({
+          bookingCode,
+          shopId: String(shop._id),
+          serviceId: String(svc._id),
+          staffId,
+          customerName: randomName(),
+          customerPhone: randomPhone(),
+          startTime: startTime,
+          endTime: endTime,
+          status: 'completed',
+          totalAmount: svc.price || 100000,
+          depositAmount: 0,
+          createdAt: baseCreatedAt,
+          updatedAt: startTime
+        });
+
+        const wallet = await Wallet.findOneAndUpdate(
+          { shopId: String(shop._id) },
+          { $setOnInsert: { minBalance: 0, escrowBalance: 0, status: 'active' }, $set: { updatedAt: new Date() } },
+          { upsert: true, new: true }
+        );
+
+        let currentBalance = Number(wallet.balance || 0);
+        currentBalance -= feeAmount;
+
+        if (currentBalance < 100000) {
+          const topupAmount = 200000;
+          currentBalance += topupAmount;
+          await WalletTransaction.create({
+            shopId: String(shop._id),
+            walletId: String(wallet._id),
+            type: 'admin_adjustment',
+            amount: topupAmount,
+            description: `Tự động nạp quỹ hệ thống để duy trì số dư > 100k`,
+            refId: 'auto_topup_' + Date.now() + '_' + Math.floor(Math.random()*100),
+            status: 'success',
+            createdAt: new Date(startTime.getTime() - 1000)
+          });
+        }
+
+        wallet.balance = currentBalance;
+        await wallet.save();
+
+        await PlatformFee.create({
+          shopId: String(shop._id),
+          bookingId: String(newBooking._id),
+          amount: feeAmount,
+          createdAt: new Date(startTime.getTime())
+        });
+
+        await WalletTransaction.create({
+          shopId: String(shop._id),
+          walletId: String(wallet._id),
+          type: 'platform_fee',
+          amount: -feeAmount,
+          description: `Trừ phí nền tảng cho booking ${newBooking.bookingCode}`,
+          refId: String(newBooking._id),
+          status: 'success',
+          createdAt: new Date(startTime.getTime())
+        });
+
+        totalAdded++;
+      }
+    }
+  }
+
+  res.json({ message: 'Hoàn tất sinh lại booking', deleted: oldFakeBookingIds.length, totalAdded });
+}
