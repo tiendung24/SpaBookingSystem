@@ -407,20 +407,3 @@ export async function exportExcel(req, res) {
   await workbook.xlsx.write(res)
   res.end()
 }
-
-export async function syncStaffDetails(req, res) {
-  const shops = await Shop.find({});
-  let staffUpdated = 0;
-  for (const shop of shops) {
-    const staffs = await ShopStaff.find({ shopId: String(shop._id) });
-    for (const st of staffs) {
-      st.experienceYears = Math.floor(Math.random() * 5) + 2;
-      st.shortBio = 'Chuyên viên tư vấn và chăm sóc tận tình.';
-      st.bio = `Với ${st.experienceYears} năm kinh nghiệm trong ngành, tôi luôn mong muốn mang đến trải nghiệm làm đẹp tuyệt vời và thư giãn nhất cho khách hàng. Sự hài lòng của bạn là niềm vui của tôi.`;
-      st.specialties = ['Chăm sóc cơ bản', 'Tư vấn chuyên sâu'];
-      await st.save();
-      staffUpdated++;
-    }
-  }
-  res.json({ message: 'Hoàn tất cập nhật kinh nghiệm nhân viên', staffUpdated });
-}
