@@ -572,7 +572,7 @@ export async function rebuildFakeBookings(req, res) {
   // ============================================================
   // CLEANUP OLD FAKE BOOKINGS
   // ============================================================
-  const oldFake = await Booking.find({ bookingCode: /^BK/, status: 'completed' }).lean();
+  const oldFake = await Booking.find({ bookingCode: { $regex: '^BK' }, status: 'completed' }).lean();
   const oldIds = oldFake.map(b => String(b._id));
   if (oldIds.length > 0) {
     await Booking.deleteMany({ _id: { $in: oldIds } });
