@@ -440,11 +440,15 @@ export async function syncFakeBookingFinancials(req, res) {
 
   const bookings = await Booking.find({ status: 'completed' }).lean();
   let updated = 0;
+  let skipped = 0;
 
   for (const booking of bookings) {
     const shopId = booking.shopId;
     const exists = await PlatformFee.findOne({ bookingId: String(booking._id) }).lean();
-    if (exists) continue; // already synced
+    if (exists) {
+      skipped++;
+      continue; // already synced
+    }
 
     const wallet = await Wallet.findOneAndUpdate(
       { shopId },
@@ -477,5 +481,5 @@ export async function syncFakeBookingFinancials(req, res) {
     updated++;
   }
 
-  res.json({ message: 'Hoàn tất đồng bộ tài chính', updated });
+  res.json({ message: 'Hoàn tất đồng bộ tài chính', feeAmount, found: bookings.length, updated, skipped });
 }
