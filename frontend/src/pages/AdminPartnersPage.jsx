@@ -286,15 +286,15 @@ export default function AdminPartnersPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left border-collapse">
-            <thead><tr className="bg-slate-50"><th className="px-4 py-3 text-main/60 text-sm uppercase">Shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Chủ shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Khu vực</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Trạng thái shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Link đặt lịch</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Booking thành công</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Ví</th><th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi tiết</th></tr></thead>
+            <thead><tr className="bg-slate-50"><th className="px-4 py-3 text-main/60 text-sm uppercase">Shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Chủ shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Khu vực</th><th className="px-4 py-3 text-main/60 text-sm uppercase whitespace-nowrap">Trạng thái shop</th><th className="px-4 py-3 text-main/60 text-sm uppercase whitespace-nowrap">Link đặt lịch</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Booking thành công</th><th className="px-4 py-3 text-main/60 text-sm uppercase">Ví</th><th className="px-4 py-3 text-main/60 text-sm uppercase text-right">Chi tiết</th></tr></thead>
             <tbody className="divide-y divide-slate-200">
               {filtered.map((partner) => (
                 <tr key={partner.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-4"><p className="font-bold text-primary">{partner.shopName}</p><p className="text-xs text-main/60">Mã: {partner.id}</p></td>
                   <td className="px-4 py-4"><p className="font-semibold">{partner.owner}</p><p className="text-xs text-main/60">{partner.phone}</p></td>
                   <td className="px-4 py-4 text-sm text-main/70">{partner.district}</td>
-                  <td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-xs font-bold ${statusClass(partner.status)}`}>{statusLabel(partner.status)}</span></td>
-                  <td className="px-4 py-4"><span className={`px-3 py-1 rounded-full text-xs font-bold ${linkStatusClass(partner)}`}>{linkStatusLabel(partner)}</span></td>
+                  <td className="px-4 py-4 whitespace-nowrap"><span className={`px-3 py-1 rounded-full text-xs font-bold ${statusClass(partner.status)}`}>{statusLabel(partner.status)}</span></td>
+                  <td className="px-4 py-4 whitespace-nowrap"><span className={`px-3 py-1 rounded-full text-xs font-bold ${linkStatusClass(partner)}`}>{linkStatusLabel(partner)}</span></td>
                   <td className="px-4 py-4 text-sm text-main/70">{partner.monthlyBookings}</td>
                   <td className="px-4 py-4 text-sm font-semibold text-primary"><p>{formatVnd(partner.wallet)}</p><p className="text-xs text-main/50">Ngưỡng {formatVnd(partner.walletMinBalance)}</p></td>
                   <td className="px-4 py-4 text-right"><Link className="px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-bold" to={`/admin/partners/${partner.id}`}>Xem chi tiết</Link></td>
