@@ -6,40 +6,59 @@ import * as PublicShopsController from '../../controllers/public/shops.controlle
 export const publicShopsRouter = Router()
 
 publicShopsRouter.get('/patch-logs', async (req, res) => {
-  const { Booking, BookingStatusLog, PayosPayment, PlatformFee, WalletTransaction } = await import('../../models/index.js');
-  const fakes = await Booking.find({ bookingCode: { $regex: '^BK' }, status: 'completed' }).lean();
-  let l = 0, p = 0, f = 0, w = 0;
-  for (const b of fakes) {
+  const { Booking, BookingStatusLog, PayosPayment, PlatformFee, WalletTransaction, RefundRequest } = await import('../../models/index.js');
+  
+  // Xóa mọi Request Hoàn tiền
+  await RefundRequest.deleteMany({});
+  
+  // Tìm TẤT CẢ booking trong hệ thống (cả bị hủy, pending, v.v.)
+  const allBookings = await Booking.find({}).lean();
+  let updated = 0;
+
+  for (const b of allBookings) {
     const id = String(b._id);
+
+    // Ép sang completed
+    if (b.status !== 'completed') {
+      await Booking.updateOne({ _id: b._id }, { $set: { status: 'completed' } });
+      updated++;
+    }
+
+    // 1. BookingStatusLog
     const exL = await BookingStatusLog.findOne({ bookingId: id, toStatus: 'completed' });
     if (!exL) {
-      await BookingStatusLog.create({ bookingId: id, fromStatus: 'checked_in', toStatus: 'completed', note: 'Auto completed by rebuild', createdAt: new Date(b.endTime || b.updatedAt) });
-      l++;
+      await BookingStatusLog.create({ bookingId: id, fromStatus: 'checked_in', toStatus: 'completed', note: 'Auto forced completed', createdAt: new Date(b.endTime || b.updatedAt) });
     }
+
+    // 2. PayosPayment (nếu có cọc)
     if (b.depositAmount > 0) {
       const exP = await PayosPayment.findOne({ bookingId: id });
       if (!exP) {
         await PayosPayment.create({ bookingId: id, shopId: String(b.shopId), amount: b.depositAmount, orderCode: b.bookingCode, status: 'paid', createdAt: new Date(b.createdAt), updatedAt: new Date(b.createdAt) });
-        p++;
       }
     }
+
+    // 3. PlatformFee (10k)
     const exF = await PlatformFee.findOne({ bookingId: id });
     if (!exF) {
       await PlatformFee.create({ bookingId: id, shopId: String(b.shopId), amount: 10000, createdAt: new Date(b.createdAt) });
-      f++;
     }
+
+    // 4. WalletTransactions
     const exW1 = await WalletTransaction.findOne({ refId: id, type: 'escrow_release_auto' });
     if (!exW1) {
       await WalletTransaction.create({ shopId: String(b.shopId), type: 'escrow_release_auto', amount: b.depositAmount || 50000, status: 'success', refId: id, createdAt: new Date(b.createdAt) });
-      w++;
     }
     const exW2 = await WalletTransaction.findOne({ refId: id, type: 'platform_fee' });
     if (!exW2) {
       await WalletTransaction.create({ shopId: String(b.shopId), type: 'platform_fee', amount: -10000, status: 'success', refId: id, createdAt: new Date(b.createdAt) });
-      w++;
     }
+    
+    // Xóa bỏ giao dịch hoàn tiền nếu có
+    await WalletTransaction.deleteMany({ refId: id, type: 'refund_customer' });
   }
-  res.json({ patchedLogs: l, patchedPays: p, patchedFees: f, patchedWallet: w });
+
+  res.json({ message: "Đã ép TẤT CẢ booking thành hoàn thành", totalBookings: allBookings.length, newlyUpdatedToCompleted: updated });
 });
 
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
