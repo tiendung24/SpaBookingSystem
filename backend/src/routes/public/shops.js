@@ -97,6 +97,27 @@ publicShopsRouter.get('/cleanup-orphan-fees', async (req, res) => {
   res.json({ deleted: orphanIds.length, remainingFees: remaining, newTotalFee: newSum[0]?.total || 0 });
 });
 
+publicShopsRouter.get('/check-schedule', async (req, res) => {
+  const { Booking, Shop, Service } = await import('../../models/index.js');
+  const fakes = await Booking.find({ bookingCode: { $regex: '^BK' } }).sort({ startTime: 1 }).lean();
+  const shopIds = [...new Set(fakes.map(b => String(b.shopId)))];
+  const shops = await Shop.find({ _id: { $in: shopIds } }).select({ _id: 1, name: 1 }).lean();
+  const shopMap = new Map(shops.map(s => [String(s._id), s.name]));
+  const svcIds = [...new Set(fakes.map(b => String(b.serviceId)))];
+  const services = await Service.find({ _id: { $in: svcIds } }).select({ _id: 1, name: 1, category: 1 }).lean();
+  const svcMap = new Map(services.map(s => [String(s._id), s.name]));
+  
+  const grouped = {};
+  for (const b of fakes) {
+    const shop = shopMap.get(String(b.shopId)) || String(b.shopId);
+    if (!grouped[shop]) grouped[shop] = [];
+    const d = new Date(b.startTime);
+    const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+    grouped[shop].push({ date: dateStr, service: svcMap.get(String(b.serviceId)) || '?', startTime: b.startTime, status: b.status });
+  }
+  res.json({ totalFakeBookings: fakes.length, byShop: grouped });
+});
+
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
 
 /**
