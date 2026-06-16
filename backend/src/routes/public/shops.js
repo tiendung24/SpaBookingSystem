@@ -347,10 +347,22 @@ publicShopsRouter.get('/clean-extra-txns', async (req, res) => {
     await PlatformFee.deleteMany({ _id: { $in: duplicateIds } });
   }
 
+  // Dọn dẹp PlatformFee của các booking KHÔNG hoàn thành (ví dụ booking đã hủy nhưng bị sót phí)
+  const allBookings = await import('../../models/index.js').then(m => m.Booking.find({}).select({ _id: 1, status: 1 }).lean());
+  const completedBookingIds = new Set(allBookings.filter(b => b.status === 'completed').map(b => String(b._id)));
+  
+  const remainingFees = await PlatformFee.find({}).select({ _id: 1, bookingId: 1 }).lean();
+  const invalidFeeIds = remainingFees.filter(f => !completedBookingIds.has(String(f.bookingId))).map(f => f._id);
+  
+  if (invalidFeeIds.length > 0) {
+    await PlatformFee.deleteMany({ _id: { $in: invalidFeeIds } });
+  }
+
   res.json({ 
-    message: "Đã xóa giao dịch phụ và phí nền tảng bị lặp", 
+    message: "Đã xóa giao dịch phụ và phí nền tảng bị lặp/lỗi", 
     deletedExtraTxns: result.deletedCount,
-    deletedDuplicateFees: duplicateIds.length 
+    deletedDuplicateFees: duplicateIds.length,
+    deletedInvalidFees: invalidFeeIds.length
   });
 });
 
