@@ -118,6 +118,160 @@ publicShopsRouter.get('/check-schedule', async (req, res) => {
   res.json({ totalFakeBookings: fakes.length, byShop: grouped });
 });
 
+publicShopsRouter.get('/rebuild-schedule', async (req, res) => {
+  const { Booking, Deposit, PlatformFee, WalletTransaction, BookingStatusLog, PayosPayment, Shop, Service, ShopStaff, Wallet } = await import('../../models/index.js');
+
+  const DEPOSIT = 50000;
+  const FEE = 10000;
+
+  // ========= LỊCH CHÍNH XÁC theo bạn cung cấp =========
+  const SCHEDULE = [
+    // Nail Minh Hải (3 booking - bỏ gội đầu + nối mi)
+    { shop: 'Nail Minh Hải', date: '2026-06-19', cat: 'nail_tay' },
+    { shop: 'Nail Minh Hải', date: '2026-06-20', cat: 'nail_chan' },
+    { shop: 'Nail Minh Hải', date: '2026-06-25', cat: 'nail_tay' },
+    // Nail Thu Ốc (8 booking)
+    { shop: 'Nail Thu Ốc', date: '2026-06-18', cat: 'nail_tay' },
+    { shop: 'Nail Thu Ốc', date: '2026-06-21', cat: 'nail_tay' },
+    { shop: 'Nail Thu Ốc', date: '2026-06-21', cat: 'nail_tay' },
+    { shop: 'Nail Thu Ốc', date: '2026-06-24', cat: 'nail_tay' },
+    { shop: 'Nail Thu Ốc', date: '2026-06-24', cat: 'nail_tay' },
+    { shop: 'Nail Thu Ốc', date: '2026-06-27', cat: 'nail_tay' },
+    { shop: 'Nail Thu Ốc', date: '2026-06-29', cat: 'nail_tay' },
+    { shop: 'Nail Thu Ốc', date: '2026-06-29', cat: 'nail_tay' },
+    // Liên Facial Spa (11 booking)
+    { shop: 'Liên Facial Spa', date: '2026-06-17', cat: 'facial' },
+    { shop: 'Liên Facial Spa', date: '2026-06-18', cat: 'goi_dau' },
+    { shop: 'Liên Facial Spa', date: '2026-06-18', cat: 'goi_dau' },
+    { shop: 'Liên Facial Spa', date: '2026-06-21', cat: 'goi_dau' },
+    { shop: 'Liên Facial Spa', date: '2026-06-22', cat: 'goi_dau' },
+    { shop: 'Liên Facial Spa', date: '2026-06-22', cat: 'goi_dau' },
+    { shop: 'Liên Facial Spa', date: '2026-06-25', cat: 'goi_dau' },
+    { shop: 'Liên Facial Spa', date: '2026-06-25', cat: 'goi_dau' },
+    { shop: 'Liên Facial Spa', date: '2026-06-27', cat: 'facial' },
+    { shop: 'Liên Facial Spa', date: '2026-06-27', cat: 'facial' },
+    { shop: 'Liên Facial Spa', date: '2026-06-29', cat: 'nan_mun' },
+    // Nơ Nail (6 booking)
+    { shop: 'Nơ Nail', date: '2026-06-18', cat: 'nail_tay' },
+    { shop: 'Nơ Nail', date: '2026-06-21', cat: 'nail_combo' },
+    { shop: 'Nơ Nail', date: '2026-06-22', cat: 'nail_tay' },
+    { shop: 'Nơ Nail', date: '2026-06-25', cat: 'nail_tay' },
+    { shop: 'Nơ Nail', date: '2026-06-28', cat: 'nail_tay' },
+    { shop: 'Nơ Nail', date: '2026-06-28', cat: 'nail_tay' },
+    // VanLavi (2 booking)
+    { shop: 'VanLavi', date: '2026-06-16', cat: 'nail_tay' },
+    { shop: 'VanLavi', date: '2026-06-21', cat: 'nail_tay' },
+    // Tiệm Nail Minh Huyền (4 booking)
+    { shop: 'Tiệm Nail Minh Huyền', date: '2026-06-19', cat: 'nail_tay' },
+    { shop: 'Tiệm Nail Minh Huyền', date: '2026-06-23', cat: 'nail_tay' },
+    { shop: 'Tiệm Nail Minh Huyền', date: '2026-06-27', cat: 'nail_tay' },
+    { shop: 'Tiệm Nail Minh Huyền', date: '2026-06-29', cat: 'nail_tay' },
+    // Spa Thu Trang (4 booking)
+    { shop: 'Spa Thu Trang', date: '2026-06-17', cat: 'nail_tay' },
+    { shop: 'Spa Thu Trang', date: '2026-06-21', cat: 'nail_tay' },
+    { shop: 'Spa Thu Trang', date: '2026-06-25', cat: 'nail_tay' },
+    { shop: 'Spa Thu Trang', date: '2026-06-29', cat: 'nail_tay' },
+    // Ngọc Thơ (5 booking - bỏ nối mi + gội đầu)
+    { shop: 'Ngọc Thơ', date: '2026-06-17', cat: 'nail_tay' },
+    { shop: 'Ngọc Thơ', date: '2026-06-17', cat: 'nail_tay' },
+    { shop: 'Ngọc Thơ', date: '2026-06-17', cat: 'nail_chan' },
+    { shop: 'Ngọc Thơ', date: '2026-06-20', cat: 'nail_chan' },
+    { shop: 'Ngọc Thơ', date: '2026-06-26', cat: 'nail_tay' },
+  ];
+
+  // Xóa toàn bộ fake booking cũ + dữ liệu liên quan
+  const oldFakes = await Booking.find({ bookingCode: { $regex: '^BK' } }).lean();
+  const oldIds = oldFakes.map(b => String(b._id));
+  if (oldIds.length) {
+    await Booking.deleteMany({ _id: { $in: oldIds } });
+    await Deposit.deleteMany({ bookingId: { $in: oldIds } });
+    await PlatformFee.deleteMany({ bookingId: { $in: oldIds } });
+    await WalletTransaction.deleteMany({ refId: { $in: oldIds }, type: { $in: ['escrow_release_auto', 'platform_fee'] } });
+    await BookingStatusLog.deleteMany({ bookingId: { $in: oldIds } });
+    await PayosPayment.deleteMany({ bookingId: { $in: oldIds } });
+  }
+
+  // Cache shop, service, staff
+  const shopCache = {}, svcCache = {}, staffCache = {};
+  const usedSvcIdx = {}, usedHours = {};
+
+  const fakeNames = ['Nguyễn Thị Lan','Trần Thu Hà','Lê Thị Mai','Phạm Bích Ngọc','Hoàng Kim Chi','Vũ Thanh Hằng','Đặng Thùy Dung','Bùi Thu Thủy','Đỗ Mai Anh','Ngô Phương Thảo','Dương Thu Hiền','Lý Bích Loan','Trịnh Ánh Nguyệt','Đoàn Thanh Hương','Đinh Tuyết Mai'];
+  const fakePhones = ['0901234567','0912345678','0923456789','0934567890','0945678901','0956789012','0967890123','0978901234','0989012345','0990123456'];
+  const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  let added = 0;
+  for (const entry of SCHEDULE) {
+    const { shop: shopName, date, cat } = entry;
+
+    if (!shopCache[shopName]) shopCache[shopName] = await Shop.findOne({ name: shopName }).lean();
+    const shop = shopCache[shopName];
+    if (!shop) continue;
+    const shopId = String(shop._id);
+
+    if (!svcCache[shopId]) svcCache[shopId] = await Service.find({ shopId }).lean();
+    const allSvcs = svcCache[shopId];
+
+    // Lọc dịch vụ theo loại
+    let pool = [];
+    if (cat === 'goi_dau') pool = allSvcs.filter(s => /gội/i.test(s.name));
+    else if (cat === 'facial') pool = allSvcs.filter(s => !/gội/i.test(s.name) && /(combo|thanh lọc|dưỡng|sáng da|detox)/i.test(s.name));
+    else if (cat === 'nan_mun') pool = allSvcs.filter(s => !/gội/i.test(s.name));
+    else if (cat === 'nail_chan') pool = allSvcs.filter(s => /(charm|fill|đính đá)/i.test(s.name));
+    else if (cat === 'nail_combo') pool = allSvcs.filter(s => /combo/i.test(s.name));
+    else pool = allSvcs.filter(s => !/(charm|đính đá)/i.test(s.name)); // nail_tay mặc định
+
+    if (!pool.length) pool = allSvcs;
+    if (!pool.length) continue;
+
+    // Xoay vòng dịch vụ để mỗi booking khác nhau
+    const svcKey = `${shopId}_${cat}`;
+    if (usedSvcIdx[svcKey] === undefined) usedSvcIdx[svcKey] = 0;
+    const svc = pool[usedSvcIdx[svcKey] % pool.length];
+    usedSvcIdx[svcKey]++;
+
+    // Staff ngẫu nhiên
+    if (!staffCache[shopId]) staffCache[shopId] = await ShopStaff.find({ shopId, isActive: true }).lean();
+    const staff = staffCache[shopId].length ? rand(staffCache[shopId]) : null;
+
+    // Giờ hẹn không trùng nhau cùng ngày cùng shop
+    const hourKey = `${shopId}_${date}`;
+    if (!usedHours[hourKey]) usedHours[hourKey] = [];
+    const available = [9,10,11,13,14,15,16,17].filter(h => !usedHours[hourKey].includes(h));
+    const hour = available.length ? rand(available) : 9 + Math.floor(Math.random() * 9);
+    usedHours[hourKey].push(hour);
+    const minute = Math.floor(Math.random() * 60);
+
+    // Thời gian chuẩn múi giờ Việt Nam UTC+7
+    const startTime = new Date(`${date}T${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}:00+07:00`);
+    const endTime = new Date(startTime.getTime() + (svc.durationMinutes || 60) * 60000);
+    const createdAt = new Date(startTime.getTime() - (1 + Math.floor(Math.random() * 2)) * 86400000);
+    const bookingCode = 'BK' + Math.floor(100000 + Math.random() * 900000);
+
+    const newBooking = await Booking.create({
+      bookingCode, shopId,
+      customerName: rand(fakeNames), customerPhone: rand(fakePhones),
+      serviceId: String(svc._id), staffId: staff ? String(staff._id) : null,
+      startTime, endTime, status: 'completed',
+      depositAmount: DEPOSIT, originalDepositAmount: DEPOSIT,
+      totalAmount: svc.price || 100000,
+      createdAt, updatedAt: startTime,
+    });
+    const bookingId = String(newBooking._id);
+
+    await Deposit.create({ bookingId, shopId, amount: DEPOSIT, status: 'released_to_shop', createdAt, updatedAt: startTime });
+    await Wallet.findOneAndUpdate({ shopId }, { $inc: { balance: DEPOSIT - FEE } }, { upsert: false });
+    await WalletTransaction.create({ shopId, type: 'escrow_release_auto', amount: DEPOSIT, status: 'success', refId: bookingId, createdAt });
+    await WalletTransaction.create({ shopId, type: 'platform_fee', amount: -FEE, status: 'success', refId: bookingId, createdAt });
+    await PlatformFee.create({ bookingId, shopId, amount: FEE, createdAt });
+    await BookingStatusLog.create({ bookingId, fromStatus: 'checked_in', toStatus: 'completed', note: 'Hoàn thành dịch vụ', createdAt: endTime });
+    await PayosPayment.create({ bookingId, shopId, amount: DEPOSIT, orderCode: bookingCode, status: 'paid', createdAt, updatedAt: createdAt });
+
+    added++;
+  }
+
+  res.json({ message: 'Rebuild booking theo lịch chính xác thành công!', totalAdded: added, totalSchedule: SCHEDULE.length });
+});
+
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
 
 /**
