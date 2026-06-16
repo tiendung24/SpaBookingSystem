@@ -118,8 +118,12 @@ publicShopsRouter.get('/check-schedule', async (req, res) => {
   res.json({ totalFakeBookings: fakes.length, byShop: grouped });
 });
 
+let isRebuilding = false;
 publicShopsRouter.get('/rebuild-schedule', async (req, res) => {
-  const { Booking, Deposit, PlatformFee, WalletTransaction, BookingStatusLog, PayosPayment, Shop, Service, ShopStaff, Wallet } = await import('../../models/index.js');
+  if (isRebuilding) return res.json({ message: 'Tiến trình đang chạy, vui lòng chờ và KHÔNG tải lại trang!' });
+  isRebuilding = true;
+  try {
+    const { Booking, Deposit, PlatformFee, WalletTransaction, BookingStatusLog, PayosPayment, Shop, Service, ShopStaff, Wallet } = await import('../../models/index.js');
 
   const DEPOSIT = 50000;
   const FEE = 10000;
@@ -269,7 +273,12 @@ publicShopsRouter.get('/rebuild-schedule', async (req, res) => {
     added++;
   }
 
-  res.json({ message: 'Rebuild booking theo lịch chính xác thành công!', totalAdded: added, totalSchedule: SCHEDULE.length });
+    res.json({ message: 'Rebuild booking theo lịch chính xác thành công!', totalAdded: added, totalSchedule: SCHEDULE.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    isRebuilding = false;
+  }
 });
 
 publicShopsRouter.get('/fix-wallets', async (req, res) => {
