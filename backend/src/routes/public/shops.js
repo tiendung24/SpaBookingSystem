@@ -78,6 +78,25 @@ publicShopsRouter.get('/debug-finance', async (req, res) => {
   res.json({ totalBookings, completedBookings, totalPlatformFees, feeSumVal, totalLogs, orphanFeesCount: orphanFees.length, orphanFees });
 });
 
+publicShopsRouter.get('/cleanup-orphan-fees', async (req, res) => {
+  const { Booking, PlatformFee, WalletTransaction } = await import('../../models/index.js');
+  const fees = await PlatformFee.find({}).select({ _id: 1, bookingId: 1 }).lean();
+  const bookingIds = new Set((await Booking.find({}).select({ _id: 1 }).lean()).map(b => String(b._id)));
+  const orphanIds = fees.filter(f => !bookingIds.has(String(f.bookingId))).map(f => f._id);
+  
+  if (orphanIds.length > 0) {
+    await PlatformFee.deleteMany({ _id: { $in: orphanIds } });
+    // Xóa cả WalletTransaction platform_fee tương ứng nếu có
+    const orphanBookingIds = fees.filter(f => !bookingIds.has(String(f.bookingId))).map(f => String(f.bookingId));
+    await WalletTransaction.deleteMany({ refId: { $in: orphanBookingIds }, type: 'platform_fee' });
+    await WalletTransaction.deleteMany({ refId: { $in: orphanBookingIds }, type: 'escrow_release_auto' });
+  }
+  
+  const remaining = await PlatformFee.countDocuments({});
+  const newSum = await PlatformFee.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]);
+  res.json({ deleted: orphanIds.length, remainingFees: remaining, newTotalFee: newSum[0]?.total || 0 });
+});
+
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
 
 /**
