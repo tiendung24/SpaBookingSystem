@@ -366,6 +366,31 @@ publicShopsRouter.get('/clean-extra-txns', async (req, res) => {
   });
 });
 
+publicShopsRouter.get('/seed-topup-100k', async (req, res) => {
+  const { Shop, WalletTransaction } = await import('../../models/index.js');
+  const shops = await Shop.find({}).lean();
+  let added = 0;
+  
+  for (const shop of shops) {
+    const shopId = String(shop._id);
+    // Kiểm tra xem shop đã có seed_topup chưa để tránh nạp trùng
+    const exist = await WalletTransaction.findOne({ shopId, type: 'seed_topup' }).lean();
+    if (!exist) {
+      await WalletTransaction.create({
+        shopId,
+        type: 'seed_topup',
+        amount: 100000,
+        status: 'success',
+        description: 'Tặng 100.000đ ký quỹ ban đầu tối thiểu',
+        createdAt: new Date()
+      });
+      added++;
+    }
+  }
+  
+  res.json({ message: "Đã nạp 100.000đ ký quỹ gốc thành công cho các shop chưa có", totalAdded: added });
+});
+
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
 
 /**
