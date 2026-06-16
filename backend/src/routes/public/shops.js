@@ -312,6 +312,20 @@ publicShopsRouter.get('/fix-wallets', async (req, res) => {
   res.json({ deletedOrphanTxns: deletedTxns, fixedWallets: results.length, totalWalletBalance: totalNew, results });
 });
 
+publicShopsRouter.get('/dump-txns', async (req, res) => {
+  const { WalletTransaction } = await import('../../models/index.js');
+  const txns = await WalletTransaction.find({}).sort({ createdAt: -1 }).lean();
+  
+  const byType = {};
+  for (const t of txns) {
+    if (!byType[t.type]) byType[t.type] = { count: 0, sum: 0 };
+    byType[t.type].count++;
+    byType[t.type].sum += t.amount;
+  }
+  
+  res.json({ totalTxns: txns.length, byType });
+});
+
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
 
 /**
