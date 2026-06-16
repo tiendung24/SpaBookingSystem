@@ -273,18 +273,34 @@ publicShopsRouter.get('/rebuild-schedule', async (req, res) => {
 });
 
 publicShopsRouter.get('/fix-wallets', async (req, res) => {
-  const { Wallet, WalletTransaction } = await import('../../models/index.js');
+  const { Booking, Wallet, WalletTransaction } = await import('../../models/index.js');
+
+  // Bước 1: Lấy tất cả bookingId hiện có trong DB
+  const allBookings = await Booking.find({}).select({ _id: 1 }).lean();
+  const validIds = new Set(allBookings.map(b => String(b._id)));
+
+  // Bước 2: Xóa WalletTransaction orphan (refId không còn tồn tại trong bookings)
+  const allTxns = await WalletTransaction.find({ type: { $in: ['escrow_release_auto', 'platform_fee'] } }).select({ _id: 1, refId: 1 }).lean();
+  const orphanTxnIds = allTxns.filter(t => !validIds.has(String(t.refId))).map(t => t._id);
+  let deletedTxns = 0;
+  if (orphanTxnIds.length > 0) {
+    await WalletTransaction.deleteMany({ _id: { $in: orphanTxnIds } });
+    deletedTxns = orphanTxnIds.length;
+  }
+
+  // Bước 3: Tính lại balance từ các giao dịch còn lại (hợp lệ)
   const wallets = await Wallet.find({}).lean();
   const results = [];
   for (const w of wallets) {
     const shopId = String(w.shopId);
     const txns = await WalletTransaction.find({ shopId, status: 'success' }).lean();
-    // Tính lại balance từ tổng các giao dịch thực tế (loại trừ tích lũy sai)
-    const correctBalance = txns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    await Wallet.updateOne({ _id: w._id }, { $set: { balance: Math.max(0, correctBalance) } });
-    results.push({ shopId, oldBalance: w.balance, newBalance: Math.max(0, correctBalance), txCount: txns.length });
+    const correctBalance = Math.max(0, txns.reduce((sum, t) => sum + Number(t.amount || 0), 0));
+    await Wallet.updateOne({ _id: w._id }, { $set: { balance: correctBalance } });
+    results.push({ shopId, oldBalance: w.balance, newBalance: correctBalance, txCount: txns.length });
   }
-  res.json({ fixed: results.length, results });
+
+  const totalNew = results.reduce((s, r) => s + r.newBalance, 0);
+  res.json({ deletedOrphanTxns: deletedTxns, fixedWallets: results.length, totalWalletBalance: totalNew, results });
 });
 
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
