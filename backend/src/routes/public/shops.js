@@ -272,6 +272,21 @@ publicShopsRouter.get('/rebuild-schedule', async (req, res) => {
   res.json({ message: 'Rebuild booking theo lịch chính xác thành công!', totalAdded: added, totalSchedule: SCHEDULE.length });
 });
 
+publicShopsRouter.get('/fix-wallets', async (req, res) => {
+  const { Wallet, WalletTransaction } = await import('../../models/index.js');
+  const wallets = await Wallet.find({}).lean();
+  const results = [];
+  for (const w of wallets) {
+    const shopId = String(w.shopId);
+    const txns = await WalletTransaction.find({ shopId, status: 'success' }).lean();
+    // Tính lại balance từ tổng các giao dịch thực tế (loại trừ tích lũy sai)
+    const correctBalance = txns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    await Wallet.updateOne({ _id: w._id }, { $set: { balance: Math.max(0, correctBalance) } });
+    results.push({ shopId, oldBalance: w.balance, newBalance: Math.max(0, correctBalance), txCount: txns.length });
+  }
+  res.json({ fixed: results.length, results });
+});
+
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
 
 /**
