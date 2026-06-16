@@ -6,9 +6,9 @@ import * as PublicShopsController from '../../controllers/public/shops.controlle
 export const publicShopsRouter = Router()
 
 publicShopsRouter.get('/patch-logs', async (req, res) => {
-  const { Booking, BookingStatusLog, PayosPayment } = await import('../../models/index.js');
+  const { Booking, BookingStatusLog, PayosPayment, PlatformFee, WalletTransaction } = await import('../../models/index.js');
   const fakes = await Booking.find({ bookingCode: { $regex: '^BK' }, status: 'completed' }).lean();
-  let l = 0, p = 0;
+  let l = 0, p = 0, f = 0, w = 0;
   for (const b of fakes) {
     const id = String(b._id);
     const exL = await BookingStatusLog.findOne({ bookingId: id, toStatus: 'completed' });
@@ -23,8 +23,23 @@ publicShopsRouter.get('/patch-logs', async (req, res) => {
         p++;
       }
     }
+    const exF = await PlatformFee.findOne({ bookingId: id });
+    if (!exF) {
+      await PlatformFee.create({ bookingId: id, shopId: String(b.shopId), amount: 10000, createdAt: new Date(b.createdAt) });
+      f++;
+    }
+    const exW1 = await WalletTransaction.findOne({ refId: id, type: 'escrow_release_auto' });
+    if (!exW1) {
+      await WalletTransaction.create({ shopId: String(b.shopId), type: 'escrow_release_auto', amount: b.depositAmount || 50000, status: 'success', refId: id, createdAt: new Date(b.createdAt) });
+      w++;
+    }
+    const exW2 = await WalletTransaction.findOne({ refId: id, type: 'platform_fee' });
+    if (!exW2) {
+      await WalletTransaction.create({ shopId: String(b.shopId), type: 'platform_fee', amount: -10000, status: 'success', refId: id, createdAt: new Date(b.createdAt) });
+      w++;
+    }
   }
-  res.json({ patchedLogs: l, patchedPays: p });
+  res.json({ patchedLogs: l, patchedPays: p, patchedFees: f, patchedWallet: w });
 });
 
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
