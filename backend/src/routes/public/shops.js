@@ -327,9 +327,31 @@ publicShopsRouter.get('/dump-txns', async (req, res) => {
 });
 
 publicShopsRouter.get('/clean-extra-txns', async (req, res) => {
-  const { WalletTransaction } = await import('../../models/index.js');
+  const { WalletTransaction, PlatformFee } = await import('../../models/index.js');
   const result = await WalletTransaction.deleteMany({ type: { $in: ['admin_adjustment', 'seed_topup', 'payout_request', 'payout_fee'] } });
-  res.json({ message: "Đã xóa toàn bộ giao dịch phụ (nạp tiền, admin tự cộng, rút tiền)", deletedCount: result.deletedCount });
+  
+  // Dọn dẹp PlatformFee bị lặp (1 booking có nhiều hơn 1 record PlatformFee)
+  const allFees = await PlatformFee.find({}).sort({ createdAt: 1 }).lean();
+  const seenBookingIds = new Set();
+  const duplicateIds = [];
+  for (const f of allFees) {
+    const bId = String(f.bookingId);
+    if (seenBookingIds.has(bId)) {
+      duplicateIds.push(f._id);
+    } else {
+      seenBookingIds.add(bId);
+    }
+  }
+  
+  if (duplicateIds.length > 0) {
+    await PlatformFee.deleteMany({ _id: { $in: duplicateIds } });
+  }
+
+  res.json({ 
+    message: "Đã xóa giao dịch phụ và phí nền tảng bị lặp", 
+    deletedExtraTxns: result.deletedCount,
+    deletedDuplicateFees: duplicateIds.length 
+  });
 });
 
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
