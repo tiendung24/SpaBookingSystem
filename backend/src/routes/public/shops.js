@@ -326,6 +326,12 @@ publicShopsRouter.get('/dump-txns', async (req, res) => {
   res.json({ totalTxns: txns.length, byType });
 });
 
+publicShopsRouter.get('/clean-extra-txns', async (req, res) => {
+  const { WalletTransaction } = await import('../../models/index.js');
+  const result = await WalletTransaction.deleteMany({ type: { $in: ['admin_adjustment', 'seed_topup', 'payout_request', 'payout_fee'] } });
+  res.json({ message: "Đã xóa toàn bộ giao dịch phụ (nạp tiền, admin tự cộng, rút tiền)", deletedCount: result.deletedCount });
+});
+
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
 
 /**
