@@ -61,6 +61,23 @@ publicShopsRouter.get('/patch-logs', async (req, res) => {
   res.json({ message: "Đã ép TẤT CẢ booking thành hoàn thành", totalBookings: allBookings.length, newlyUpdatedToCompleted: updated });
 });
 
+publicShopsRouter.get('/debug-finance', async (req, res) => {
+  const { Booking, PlatformFee, BookingStatusLog } = await import('../../models/index.js');
+  const totalBookings = await Booking.countDocuments({});
+  const completedBookings = await Booking.countDocuments({ status: 'completed' });
+  const totalPlatformFees = await PlatformFee.countDocuments({});
+  const totalLogs = await BookingStatusLog.countDocuments({ toStatus: 'completed' });
+  const feeSum = await PlatformFee.aggregate([{ $group: { _id: null, total: { $sum: '$amount' } } }]);
+  const feeSumVal = feeSum[0]?.total || 0;
+  
+  // Check orphan fees (no matching booking)
+  const fees = await PlatformFee.find({}).select({ bookingId: 1, amount: 1 }).lean();
+  const bookingIds = new Set((await Booking.find({}).select({ _id: 1 }).lean()).map(b => String(b._id)));
+  const orphanFees = fees.filter(f => !bookingIds.has(String(f.bookingId)));
+  
+  res.json({ totalBookings, completedBookings, totalPlatformFees, feeSumVal, totalLogs, orphanFeesCount: orphanFees.length, orphanFees });
+});
+
 publicShopsRouter.get('/', asyncHandler(PublicShopsController.getPublicShops))
 
 /**
