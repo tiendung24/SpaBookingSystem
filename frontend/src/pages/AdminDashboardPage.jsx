@@ -28,21 +28,50 @@ function formatVnd(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')}đ`
 }
 
-function getMonthRange() {
+function getDefaultRange() {
   const now = new Date()
-  const from = new Date(now.getFullYear(), now.getMonth(), 1)
-  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  const from = new Date(now.getFullYear(), 0, 1) // 01/01 năm nay
+  const to = new Date(now.getFullYear(), 11, 31) // 31/12 năm nay
   return {
     from: from.toISOString().slice(0, 10),
     to: to.toISOString().slice(0, 10)
   }
 }
 
+function getPresets() {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  const q = Math.floor(m / 3)
+  return [
+    {
+      label: 'Tháng này',
+      from: new Date(y, m, 1).toISOString().slice(0, 10),
+      to: new Date(y, m + 1, 0).toISOString().slice(0, 10)
+    },
+    {
+      label: 'Quý này',
+      from: new Date(y, q * 3, 1).toISOString().slice(0, 10),
+      to: new Date(y, q * 3 + 3, 0).toISOString().slice(0, 10)
+    },
+    {
+      label: 'Năm nay',
+      from: new Date(y, 0, 1).toISOString().slice(0, 10),
+      to: new Date(y, 11, 31).toISOString().slice(0, 10)
+    },
+    {
+      label: 'Tất cả',
+      from: '2020-01-01',
+      to: '2099-12-31'
+    }
+  ]
+}
+
 export default function AdminDashboardPage() {
   const navigate = useNavigate()
   const { token } = useShop()
   const { pushToast } = useToast()
-  const [dateRange, setDateRange] = useState(() => getMonthRange())
+  const [dateRange, setDateRange] = useState(() => getDefaultRange())
   const [metrics, setMetrics] = useState({ totalShops: 0, totalBookings: 0, totalRefundRequests: 0, totalFraudReports: 0, finance: {} })
   const [shops, setShops] = useState([])
   const [frauds, setFrauds] = useState([])
@@ -123,22 +152,40 @@ export default function AdminDashboardPage() {
           <AdminHeaderNav />
         </div>
         <div className="flex flex-col gap-3 items-start md:items-end">
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-wrap gap-1">
+            {getPresets().map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => setDateRange({ from: preset.from, to: preset.to })}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
+                  dateRange.from === preset.from && dateRange.to === preset.to
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-main/70 border-slate-200 hover:border-primary hover:text-primary'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 items-center">
             <input
               type="date"
-              className="px-4 py-3 rounded-xl border border-slate-200 bg-white"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm"
               value={dateRange.from}
               onChange={(e) => setDateRange((current) => ({ ...current, from: e.target.value }))}
             />
+            <span className="text-main/50 text-sm">→</span>
             <input
               type="date"
-              className="px-4 py-3 rounded-xl border border-slate-200 bg-white"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm"
               value={dateRange.to}
               onChange={(e) => setDateRange((current) => ({ ...current, to: e.target.value }))}
             />
           </div>
-          <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold" onClick={() => navigate('/admin/partners?create=1')}>Tạo đối tác</button>
-          <button className="px-5 py-3 rounded-xl bg-white border border-slate-200 text-main font-bold" onClick={handleExportReport}>Xuất báo cáo</button>
+          <div className="flex gap-2">
+            <button className="px-5 py-3 rounded-xl bg-primary text-white font-bold" onClick={() => navigate('/admin/partners?create=1')}>Tạo đối tác</button>
+            <button className="px-5 py-3 rounded-xl bg-white border border-slate-200 text-main font-bold" onClick={handleExportReport}>Xuất báo cáo</button>
+          </div>
         </div>
       </header>
 
