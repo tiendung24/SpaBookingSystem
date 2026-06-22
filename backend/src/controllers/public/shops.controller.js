@@ -118,11 +118,6 @@ function isStaffAvailableForBlock(staff, startTime, endTime) {
   return segments.every((segment) => isStaffAvailableForSlot(staff, formatHm(segment.start)))
 }
 
-export async function getServiceCategories(req, res) {
-  const shop = await findShopBySlug(req.params.slug)
-  const items = await ServiceCategory.find({ shopId: String(shop._id) }).sort({ sortOrder: 1, createdAt: 1 }).lean()
-  res.json({ items })
-}
 
 export async function getShopBySlug(req, res) {
   const shop = await findShopBySlug(req.params.slug)

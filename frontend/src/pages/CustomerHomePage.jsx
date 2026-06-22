@@ -69,14 +69,14 @@ export default function CustomerHomePage() {
   const visibleServices = useMemo(() => services.filter((item) => item.visible), [services])
 
   const activeCategories = useMemo(() => {
-    const set = new Set(visibleServices.map((s) => String(s.category)))
+    const set = new Set(visibleServices.map((s) => String(s.categoryId)))
     return dbCategories.filter(c => set.has(String(c._id)))
   }, [visibleServices, dbCategories])
 
   const featuredServices = useMemo(() => {
     if (category === 'all') return visibleServices
-    if (category === 'uncategorized') return visibleServices.filter(s => !dbCategories.find(c => String(c._id) === String(s.category)))
-    return visibleServices.filter(s => String(s.category) === String(category))
+    if (category === 'uncategorized') return visibleServices.filter(s => !dbCategories.find(c => String(c._id) === String(s.categoryId)))
+    return visibleServices.filter(s => String(s.categoryId) === String(category))
   }, [visibleServices, category, dbCategories])
 
   const visibleStaff = useMemo(() => staff.filter((member) => member.bookingEnabled !== false), [staff])

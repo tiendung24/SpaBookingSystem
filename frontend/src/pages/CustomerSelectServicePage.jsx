@@ -43,14 +43,14 @@ export default function CustomerSelectServicePage({ isModal = false, onClose, on
   const visibleServices = services.filter((s) => s.visible)
 
   const activeCategories = useMemo(() => {
-    const set = new Set(visibleServices.map((s) => String(s.category)))
+    const set = new Set(visibleServices.map((s) => String(s.categoryId)))
     return dbCategories.filter(c => set.has(String(c._id)))
   }, [visibleServices, dbCategories])
 
   const filteredServices = useMemo(() => {
     const q = query.trim().toLowerCase()
     return visibleServices.filter((s) => {
-      const matchCategory = category === 'all' || String(s.category) === String(category)
+      const matchCategory = category === 'all' || String(s.categoryId) === String(category)
       const matchQuery = !q || String(s.name || '').toLowerCase().includes(q)
       return matchCategory && matchQuery
     })
