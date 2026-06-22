@@ -1,4 +1,4 @@
-﻿import { PayOSService } from '../../services/payos.service.js'
+import { PayOSService } from '../../services/payos.service.js'
 import mongoose from 'mongoose'
 import { Booking, BookingSlotLock, Customer, Deposit, PayosPayment, Service, ServiceCategory, Shop, ShopStaff, ShopWorkingHour } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
@@ -116,6 +116,12 @@ function isBlockWithinCapacity({ startTime, endTime, capacity, bookings = [], lo
 function isStaffAvailableForBlock(staff, startTime, endTime) {
   const segments = buildSegments(startTime, endTime, SYSTEM_SLOT_MINUTES)
   return segments.every((segment) => isStaffAvailableForSlot(staff, formatHm(segment.start)))
+}
+
+export async function getServiceCategories(req, res) {
+  const shop = await findShopBySlug(req.params.slug)
+  const items = await ServiceCategory.find({ shopId: String(shop._id) }).sort({ sortOrder: 1, createdAt: 1 }).lean()
+  res.json({ items })
 }
 
 export async function getShopBySlug(req, res) {
