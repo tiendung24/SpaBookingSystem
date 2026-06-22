@@ -39,12 +39,13 @@ function staffExperienceLabel(member) {
 export default function CustomerHomePage() {
   const { slug } = useParams()
   const location = useLocation()
-  const { shop, services, staff, loadPublicShop, setBookingDraft } = useShop()
+  const { shop, services, staff, categories: dbCategories, loadPublicShop, setBookingDraft } = useShop()
   const navigate = useNavigate()
   const [bookingOpen, setBookingOpen] = useState(false)
   const [serviceDetail, setServiceDetail] = useState(null)
   const [staffDetail, setStaffDetail] = useState(null)
   const [activeTab, setActiveTab] = useState('services')
+  const [category, setCategory] = useState('all')
 
   useEffect(() => {
     if (!slug) return
@@ -64,9 +65,17 @@ export default function CustomerHomePage() {
     setActiveTab('services')
   }, [location.hash, location.pathname])
 
-  const isCorrectSlug = !slug || slug === shop.slug
-  const visibleServices = useMemo(() => services.filter((item) => item.visible), [services])
-  const featuredServices = visibleServices
+  const activeCategories = useMemo(() => {
+    const set = new Set(visibleServices.map((s) => String(s.category)))
+    return dbCategories.filter(c => set.has(String(c._id)))
+  }, [visibleServices, dbCategories])
+
+  const featuredServices = useMemo(() => {
+    if (category === 'all') return visibleServices
+    if (category === 'uncategorized') return visibleServices.filter(s => !dbCategories.find(c => String(c._id) === String(s.category)))
+    return visibleServices.filter(s => String(s.category) === String(category))
+  }, [visibleServices, category, dbCategories])
+
   const visibleStaff = useMemo(() => staff.filter((member) => member.bookingEnabled !== false), [staff])
   const featuredStaff = visibleStaff.slice(0, 8)
   const bookUrl = `/${slug || shop.slug}/book`
@@ -217,6 +226,38 @@ export default function CustomerHomePage() {
           <div className="text-center mb-12 space-y-2">
             <h3 className="font-label-bold text-label-bold text-secondary uppercase tracking-widest">Dịch vụ nổi bật</h3>
             <h2 className="font-h2 text-h2 text-main">Trải nghiệm đẳng cấp tại {shop.name}</h2>
+          </div>
+
+          <div className="flex gap-2 flex-wrap justify-center mb-8">
+            <button
+              type="button"
+              onClick={() => setCategory('all')}
+              className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-colors ${category === 'all' ? 'bg-primary text-white shadow-md' : 'bg-white border border-primary/20 text-main/70 hover:bg-slate-50'}`}
+            >
+              Tất cả
+            </button>
+            {activeCategories.map((c) => {
+              const active = String(c._id) === String(category)
+              return (
+                <button
+                  key={c._id}
+                  type="button"
+                  onClick={() => setCategory(String(c._id))}
+                  className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-colors ${active ? 'bg-primary text-white shadow-md' : 'bg-white border border-primary/20 text-main/70 hover:bg-slate-50'}`}
+                >
+                  {c.name}
+                </button>
+              )
+            })}
+            {visibleServices.some(s => !dbCategories.find(c => String(c._id) === String(s.category))) && (
+              <button
+                type="button"
+                onClick={() => setCategory('uncategorized')}
+                className={`px-6 py-2.5 rounded-full font-bold whitespace-nowrap transition-colors ${category === 'uncategorized' ? 'bg-primary text-white shadow-md' : 'bg-white border border-primary/20 text-main/70 hover:bg-slate-50'}`}
+              >
+                Khác
+              </button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

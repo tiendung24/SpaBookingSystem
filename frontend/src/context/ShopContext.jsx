@@ -157,6 +157,7 @@ export function ShopProvider({ children }) {
     },
     wallet: { balance: 0, escrow: 0, minBalance: 100000 }
   })
+  const [categories, setCategories] = useState([])
   const [services, setServices] = useState([])
   const [staff, setStaff] = useState([])
   const [bookings, setBookings] = useState([])
@@ -241,14 +242,16 @@ export function ShopProvider({ children }) {
         }
       }))
 
-      const [serviceRes, staffRes, bookingRes, walletRes, walletTxnRes] = await Promise.all([
+      const [serviceRes, staffRes, bookingRes, walletRes, walletTxnRes, categoryRes] = await Promise.all([
         apiRequest('/api/shop/services', { token: accessToken }),
         apiRequest('/api/shop/staffs', { token: accessToken }),
         apiRequest('/api/shop/bookings?includeHistory=1', { token: accessToken }),
         apiRequest('/api/shop/wallet', { token: accessToken }),
-        apiRequest('/api/shop/wallet/transactions', { token: accessToken })
+        apiRequest('/api/shop/wallet/transactions', { token: accessToken }),
+        apiRequest('/api/shop/service-categories', { token: accessToken }).catch(() => ({ items: [] }))
       ])
 
+      setCategories(categoryRes?.items || [])
       setServices((serviceRes.items || []).map(mapService))
       setStaff((staffRes.items || []).map(mapStaff))
       setBookings((bookingRes.items || []).map(mapBooking))
@@ -607,10 +610,11 @@ export function ShopProvider({ children }) {
   }
 
   const loadPublicShop = useCallback(async (slug) => {
-    const [shopRes, servicesRes, staffsRes] = await Promise.all([
+    const [shopRes, servicesRes, staffsRes, categoryRes] = await Promise.all([
       apiRequest(`/api/public/shops/${slug}`),
       apiRequest(`/api/public/shops/${slug}/services`),
-      apiRequest(`/api/public/shops/${slug}/staffs`)
+      apiRequest(`/api/public/shops/${slug}/staffs`),
+      apiRequest(`/api/public/shops/${slug}/categories`).catch(() => ({ items: [] }))
     ])
     setShop((prev) => ({
       ...prev,
@@ -628,6 +632,7 @@ export function ShopProvider({ children }) {
         cancelHours: Number(shopRes.shop?.depositConfig?.cancelHours ?? prev.deposit.cancelHours)
       }
     }))
+    setCategories(categoryRes?.items || [])
     setServices((servicesRes.items || []).map(mapService))
     setStaff((staffsRes.items || []).map(mapStaff))
   }, [])
@@ -798,6 +803,23 @@ export function ShopProvider({ children }) {
     const mapped = mapService(res.service)
     setServices((prev) => [mapped, ...prev])
     return mapped
+  }
+
+  const addCategory = async (category) => {
+    const res = await apiRequest('/api/shop/service-categories', { method: 'POST', token, body: category })
+    setCategories((prev) => [...prev, res.category].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)))
+    return res.category
+  }
+
+  const updateCategory = async (id, patch) => {
+    const res = await apiRequest(`/api/shop/service-categories/${id}`, { method: 'PUT', token, body: patch })
+    setCategories((prev) => prev.map((item) => (item._id === id ? res.category : item)).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)))
+    return res.category
+  }
+
+  const deleteCategory = async (id) => {
+    await apiRequest(`/api/shop/service-categories/${id}`, { method: 'DELETE', token })
+    setCategories((prev) => prev.filter((item) => item._id !== id))
   }
 
   const updateService = async (id, patch) => {
@@ -999,6 +1021,10 @@ export function ShopProvider({ children }) {
     markAllNotificationsRead,
     holdBookingSlot,
     getAvailableSlots,
+    categories,
+    addCategory,
+    updateCategory,
+    deleteCategory,
     addService,
     updateService,
     deleteService,

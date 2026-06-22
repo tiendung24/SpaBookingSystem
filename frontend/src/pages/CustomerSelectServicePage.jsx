@@ -7,13 +7,7 @@ function formatVnd(v) {
   return `${Number(v || 0).toLocaleString('vi-VN')}đ`
 }
 
-const categoryLabels = {
-  all: 'Tất cả',
-  nail: 'Nail',
-  massage: 'Massage',
-  spa: 'Spa & Skincare',
-  other: 'Khác'
-}
+
 
 const serviceFallbackImage = 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=1200&auto=format&fit=crop'
 const staffFallbackImage = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop'
@@ -32,7 +26,7 @@ function staffExperienceLabel(member) {
 export default function CustomerSelectServicePage({ isModal = false, onClose, onNext } = {}) {
   const navigate = useNavigate()
   const { slug } = useParams()
-  const { shop, services, staff, bookingDraft, setBookingDraft, loadPublicShop } = useShop()
+  const { shop, services, staff, categories: dbCategories, bookingDraft, setBookingDraft, loadPublicShop } = useShop()
 
   const [category, setCategory] = useState('all')
   const [query, setQuery] = useState('')
@@ -48,15 +42,15 @@ export default function CustomerSelectServicePage({ isModal = false, onClose, on
 
   const visibleServices = services.filter((s) => s.visible)
 
-  const categories = useMemo(() => {
-    const set = new Set(visibleServices.map((s) => s.category))
-    return ['all', ...Array.from(set)]
-  }, [visibleServices])
+  const activeCategories = useMemo(() => {
+    const set = new Set(visibleServices.map((s) => String(s.category)))
+    return dbCategories.filter(c => set.has(String(c._id)))
+  }, [visibleServices, dbCategories])
 
   const filteredServices = useMemo(() => {
     const q = query.trim().toLowerCase()
     return visibleServices.filter((s) => {
-      const matchCategory = category === 'all' || s.category === category
+      const matchCategory = category === 'all' || String(s.category) === String(category)
       const matchQuery = !q || String(s.name || '').toLowerCase().includes(q)
       return matchCategory && matchQuery
     })
@@ -167,19 +161,36 @@ export default function CustomerSelectServicePage({ isModal = false, onClose, on
               </div>
 
               <div className="flex gap-2 flex-wrap">
-                {categories.map((c) => {
-                  const active = c === category
+                <button
+                  type="button"
+                  onClick={() => setCategory('all')}
+                  className={`px-7 py-3 rounded-full font-bold whitespace-nowrap transition-colors ${category === 'all' ? 'bg-primary text-white shadow-md' : 'bg-white border border-primary/20 text-main/70 hover:bg-slate-50'}`}
+                >
+                  Tất cả
+                </button>
+                {activeCategories.map((c) => {
+                  const active = String(c._id) === String(category)
                   return (
                     <button
-                      key={c}
+                      key={c._id}
                       type="button"
-                      onClick={() => setCategory(c)}
+                      onClick={() => setCategory(String(c._id))}
                       className={`px-7 py-3 rounded-full font-bold whitespace-nowrap transition-colors ${active ? 'bg-primary text-white shadow-md' : 'bg-white border border-primary/20 text-main/70 hover:bg-slate-50'}`}
                     >
-                      {categoryLabels[c] || c}
+                      {c.name}
                     </button>
                   )
                 })}
+                {/* Fallback for uncategorized */}
+                {visibleServices.some(s => !dbCategories.find(c => String(c._id) === String(s.category))) && (
+                  <button
+                    type="button"
+                    onClick={() => setCategory('uncategorized')}
+                    className={`px-7 py-3 rounded-full font-bold whitespace-nowrap transition-colors ${category === 'uncategorized' ? 'bg-primary text-white shadow-md' : 'bg-white border border-primary/20 text-main/70 hover:bg-slate-50'}`}
+                  >
+                    Khác
+                  </button>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
