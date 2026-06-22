@@ -614,7 +614,7 @@ export function ShopProvider({ children }) {
       apiRequest(`/api/public/shops/${slug}`),
       apiRequest(`/api/public/shops/${slug}/services`),
       apiRequest(`/api/public/shops/${slug}/staffs`),
-      apiRequest(`/api/public/shops/${slug}/categories`).catch(() => ({ items: [] }))
+      apiRequest(`/api/public/shops/${slug}/service-categories`).catch(() => ({ items: [] }))
     ])
     setShop((prev) => ({
       ...prev,
