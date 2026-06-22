@@ -65,6 +65,9 @@ export default function CustomerHomePage() {
     setActiveTab('services')
   }, [location.hash, location.pathname])
 
+  const isCorrectSlug = !slug || slug === shop.slug
+  const visibleServices = useMemo(() => services.filter((item) => item.visible), [services])
+
   const activeCategories = useMemo(() => {
     const set = new Set(visibleServices.map((s) => String(s.category)))
     return dbCategories.filter(c => set.has(String(c._id)))
