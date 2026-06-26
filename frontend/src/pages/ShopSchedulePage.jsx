@@ -93,11 +93,20 @@ export default function ShopSchedulePage() {
 
     // 2. Map slots to bookings
     return shopSlots.map(slotTime => {
+      const [slotHour, slotMin] = slotTime.split(':').map(Number)
+      const slotStart = new Date(targetDate)
+      slotStart.setHours(slotHour, slotMin, 0, 0)
+      
+      // Each grid slot is 15 minutes long
+      const slotEnd = new Date(slotStart.getTime() + 15 * 60000)
+
       const slotBookings = validBookings.filter(b => {
-        const bDate = new Date(b.time)
-        const bHour = String(bDate.getHours()).padStart(2, '0')
-        const bMin = String(bDate.getMinutes()).padStart(2, '0')
-        return `${bHour}:${bMin}` === slotTime
+        const bStart = new Date(b.startTime || b.time)
+        const durationMin = Number(b.serviceDurationMinutes || 60)
+        const bEnd = b.endTime ? new Date(b.endTime) : new Date(bStart.getTime() + durationMin * 60000)
+        
+        // Check if the 15-minute slot overlaps with the booking's time span
+        return slotStart < bEnd && slotEnd > bStart
       })
 
       return {
