@@ -82,6 +82,12 @@ export default function ShopSchedulePage() {
   const scheduleData = useMemo(() => {
     // 1. Filter valid bookings for the selected date
     const targetDate = new Date(`${selectedDate}T00:00:00`)
+    const lunchStart = shop?.hours?.lunchBreakStart || '12:00'
+    const lunchEnd = shop?.hours?.lunchBreakEnd || '13:00'
+    const [lStartH, lStartM] = lunchStart.split(':').map(Number)
+    const [lEndH, lEndM] = lunchEnd.split(':').map(Number)
+    const lunchStartMins = lStartH * 60 + lStartM
+    const lunchEndMins = lEndH * 60 + lEndM
     
     const validBookings = (bookings || []).filter(b => {
       if (['canceled', 'rejected'].includes(b.status)) return false
@@ -109,12 +115,16 @@ export default function ShopSchedulePage() {
         return slotStart < bEnd && slotEnd > bStart
       })
 
+      const slotMins = slotHour * 60 + slotMin
+      const isLunchBreak = slotMins >= lunchStartMins && slotMins < lunchEndMins
+
       return {
         time: slotTime,
-        bookings: slotBookings
+        bookings: slotBookings,
+        isLunchBreak
       }
     })
-  }, [selectedDate, shopSlots, bookings])
+  }, [selectedDate, shopSlots, bookings, shop?.hours?.lunchBreakStart, shop?.hours?.lunchBreakEnd])
 
   const nextDay = () => {
     const d = new Date(selectedDate)
@@ -173,13 +183,19 @@ export default function ShopSchedulePage() {
               {scheduleData.map((slot) => {
                 const hasBooking = slot.bookings.length > 0;
                 const isLocked = lockedSlots.includes(slot.time);
+                const isLunchBreak = slot.isLunchBreak;
                 
                 let bgColor = 'bg-white border-primary/20 text-main hover:bg-primary/5';
                 let icon = '';
                 let statusText = 'Trống';
                 let statusColor = 'text-main/50';
 
-                if (hasBooking) {
+                if (isLunchBreak) {
+                  bgColor = 'bg-orange-50 border-orange-200 text-orange-600';
+                  icon = 'restaurant';
+                  statusText = 'Giờ nghỉ';
+                  statusColor = 'text-orange-500';
+                } else if (hasBooking) {
                   bgColor = 'bg-primary text-white border-primary shadow-md';
                   statusText = 'Đã có lịch';
                   statusColor = 'text-white/80';
@@ -193,9 +209,9 @@ export default function ShopSchedulePage() {
                 return (
                   <div 
                     key={slot.time} 
-                    className={`p-3 rounded-xl text-center border transition-all shadow-sm flex flex-col items-center justify-center gap-1 relative group cursor-pointer ${bgColor}`}
-                    onClick={() => toggleLock(slot.time)}
-                    title={isLocked ? "Bấm để mở khóa" : "Bấm để khóa"}
+                    className={`p-3 rounded-xl text-center border transition-all shadow-sm flex flex-col items-center justify-center gap-1 relative group ${isLunchBreak ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'} ${bgColor}`}
+                    onClick={() => { if (!isLunchBreak) toggleLock(slot.time) }}
+                    title={isLunchBreak ? "Giờ nghỉ trưa" : (isLocked ? "Bấm để mở khóa" : "Bấm để khóa")}
                   >
                     <span className="font-bold text-lg">{slot.time}</span>
                     <div className="flex items-center gap-1">
@@ -205,9 +221,11 @@ export default function ShopSchedulePage() {
                       </span>
                     </div>
                     {/* Hover tooltip hint */}
-                    <div className="absolute inset-0 bg-black/80 text-white text-[10px] font-bold uppercase rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      {isLocked ? 'Mở khóa' : 'Khóa'}
-                    </div>
+                    {!isLunchBreak && (
+                      <div className="absolute inset-0 bg-black/80 text-white text-[10px] font-bold uppercase rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        {isLocked ? 'Mở khóa' : 'Khóa'}
+                      </div>
+                    )}
                   </div>
                 );
               })}
