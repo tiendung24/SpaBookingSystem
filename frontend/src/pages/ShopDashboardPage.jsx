@@ -256,7 +256,11 @@ export default function ShopDashboardPage() {
               Theo dõi tình hình kinh doanh, lịch hẹn và hiệu suất vận hành trong ngày.
             </p>
           </div>
-          <button type="button" className="bg-primary text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all font-bold">
+          <button 
+            type="button" 
+            onClick={() => navigate('/shop/bookings/new')}
+            className="bg-primary text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all font-bold"
+          >
             <span className="material-symbols-outlined">add_circle</span>
             Tạo lịch hẹn mới
           </button>
