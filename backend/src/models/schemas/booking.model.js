@@ -9,6 +9,7 @@ export const Booking = createModel('Booking', 'bookings', {
   customerPhone: { type: String, index: true },
   customerEmail: { type: String, index: true },
   serviceId: { type: String, index: true },
+  serviceName: String,
   staffId: { type: String, index: true },
   startTime: { type: Date, index: true },
   endTime: Date,

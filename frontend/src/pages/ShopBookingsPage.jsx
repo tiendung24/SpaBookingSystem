@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import { useShop } from '../context/ShopContext'
@@ -94,7 +94,7 @@ export default function ShopBookingsPage() {
       return {
         ...booking,
         statusLabel: status,
-        serviceName: service?.name ?? 'Dịch vụ',
+        serviceName: booking.serviceName || service?.name || 'Dịch vụ',
         staffName: employee?.name ?? 'Chưa phân công',
         depositAmount: Number(booking.deposit || 0),
         serviceAmount: Number(booking.total || service?.priceVnd || 0),

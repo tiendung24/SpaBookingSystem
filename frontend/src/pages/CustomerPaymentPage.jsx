@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useShop } from '../context/ShopContext'
 import CustomerHeader from '../components/customer/CustomerHeader'
@@ -1329,7 +1329,7 @@ export default function CustomerPaymentPage() {
                 <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm transition-all hover:shadow-lg">
                   <h3 className="font-bold mb-4">Thông tin đặt lịch</h3>
                   <div className="space-y-3 text-sm">
-                    <div className="flex justify-between"><span className="text-main/60">Dịch vụ</span><span className="font-bold text-main">{service?.name || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-main/60">Dịch vụ</span><span className="font-bold text-main">{booking?.serviceName || service?.name || '—'}</span></div>
                     <div className="flex justify-between"><span className="text-main/60">Nhân viên</span><span className="font-bold text-main">{bookingDraft.staffId === 'random' ? 'Ngẫu nhiên' : selectedStaff?.name ?? '—'}</span></div>
                     <div className="flex justify-between"><span className="text-main/60">Thời lượng</span><span className="font-bold text-main">{service?.durationMinutes || 0} phút</span></div>
                     <div className="flex justify-between"><span className="text-main/60">Giá</span><span className="font-bold text-main">{formatVnd(service?.priceVnd || attemptAmounts.totalAmount || 0)}</span></div>

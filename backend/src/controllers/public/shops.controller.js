@@ -577,6 +577,7 @@ export async function createBooking(req, res) {
             customerPhone: String(phone).replace(/\\s+/g, ''),
             customerEmail: email ? String(email).toLowerCase() : undefined,
             serviceId,
+            serviceName: String(service.name || 'Dịch vụ'),
             staffId: staffId || null,
             startTime,
             endTime,

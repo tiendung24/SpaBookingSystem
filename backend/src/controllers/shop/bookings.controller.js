@@ -1,4 +1,4 @@
-﻿import mongoose from 'mongoose'
+import mongoose from 'mongoose'
 import {
   Booking,
   BookingSlotLock,
@@ -152,6 +152,7 @@ export async function createBooking(req, res) {
             customerName,
             customerPhone: String(phone).replace(/\\s+/g, ''),
             serviceId,
+            serviceName: String(service.name || 'Dịch vụ'),
             staffId: staffId || null,
             startTime,
             endTime,

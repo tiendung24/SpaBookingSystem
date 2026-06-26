@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import { useShop } from '../context/ShopContext'
@@ -171,7 +171,7 @@ export default function ShopBookingDetailPage() {
           </div>
           <div className="space-y-2">
             <p className="text-xs text-main/60 uppercase font-bold">Dịch vụ</p>
-            <p className="font-bold text-lg">{service?.name ?? 'Dịch vụ'}</p>
+            <p className="font-bold text-lg">{booking.serviceName || service?.name || 'Dịch vụ'}</p>
             <p className="text-main/70">{`${service?.durationMinutes ?? 0} phút`}</p>
           </div>
           <div className="space-y-2">

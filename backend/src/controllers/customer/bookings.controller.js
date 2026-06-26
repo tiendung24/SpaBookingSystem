@@ -146,7 +146,7 @@ export async function myBookings(req, res) {
     const payment = paymentByBookingId.get(String(booking._id)) || null
     return {
       ...booking,
-      serviceName: service?.name || '',
+      serviceName: booking.serviceName || service?.name || 'Dịch vụ đã xóa',
       serviceImageUrl: service?.imageUrl || '',
       serviceDescription: service?.description || '',
       serviceShortDescription: service?.shortDescription || '',
