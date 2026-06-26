@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import { useShop } from '../context/ShopContext'
+import { apiRequest } from '../lib/api'
+import { useEffect } from 'react'
 
 function dateOnlyLocal(date = new Date()) {
   const year = date.getFullYear()
@@ -11,8 +13,9 @@ function dateOnlyLocal(date = new Date()) {
 }
 
 export default function ShopSchedulePage() {
-  const { shop, bookings } = useShop()
+  const { shop, bookings, token } = useShop()
   const [selectedDate, setSelectedDate] = useState(dateOnlyLocal())
+  const [lockedSlots, setLockedSlots] = useState([])
 
   const daysOff = useMemo(() => {
     return Array.isArray(shop?.hours?.daysOff) 
@@ -24,6 +27,40 @@ export default function ShopSchedulePage() {
     const targetDate = new Date(`${selectedDate}T00:00:00`)
     return daysOff.includes(targetDate.getDay())
   }, [selectedDate, daysOff])
+
+  useEffect(() => {
+    if (!token || isDayOff) {
+      setLockedSlots([])
+      return
+    }
+    apiRequest(`/api/shop/slot-locks?date=${selectedDate}`, { token })
+      .then(res => setLockedSlots(res || []))
+      .catch(err => console.error(err))
+  }, [selectedDate, token, isDayOff])
+
+  const toggleLock = async (time) => {
+    const isLocked = lockedSlots.includes(time)
+    try {
+      if (isLocked) {
+        await apiRequest(`/api/shop/slot-locks`, {
+          method: 'DELETE',
+          token,
+          body: { date: selectedDate, time }
+        })
+        setLockedSlots(prev => prev.filter(t => t !== time))
+      } else {
+        await apiRequest(`/api/shop/slot-locks`, {
+          method: 'POST',
+          token,
+          body: { date: selectedDate, time }
+        })
+        setLockedSlots(prev => [...prev, time])
+      }
+    } catch (err) {
+      console.error('Lock error:', err)
+      alert(err.message || 'Không thể cập nhật trạng thái khóa slot')
+    }
+  }
 
   const shopSlots = useMemo(() => {
     const open = shop?.hours?.open || '09:00'
@@ -126,22 +163,45 @@ export default function ShopSchedulePage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
               {scheduleData.map((slot) => {
                 const hasBooking = slot.bookings.length > 0;
-              return (
-                <div 
-                  key={slot.time} 
-                  className={`p-3 rounded-xl text-center border transition-all shadow-sm flex flex-col items-center justify-center gap-1 ${
-                    hasBooking 
-                      ? 'bg-primary text-white border-primary shadow-md' 
-                      : 'bg-white border-primary/20 text-main hover:bg-primary/5'
-                  }`}
-                >
-                  <span className="font-bold text-lg">{slot.time}</span>
-                  <span className={`text-[11px] font-bold uppercase ${hasBooking ? 'text-white/80' : 'text-main/50'}`}>
-                    {hasBooking ? 'Đã có lịch' : 'Trống'}
-                  </span>
-                </div>
-              );
-            })}
+                const isLocked = lockedSlots.includes(slot.time);
+                
+                let bgColor = 'bg-white border-primary/20 text-main hover:bg-primary/5';
+                let icon = '';
+                let statusText = 'Trống';
+                let statusColor = 'text-main/50';
+
+                if (hasBooking) {
+                  bgColor = 'bg-primary text-white border-primary shadow-md';
+                  statusText = 'Đã có lịch';
+                  statusColor = 'text-white/80';
+                } else if (isLocked) {
+                  bgColor = 'bg-slate-100 border-slate-300 text-slate-400';
+                  icon = 'lock';
+                  statusText = 'Đã khóa';
+                  statusColor = 'text-slate-500';
+                }
+
+                return (
+                  <div 
+                    key={slot.time} 
+                    className={`p-3 rounded-xl text-center border transition-all shadow-sm flex flex-col items-center justify-center gap-1 relative group cursor-pointer ${bgColor}`}
+                    onClick={() => toggleLock(slot.time)}
+                    title={isLocked ? "Bấm để mở khóa" : "Bấm để khóa"}
+                  >
+                    <span className="font-bold text-lg">{slot.time}</span>
+                    <div className="flex items-center gap-1">
+                      {icon && <span className="material-symbols-outlined text-[12px]">{icon}</span>}
+                      <span className={`text-[11px] font-bold uppercase ${statusColor}`}>
+                        {statusText}
+                      </span>
+                    </div>
+                    {/* Hover tooltip hint */}
+                    <div className="absolute inset-0 bg-black/80 text-white text-[10px] font-bold uppercase rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      {isLocked ? 'Mở khóa' : 'Khóa'}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
           )}
         </section>

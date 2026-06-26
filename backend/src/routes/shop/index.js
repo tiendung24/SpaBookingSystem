@@ -10,6 +10,7 @@ import * as ShopBookingsController from '../../controllers/shop/bookings.control
 import * as ShopWalletController from '../../controllers/shop/wallet.controller.js'
 import * as ShopNotificationsController from '../../controllers/shop/notifications.controller.js'
 import * as ShopReviewsController from '../../controllers/shop/reviews.controller.js'
+import * as ShopScheduleController from '../../controllers/shop/schedule.controller.js'
 
 export const shopRouter = Router()
 
@@ -45,6 +46,10 @@ shopRouter.use(requireAuth, requireRole(['shop', 'owner', 'shop_owner']))
 shopRouter.get('/profile', asyncHandler(ShopProfileController.getMe))
 shopRouter.get('/me', asyncHandler(ShopProfileController.getMe))
 shopRouter.put('/me', asyncHandler(ShopProfileController.updateMe))
+
+shopRouter.get('/slot-locks', asyncHandler(ShopScheduleController.getLockedSlots))
+shopRouter.post('/slot-locks', asyncHandler(ShopScheduleController.lockSlot))
+shopRouter.delete('/slot-locks', asyncHandler(ShopScheduleController.unlockSlot))
 
 /**
  * @openapi

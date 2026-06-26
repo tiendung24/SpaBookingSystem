@@ -1,4 +1,4 @@
-﻿export { AuditLog } from './schemas/auditLog.model.js'
+export { AuditLog } from './schemas/auditLog.model.js'
 export { Booking } from './schemas/booking.model.js'
 export { BookingCancelReason } from './schemas/bookingCancelReason.model.js'
 export { BookingStatusLog } from './schemas/bookingStatusLog.model.js'
@@ -26,4 +26,5 @@ export { User } from './schemas/user.model.js'
 export { Wallet } from './schemas/wallet.model.js'
 export { WalletTransaction } from './schemas/walletTransaction.model.js'
 export { Upload } from './schemas/upload.model.js'
+export { ShopSlotLock } from './schemas/shopSlotLock.model.js'
 

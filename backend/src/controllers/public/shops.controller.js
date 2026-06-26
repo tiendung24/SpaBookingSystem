@@ -1,6 +1,6 @@
 import { PayOSService } from '../../services/payos.service.js'
 import mongoose from 'mongoose'
-import { Booking, BookingSlotLock, Customer, Deposit, PayosPayment, Service, ServiceCategory, Shop, ShopStaff, ShopWorkingHour } from '../../models/index.js'
+import { Booking, BookingSlotLock, Customer, Deposit, PayosPayment, Service, ServiceCategory, Shop, ShopStaff, ShopWorkingHour, ShopSlotLock } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
 import { releaseRedeemForBooking, reserveRedeemPointsForBooking } from '../../services/loyalty.service.js'
@@ -261,6 +261,9 @@ export async function getAvailableSlots(req, res) {
     ? activeLocksRaw.filter((lock) => String(lock.holdToken || '') !== String(holdToken))
     : activeLocksRaw
 
+  const shopSlotLocks = await ShopSlotLock.find({ shopId, date }).lean()
+  const lockedHms = new Set(shopSlotLocks.map(l => l.time))
+
   const activeStaffs = await ShopStaff.find({ shopId, status: 'active' }).lean()
   const candidateStaffs = Array.isArray(service.availableStaffIds) && service.availableStaffIds.length
     ? activeStaffs.filter((s) => service.availableStaffIds.includes(String(s._id)))
@@ -276,6 +279,11 @@ export async function getAvailableSlots(req, res) {
     const slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000)
     if (slotEnd > close) break
     const slotHm = formatHm(slotStart)
+
+    if (lockedHms.has(slotHm)) {
+      cursor = new Date(cursor.getTime() + slotStepMinutes * 60 * 1000)
+      continue
+    }
 
     const slotCapacity = getSlotCapacity(plan)
     if (!isBlockWithinCapacity({ startTime: slotStart, endTime: slotEnd, capacity: slotCapacity, bookings, locks: activeLocks })) {
