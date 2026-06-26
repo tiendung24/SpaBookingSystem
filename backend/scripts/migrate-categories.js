@@ -13,7 +13,7 @@ async function migrate() {
 
     for (const shop of shops) {
       console.log(`Processing shop: ${shop.name} (${shop._id})`)
-      
+
       const services = await Service.find({ shopId: shop._id }).lean()
       if (!services.length) {
         console.log('No services found. Skipping.')
@@ -25,12 +25,12 @@ async function migrate() {
 
       // Ensure some base categories for the shop just in case
       const baseCategories = [
-        { name: 'Chăm sóc da', slug: 'cham-soc-da', keywords: ['da', 'mặt', 'facial', 'skin', 'skincare', 'nám', 'mụn', 'ẩm', 'lão hóa'] },
-        { name: 'Massage', slug: 'massage', keywords: ['massage', 'xoa bóp', 'body', 'toàn thân', 'cổ', 'vai', 'gáy', 'spa'] },
-        { name: 'Làm móng (Nail)', slug: 'lam-mong', keywords: ['nail', 'móng', 'sơn', 'gel', 'cắt da'] },
         { name: 'Gội đầu', slug: 'goi-dau', keywords: ['gội', 'đầu', 'dưỡng sinh', 'tóc', 'head'] },
-        { name: 'Triệt lông', slug: 'triet-long', keywords: ['triệt', 'lông', 'waxing'] },
         { name: 'Phun xăm', slug: 'phun-xam', keywords: ['phun', 'xăm', 'điêu khắc', 'môi', 'mày'] },
+        { name: 'Triệt lông', slug: 'triet-long', keywords: ['triệt', 'waxing'] },
+        { name: 'Làm móng (Nail)', slug: 'lam-mong', keywords: ['nail', 'móng', 'sơn', 'gel', 'cắt da', 'nhật da', 'charm', 'base', 'french'] },
+        { name: 'Massage', slug: 'massage', keywords: ['massage', 'xoa bóp', 'body', 'toàn thân', 'cổ', 'vai', 'gáy', 'spa'] },
+        { name: 'Chăm sóc da', slug: 'cham-soc-da', keywords: ['da', 'mặt', 'facial', 'skin', 'skincare', 'nám', 'mụn', 'ẩm', 'lão hóa'] },
         { name: 'Dịch vụ khác', slug: 'khac', keywords: [] }
       ]
 
@@ -38,7 +38,7 @@ async function migrate() {
       for (const service of services) {
         const rawText = `${service.name} ${service.shortDescription} ${service.detailedDescription}`.toLowerCase()
         const paddedText = ' ' + rawText.replace(/[^\p{L}\p{N}]/gu, ' ').replace(/\s+/g, ' ') + ' '
-        
+
         let matchedCategory = baseCategories.find(c => c.keywords.some(k => paddedText.includes(' ' + k + ' ')))
         if (!matchedCategory) matchedCategory = baseCategories.find(c => c.slug === 'khac')
 

@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 
@@ -82,6 +82,16 @@ export default function LoginForm() {
         <button disabled={submitting} className="w-full bg-primary text-white font-bold py-4 rounded-lg disabled:opacity-60" type="submit">
           {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
+        <div className="text-center text-sm text-main mt-4">
+          Chưa có tài khoản?{' '}
+          <Link to="/customer/register" className="text-primary font-bold hover:underline">
+            Đăng ký khách hàng
+          </Link>
+          <span className="mx-2 text-gray-300">|</span>
+          <Link to="/register" className="text-primary font-bold hover:underline">
+            Đăng ký đối tác
+          </Link>
+        </div>
       </form>
     </div>
   )
