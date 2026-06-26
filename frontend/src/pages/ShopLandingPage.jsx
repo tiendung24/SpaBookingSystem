@@ -1,10 +1,9 @@
-﻿
+
 import TopNavBar from '../components/shop/TopNavBar';
 import HeroSection from '../components/shop/HeroSection';
 import ProblemSection from '../components/shop/ProblemSection';
 import FeaturesSection from '../components/shop/FeaturesSection';
 import PricingSection from '../components/shop/PricingSection';
-import FAQSection from '../components/shop/FAQSection';
 import CTASection from '../components/shop/CTASection';
 import Footer from '../components/shop/Footer';
 
@@ -17,7 +16,6 @@ export default function ShopLandingPage() {
         <ProblemSection />
         <FeaturesSection />
         <PricingSection />
-        <FAQSection />
         <CTASection />
       </main>
       <Footer />

@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import LumiXLogo from '../../assets/lumix-logo.png'
 import { useShop } from '../../context/ShopContext'
@@ -12,21 +12,21 @@ export default function TopNavBar() {
   const closeMenu = () => setMobileMenuOpen(false)
 
   return (
-    <header className="fixed top-0 w-full z-50 glass-card !border-x-0 !border-t-0 rounded-none">
-      <nav className="flex justify-between items-center px-4 md:px-10 py-4 max-w-7xl mx-auto">
+    <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-[#14677a]/10 shadow-sm transition-all duration-300">
+      <nav className="flex justify-between items-center px-4 md:px-10 py-3 md:py-4 max-w-[1440px] mx-auto">
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <img src={LumiXLogo} alt="LumiX Logo" className="h-12 w-auto" />
-            <span className="text-lg font-bold text-main hidden sm:inline">Partner</span>
+            <span className="text-xl font-bold text-[#14677a] hidden sm:inline" style={{ fontFamily: 'Quicksand, sans-serif' }}>Partner</span>
           </Link>
           <div className="hidden md:flex gap-6">
-            <a href="#features" className="text-primary font-bold border-b-2 border-primary pb-1 font-label-bold text-label-bold">
+            <a href="#features" className="text-[#14677a] font-bold border-b-2 border-[#14677a] pb-1">
               Tính năng
             </a>
-            <a href="#pricing" className="text-main hover:text-primary transition-colors font-label-bold text-label-bold">
+            <a href="#pricing" className="text-gray-600 hover:text-[#14677a] font-semibold transition-colors">
               Bảng giá
             </a>
-            <a href="#faq" className="text-main hover:text-primary transition-colors font-label-bold text-label-bold">
+            <a href="#faq" className="text-gray-600 hover:text-[#14677a] font-semibold transition-colors">
               Hỗ trợ
             </a>
           </div>
@@ -35,10 +35,10 @@ export default function TopNavBar() {
         <div className="hidden md:flex items-center gap-4">
           {isPublicShopPath || !isAuthenticated || role !== 'shop' ? (
             <>
-              <Link to="/login" className="text-main hover:bg-gray-100 transition-all duration-300 font-label-bold text-label-bold px-4 py-2 rounded-xl">
+              <Link to="/login" className="text-[#14677a] border border-[#14677a] font-bold px-5 py-2 rounded-full hover:bg-[#14677a]/5 transition-all duration-300">
                 Đăng nhập
               </Link>
-              <Link to="/register" className="bg-[#5ea4b8] text-white font-label-bold text-label-bold px-6 py-2.5 rounded-xl cta-3d hover:brightness-110">
+              <Link to="/register" className="bg-[#14677a] text-white font-bold px-6 py-2 rounded-full hover:brightness-110 shadow-md transition-all active:scale-95">
                 Đăng ký ngay
               </Link>
             </>

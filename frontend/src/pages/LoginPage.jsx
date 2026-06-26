@@ -1,61 +1,55 @@
-
 import { Link } from 'react-router-dom'
 import LoginForm from '../components/shop/LoginForm';
 import LumiXLogo from '../assets/lumix-logo.png';
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-white font-body-md text-main flex flex-col overflow-x-hidden bg-3d-elements">
-      {/* Background 3D Decorations */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px] floating-object" style={{ animationDelay: '0s' }}></div>
-        <div className="absolute bottom-[-5%] left-[-5%] w-[300px] h-[300px] bg-tertiary/10 rounded-full blur-[80px] floating-object" style={{ animationDelay: '-2s' }}></div>
-        {/* Abstract 3D shapes */}
-        <div className="absolute top-1/4 left-10 w-24 h-24 glass-card rounded-3xl opacity-30 floating-object hidden md:block" style={{ animationDelay: '-1s' }}></div>
-        <div className="absolute bottom-1/4 right-20 w-32 h-32 glass-card rounded-full opacity-20 floating-object" style={{ animationDelay: '-3.5s' }}></div>
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-body-md text-main">
+      {/* Left Column: Branding / Image (Hidden on small screens) */}
+      <div className="hidden md:flex md:w-1/2 relative bg-primary items-center justify-center overflow-hidden">
+        <div 
+          className="absolute inset-0 z-0 bg-cover bg-center" 
+          style={{ backgroundImage: "url('https://file.hstatic.net/200000827051/article/hinh-anh-goi-dau-duong-sinh_12_65344a182040435dae6ec3ba33e80b86.jpg')" }}
+        ></div>
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+        
+        <div className="relative z-20 p-12 text-white max-w-lg text-center floating-object" style={{ animationDuration: '8s' }}>
+          <div className="bg-black/30 backdrop-blur-md p-8 rounded-3xl border border-white/20 shadow-[0_30px_60px_rgba(0,0,0,0.3)]">
+            <h1 className="text-4xl lg:text-5xl font-bold mb-4">LumiX</h1>
+            <p className="text-xl font-medium opacity-90 mb-6">Hệ sinh thái làm đẹp thông minh</p>
+            <p className="opacity-80">Trải nghiệm đặt lịch, quản lý chuyên nghiệp và nâng tầm dịch vụ của bạn chỉ với một chạm.</p>
+          </div>
+        </div>
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 w-full px-10 h-20 flex items-center justify-between border-b border-gray-200">
-        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <img src={LumiXLogo} alt="LumiX Logo" className="h-16 w-auto" />
-        </Link>
-        <div className="hidden md:block">
-          <a className="text-main font-medium hover:text-primary transition-colors font-body-md text-body-md" href="#">
-            Hỗ trợ
-          </a>
-        </div>
-      </header>
+      {/* Right Column: Form */}
+      <div className="w-full md:w-1/2 flex flex-col justify-between bg-white relative">
+        {/* Abstract 3D shape decorations */}
+        <div className="absolute top-[-5%] right-[-10%] w-[300px] h-[300px] bg-primary/5 rounded-full blur-[80px] pointer-events-none"></div>
+        <div className="absolute bottom-[10%] left-[-10%] w-[250px] h-[250px] bg-tertiary/10 rounded-full blur-[60px] pointer-events-none"></div>
 
-      {/* Main Content */}
-      <main className="relative z-10 flex-grow flex items-center justify-center px-6 py-16">
-        <div className="w-full max-w-[480px] flex flex-col items-center">
-          <LoginForm />
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="relative z-10 w-full border-t border-gray-200 bg-gray-50 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-center px-10 max-w-7xl mx-auto gap-4">
-          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+        {/* Header (Mobile Logo) */}
+        <header className="p-6 md:p-10 flex items-center justify-between z-10">
+          <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <img src={LumiXLogo} alt="LumiX Logo" className="h-12 w-auto" />
           </Link>
-          <div className="flex flex-wrap justify-center gap-6">
-            <a className="font-body-md text-body-md text-main hover:text-primary transition-colors" href="#">
-              Điều khoản dịch vụ
-            </a>
-            <a className="font-body-md text-body-md text-main hover:text-primary transition-colors" href="#">
-              Chính sách bảo mật
-            </a>
-            <a className="font-body-md text-body-md text-main hover:text-primary transition-colors" href="#">
-              Liên hệ
-            </a>
+          <a className="text-sm font-semibold text-main hover:text-primary transition-colors" href="#">
+            Trợ giúp
+          </a>
+        </header>
+
+        {/* Form Container */}
+        <main className="flex-grow flex items-center justify-center p-6 md:p-12 z-10">
+          <div className="w-full max-w-md">
+            <LoginForm />
           </div>
-          <div className="font-body-md text-body-md text-main text-center md:text-right">
-            © 2026 LumiX Partner. Elevating the beauty ecosystem.
-          </div>
-        </div>
-      </footer>
+        </main>
+
+        {/* Footer */}
+        <footer className="p-6 md:p-10 text-center text-xs text-gray-500 z-10">
+          © 2026 LumiX. Mọi bản quyền được bảo lưu.
+        </footer>
+      </div>
     </div>
   );
 }

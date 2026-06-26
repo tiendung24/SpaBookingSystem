@@ -23,48 +23,22 @@ export default function RegisterPage() {
         </section>
 
         <section className="hidden md:flex md:w-5/12 lg:w-1/2 bg-[#f5f9fb] relative items-center justify-center overflow-hidden">
+          <div className="absolute inset-0">
+            <img src="https://file.hstatic.net/200000827051/article/hinh-anh-goi-dau-duong-sinh_12_65344a182040435dae6ec3ba33e80b86.jpg" alt="LumiX Partner" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-slate-900/40" />
+          </div>
           <div className="absolute top-[-10%] right-[-10%] w-[420px] h-[420px] bg-primary/10 rounded-full blur-3xl" />
           <div className="absolute bottom-[-5%] left-[-5%] w-[320px] h-[320px] bg-tertiary/10 rounded-full blur-3xl" />
 
-          <div className="relative z-10 w-full max-w-[520px] px-10 text-center">
-            <div className="floating-object">
-              <div className="glass-card rounded-3xl p-6 mb-6">
-                <div className="bg-white/60 rounded-2xl p-4 border border-white/70 shadow-sm mb-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-primary/20" />
-                    <div className="space-y-2">
-                      <div className="h-2.5 w-24 bg-primary/25 rounded" />
-                      <div className="h-2 w-14 bg-primary/15 rounded" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-7 gap-2 mb-4">
-                    {[...Array(7)].map((_, idx) => (
-                      <div key={idx} className={`h-7 rounded-md ${idx === 3 ? 'bg-primary/30' : 'bg-primary/10'}`} />
-                    ))}
-                  </div>
-                  <div className="space-y-2">
-                    {[...Array(2)].map((_, idx) => (
-                      <div key={idx} className="h-10 bg-white/70 rounded-lg flex items-center justify-between px-3 border border-primary/10">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-primary' : 'bg-primary/50'}`} />
-                          <div className="h-2 w-20 bg-slate-400/30 rounded" />
-                        </div>
-                        <div className="h-2 w-10 bg-slate-400/30 rounded" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <h3 className="font-headline-md text-headline-md text-primary mb-2">Tăng 40% doanh thu</h3>
-                <p className="font-body-md text-body-md text-main">
-                  Hệ thống đặt lịch tự động giúp bạn tối ưu thời gian và giảm thiểu tình trạng bỏ lỡ khách hàng.
-                </p>
+          <div className="relative z-10 w-full max-w-[520px] px-10 text-white">
+            <div className="glass-card rounded-3xl p-6 bg-white/10 border border-white/20 backdrop-blur-xl">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/70">LumiX Partner</p>
+              <h2 className="mt-3 text-3xl font-black leading-tight">Nâng tầm quản lý Spa & Salon</h2>
+              <div className="mt-6 space-y-3 text-sm text-white/90">
+                <p>• Hệ thống đặt lịch tự động tối ưu thời gian trống.</p>
+                <p>• Quản lý nhân viên, lịch làm việc và hoa hồng dễ dàng.</p>
+                <p>• Tham gia cùng hơn 5,000+ tiệm đã thành công.</p>
               </div>
-            </div>
-
-            <div className="glass-card rounded-2xl p-5">
-              <p className="font-body-sm text-body-sm text-main">
-                Tham gia cùng hơn <span className="font-bold text-primary">5,000+</span> tiệm đã thành công cùng LumiX.
-              </p>
             </div>
           </div>
         </section>

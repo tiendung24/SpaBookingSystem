@@ -61,28 +61,38 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="glass-card inner-glow w-full p-8 md:p-12 rounded-2xl transition-all duration-500 hover:shadow-[0_30px_60px_rgba(94,164,184,0.2)]">
+    <div className="w-full">
       <div className="text-center mb-10">
-        <h1 className="font-headline-lg text-headline-lg text-primary mb-2">Chào mừng trở lại</h1>
-        <p className="font-body-md text-body-md text-main">Vui lòng đăng nhập vào tài khoản của bạn</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Đăng nhập</h1>
+        <p className="text-gray-500">Chào mừng trở lại, vui lòng nhập thông tin của bạn</p>
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <input name="identity" className="w-full p-4 border rounded-lg" placeholder="Email hoặc số điện thoại" value={formData.identity} onChange={handleChange} />
-        <div className="relative">
-          <input name="password" type={showPassword ? 'text' : 'password'} className="w-full p-4 border rounded-lg pr-12" placeholder="Mật khẩu" value={formData.password} onChange={handleChange} />
-          <button type="button" className="absolute right-3 top-3 text-sm" onClick={() => setShowPassword((v) => !v)}>{showPassword ? 'Ẩn' : 'Hiện'}</button>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email hoặc số điện thoại</label>
+            <input name="identity" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" placeholder="Nhập email hoặc SĐT" value={formData.identity} onChange={handleChange} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
+            <div className="relative">
+              <input name="password" type={showPassword ? 'text' : 'password'} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all pr-12" placeholder="Nhập mật khẩu" value={formData.password} onChange={handleChange} />
+              <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-primary font-medium" onClick={() => setShowPassword((v) => !v)}>{showPassword ? 'Ẩn' : 'Hiện'}</button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <input id="remember" name="remember" type="checkbox" checked={formData.remember} onChange={handleChange} />
-          <label htmlFor="remember">Ghi nhớ đăng nhập</label>
-          <Link to="/forgot-password" className="ml-auto text-primary">Quên mật khẩu?</Link>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <input id="remember" name="remember" type="checkbox" className="w-4 h-4 text-primary bg-gray-50 border-gray-300 rounded focus:ring-primary/20 accent-primary" checked={formData.remember} onChange={handleChange} />
+            <label htmlFor="remember" className="text-sm text-gray-600 cursor-pointer select-none">Ghi nhớ đăng nhập</label>
+          </div>
+          <Link to="/forgot-password" className="text-sm text-primary font-semibold hover:underline">Quên mật khẩu?</Link>
         </div>
-        <button disabled={submitting} className="w-full bg-primary text-white font-bold py-4 rounded-lg disabled:opacity-60" type="submit">
-          {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
+        <button disabled={submitting} className="w-full bg-gradient-to-r from-primary to-[#1a7f96] text-white font-bold py-4 rounded-xl disabled:opacity-60 transition-all shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 active:shadow-primary/20" type="submit">
+          {submitting ? 'Đang xử lý...' : 'Đăng nhập'}
         </button>
-        <div className="text-center text-sm text-main mt-4">
+        <div className="text-center text-sm text-gray-500 mt-4">
           Chưa có tài khoản?{' '}
           <Link to="/customer/register" className="text-primary font-bold hover:underline">
             Đăng ký khách hàng
