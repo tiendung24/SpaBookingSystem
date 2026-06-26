@@ -1,7 +1,8 @@
-import { Deposit, PayosPayment, PlatformFee, Shop, ShopPayout, Wallet, WalletTransaction } from '../../models/index.js'
+import { Deposit, PayosPayment, PlatformFee, Shop, ShopPayout, Wallet, WalletTransaction, User } from '../../models/index.js'
 import { PayOSService } from '../../services/payos.service.js'
 import { httpError } from '../../utils/httpError.js'
 import { writeAuditLog } from '../../utils/audit.js'
+import { sendEmailBestEffort, buildWithdrawalRequestEmailForAdmin } from '../../utils/emailNotifications.js'
 
 async function applyTopupPaymentToWallet(payment, payload = {}) {
   const defaultMin = Number(process.env.SHOP_WALLET_MIN_BALANCE || 100000)
@@ -67,8 +68,7 @@ export async function getWalletTransactions(req, res) {
 export async function createTopup(req, res) {
   const shopId = req.auth.shopId
   const amount = Number(req.body?.amount || 0)
-  if (!amount || amount <= 0) throw httpError(400, 'Số tiền nạp không hợp lệ')
-  if (amount < 100000) throw httpError(400, 'Số tiền nạp tối thiểu là 100.000đ')
+  if (!amount || amount < 2000) throw httpError(400, 'Số tiền nạp tối thiểu là 2.000đ (theo quy định của cổng thanh toán)')
 
   const payos = new PayOSService()
   const topup = await payos.createTopupPayment({
@@ -208,10 +208,10 @@ export async function requestWithdrawal(req, res) {
 
   const wallet = await Wallet.findOne({ shopId })
   if (!wallet) throw httpError(404, 'Không tìm thấy ví')
+  const shop = await Shop.findById(shopId).lean()
 
-  const minBalance = Number(wallet.minBalance || 100000)
-  if (Number(wallet.balance || 0) - amount < minBalance) {
-    throw httpError(400, `Số dư không đủ. Cần duy trì tối thiểu ${minBalance.toLocaleString('vi-VN')}đ trong ví.`)
+  if (Number(wallet.balance || 0) < amount) {
+    throw httpError(400, `Số dư không đủ. Số dư hiện tại là ${Number(wallet.balance || 0).toLocaleString('vi-VN')}đ.`)
   }
 
   // DO NOT deduct balance here yet, wait for admin approval
@@ -247,6 +247,32 @@ export async function requestWithdrawal(req, res) {
     entityId: String(payout._id),
     meta: { shopId, amount }
   })
+
+  // Send email to admin
+  try {
+    const adminUser = await User.findOne({ role: 'admin' }).lean()
+    const adminEmail = adminUser?.email || process.env.ADMIN_EMAIL || 'admin@lumix.io.vn'
+    
+    if (adminEmail) {
+      const adminUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/admin/finance`
+      const emailData = buildWithdrawalRequestEmailForAdmin({
+        shopName: shop?.name || 'Shop',
+        shopPhone: shop?.phone || '',
+        amount,
+        bankInfo,
+        adminUrl
+      })
+      sendEmailBestEffort({
+        to: adminEmail,
+        subject: emailData.subject,
+        html: emailData.html,
+        text: emailData.text,
+        meta: { event: 'withdrawal_request', shopId }
+      })
+    }
+  } catch (error) {
+    console.error('Failed to send withdrawal email', error)
+  }
 
   res.status(201).json({ payout })
 }

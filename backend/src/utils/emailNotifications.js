@@ -1,4 +1,4 @@
-﻿import { EmailService } from '../services/email.service.js'
+import { EmailService } from '../services/email.service.js'
 
 function logEmailEvent(level, event, meta = {}) {
   try {
@@ -381,6 +381,59 @@ export function buildResetPasswordEmail({ resetUrl, expiresAt }) {
     ctaLabel: 'Đặt lại mật khẩu',
     ctaUrl: resetUrl,
     footerNote: 'Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.'
+  })
+
+  return { subject, text, html }
+}
+export function buildWithdrawalRequestEmailForAdmin({ shopName, shopPhone, amount, bankInfo, adminUrl }) {
+  const amountText = formatVnd(amount)
+  const subject = `[LumiX] Yêu cầu rút tiền mới từ ${shopName}`
+  const text = [
+    `Shop ${shopName} (${shopPhone}) vừa gửi yêu cầu rút số tiền ${amountText}.`,
+    `Ngân hàng: ${bankInfo.bankName}`,
+    `Số tài khoản: ${bankInfo.accountNumber}`,
+    `Chủ tài khoản: ${bankInfo.accountName}`,
+    `Vui lòng đăng nhập hệ thống admin để kiểm tra và xử lý.`
+  ].join('\n')
+
+  const bodyHtml = `
+    <p>Hệ thống vừa ghi nhận một yêu cầu rút tiền từ đối tác.</p>
+    <table style="width:100%; border-collapse: collapse; margin-top: 16px;">
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color:#64748b;">Shop</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:bold; text-align:right;">${escapeHtml(shopName)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color:#64748b;">Số điện thoại</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:bold; text-align:right;">${escapeHtml(shopPhone || '')}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color:#64748b;">Số tiền</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:bold; text-align:right; color:#2563eb; font-size:16px;">${escapeHtml(amountText)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color:#64748b;">Ngân hàng</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:bold; text-align:right;">${escapeHtml(bankInfo.bankName)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color:#64748b;">Số tài khoản</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:bold; text-align:right;">${escapeHtml(bankInfo.accountNumber)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color:#64748b;">Chủ tài khoản</td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight:bold; text-align:right;">${escapeHtml(bankInfo.accountName)}</td>
+      </tr>
+    </table>
+  `
+  const html = renderEmailLayout({
+    title: 'Yêu cầu rút tiền',
+    subtitle: 'Hệ thống đối soát',
+    badgeText: 'Mới',
+    badgeTone: 'warning',
+    preheader: `Yêu cầu rút ${amountText} từ ${shopName}`,
+    bodyHtml,
+    ctaLabel: 'Kiểm tra giao dịch',
+    ctaUrl: adminUrl
   })
 
   return { subject, text, html }

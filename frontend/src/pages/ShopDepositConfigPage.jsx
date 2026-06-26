@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import SystemConfigTabs from '../components/shop/SystemConfigTabs'
 import { useShop } from '../context/ShopContext'
@@ -124,9 +124,8 @@ export default function ShopDepositConfigPage() {
                 <button
                   type="button"
                   onClick={() => setDepositType('fixed')}
-                  className={`rounded-2xl border p-5 text-left transition-all ${
-                    depositType === 'fixed' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-white'
-                  }`}
+                  className={`rounded-2xl border p-5 text-left transition-all ${depositType === 'fixed' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-white'
+                    }`}
                 >
                   <span className="font-label-bold block">Số tiền cố định</span>
                   <span className="text-xs text-main/70">Khách cọc một mức phí đồng nhất.</span>
@@ -134,9 +133,8 @@ export default function ShopDepositConfigPage() {
                 <button
                   type="button"
                   onClick={() => setDepositType('percent')}
-                  className={`rounded-2xl border p-5 text-left transition-all ${
-                    depositType === 'percent' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-white'
-                  }`}
+                  className={`rounded-2xl border p-5 text-left transition-all ${depositType === 'percent' ? 'border-primary bg-primary/5' : 'border-slate-200 bg-white'
+                    }`}
                 >
                   <span className="font-label-bold block">Phần trăm hóa đơn (%)</span>
                   <span className="text-xs text-main/70">Cọc dựa trên tổng giá trị dịch vụ.</span>
@@ -158,25 +156,25 @@ export default function ShopDepositConfigPage() {
                 <div className="flex flex-wrap gap-2 mt-3">
                   {depositType === 'fixed'
                     ? quickDepositValues.map((value) => (
-                        <button
-                          key={value}
-                          type="button"
-                          className="px-4 py-2 rounded-full border border-slate-300 hover:border-primary hover:text-primary"
-                          onClick={() => setDepositValue(value)}
-                        >
-                          {Number(value || 0).toLocaleString('vi-VN')}đ
-                        </button>
-                      ))
+                      <button
+                        key={value}
+                        type="button"
+                        className="px-4 py-2 rounded-full border border-slate-300 hover:border-primary hover:text-primary"
+                        onClick={() => setDepositValue(value)}
+                      >
+                        {Number(value || 0).toLocaleString('vi-VN')}đ
+                      </button>
+                    ))
                     : [10, 20, 30, 50].map((value) => (
-                        <button
-                          key={value}
-                          type="button"
-                          className="px-4 py-2 rounded-full border border-slate-300 hover:border-primary hover:text-primary"
-                          onClick={() => setDepositValue(value)}
-                        >
-                          {value}%
-                        </button>
-                      ))}
+                      <button
+                        key={value}
+                        type="button"
+                        className="px-4 py-2 rounded-full border border-slate-300 hover:border-primary hover:text-primary"
+                        onClick={() => setDepositValue(value)}
+                      >
+                        {value}%
+                      </button>
+                    ))}
                 </div>
               </div>
             </section>
@@ -232,34 +230,34 @@ export default function ShopDepositConfigPage() {
           </div>
 
           <div className="lg:col-span-4 space-y-6">
-            <div className="glass-card p-6 rounded-3xl bg-gradient-to-br from-primary to-[#0f5666] text-white">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="glass-card p-6 rounded-3xl bg-white/70 border border-slate-200">
+              <div className="flex items-center gap-3 mb-4 text-emerald-600">
                 <span className="material-symbols-outlined text-[28px]">shield_lock</span>
-                <h4 className="font-h3 text-h3">Cơ chế LumiX Escrow</h4>
+                <h4 className="font-h3 text-h3 text-main">Cơ chế LumiX Escrow</h4>
               </div>
-              <div className="space-y-4 text-sm leading-6">
+              <div className="space-y-4 text-sm leading-6 text-main/80">
                 <p>
-                  Tiền cọc của khách hàng sẽ được <b>LumiX giữ trung gian</b>. Tiền chỉ được chuyển vào ví của bạn sau khi:
+                  Tiền cọc của khách hàng sẽ được <b className="text-main">LumiX giữ trung gian</b>. Tiền chỉ được chuyển vào ví của bạn sau khi:
                 </p>
                 <ul className="space-y-3 text-xs">
                   <li className="flex gap-3">
-                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    <span className="material-symbols-outlined text-[18px] text-emerald-500">check_circle</span>
                     <span>Lịch hẹn hoàn tất thành công.</span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    <span className="material-symbols-outlined text-[18px] text-emerald-500">check_circle</span>
                     <span>Quá thời hạn khách có thể yêu cầu hoàn tiền theo chính sách của bạn.</span>
                   </li>
                   <li className="flex gap-3">
-                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    <span className="material-symbols-outlined text-[18px] text-emerald-500">check_circle</span>
                     <span>Khách hàng hủy lịch muộn (theo cấu hình bên trái).</span>
                   </li>
                 </ul>
-                <div className="mt-6 p-4 bg-white/10 rounded-xl border border-white/20">
-                  <p className="text-[11px] uppercase tracking-widest opacity-70 mb-1">Trạng thái hiện tại</p>
-                  <div className="flex items-center justify-between">
+                <div className="mt-6 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                  <p className="text-[11px] uppercase tracking-widest text-emerald-600/70 mb-1 font-bold">Trạng thái hiện tại</p>
+                  <div className="flex items-center justify-between text-emerald-700">
                     <span className="font-bold">Đang bảo vệ 24/7</span>
-                    <span className="w-2 h-2 rounded-full bg-cyan-100 animate-pulse"></span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   </div>
                 </div>
               </div>

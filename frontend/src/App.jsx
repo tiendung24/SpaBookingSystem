@@ -10,6 +10,7 @@ import RegisterPage from './pages/RegisterPage'
 
 import ShopDashboardPage from './pages/ShopDashboardPage'
 import ShopBookingsPage from './pages/ShopBookingsPage'
+import ShopSchedulePage from './pages/ShopSchedulePage'
 import ShopWalletPage from './pages/ShopWalletPage'
 import ShopServicesPage from './pages/ShopServicesPage'
 import ShopStaffPage from './pages/ShopStaffPage'
@@ -70,6 +71,7 @@ function App() {
             <Route path="/shop/bookings" element={<RequireRole allow={['shop']}><ShopBookingsPage /></RequireRole>} />
             <Route path="/shop/bookings/new" element={<RequireRole allow={['shop']}><ShopCreateBookingPage /></RequireRole>} />
             <Route path="/shop/bookings/:id" element={<RequireRole allow={['shop']}><ShopBookingDetailPage /></RequireRole>} />
+            <Route path="/shop/schedule" element={<RequireRole allow={['shop']}><ShopSchedulePage /></RequireRole>} />
             <Route path="/shop/wallet" element={<RequireRole allow={['shop']}><ShopWalletPage /></RequireRole>} />
             <Route path="/shop/services" element={<RequireRole allow={['shop']}><ShopServicesPage /></RequireRole>} />
             <Route path="/shop/staff" element={<RequireRole allow={['shop']}><ShopStaffPage /></RequireRole>} />

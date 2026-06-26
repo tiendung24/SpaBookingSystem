@@ -1,10 +1,11 @@
-﻿import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useShop } from '../../context/ShopContext'
 import LumiXLogo from '../../assets/lumix-logo.png'
 
 const menus = [
   { to: '/shop/dashboard', icon: 'dashboard', label: 'Tổng quan' },
   { to: '/shop/bookings', icon: 'calendar_month', label: 'Lịch hẹn' },
+  { to: '/shop/schedule', icon: 'event_available', label: 'Theo dõi Slot' },
   { to: '/shop/services', icon: 'spa', label: 'Dịch vụ' },
   { to: '/shop/staff', icon: 'group', label: 'Nhân sự' },
   { to: '/shop/wallet', icon: 'account_balance_wallet', label: 'Ví' },

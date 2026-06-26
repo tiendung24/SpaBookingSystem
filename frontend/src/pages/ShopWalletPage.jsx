@@ -22,6 +22,7 @@ export default function ShopWalletPage() {
 
   const walletBalance = Number(shop.wallet?.balance || 0);
   const walletMinBalance = Number(shop.wallet?.minBalance || 100000);
+  const maxWithdrawable = Math.max(0, walletBalance);
   const isWalletHealthy = walletBalance >= walletMinBalance;
 
   const refreshWalletBalance = async () => {
@@ -214,9 +215,18 @@ export default function ShopWalletPage() {
     }
   }, [searchParams, token, loadMeAndShop])
 
-  const createPayosQr = async () => {
-    setLoadingQr(true);
+  const openTopupModal = () => {
     setQrVisible(true);
+    setPayosData(null);
+    setTopupStatusText('');
+  };
+
+  const createPayosQr = async () => {
+    if (!topupAmount || topupAmount < 2000) {
+      pushToast({ type: 'error', title: 'Số tiền nạp', message: 'Số tiền nạp tối thiểu là 2.000đ (theo quy định ngân hàng)' });
+      return;
+    }
+    setLoadingQr(true);
     try {
       if (topupPollRef.current) {
         clearInterval(topupPollRef.current);
@@ -292,6 +302,7 @@ export default function ShopWalletPage() {
       }
     } catch (err) {
       console.error("Lỗi tạo link nạp tiền:", err);
+      pushToast({ type: 'error', title: 'Lỗi', message: err.message || 'Không thể tạo mã nạp tiền' });
     } finally {
       setLoadingQr(false);
     }
@@ -306,11 +317,9 @@ export default function ShopWalletPage() {
 
   const handleWithdraw = async () => {
     const amt = Number(withdrawAmount);
-    if (!amt || amt <= 0) return pushToast({ type: 'error', title: 'Lỗi', message: 'Số tiền không hợp lệ' });
+    if (!amt || amt < 50000) return pushToast({ type: 'error', title: 'Lỗi', message: 'Số tiền rút tối thiểu là 50.000đ' });
+    if (amt > maxWithdrawable) return pushToast({ type: 'error', title: 'Lỗi', message: `Số tiền rút vượt quá số dư cho phép (${maxWithdrawable.toLocaleString('vi-VN')}đ)` });
     if (!withdrawBank || !withdrawAccount || !withdrawName) return pushToast({ type: 'error', title: 'Lỗi', message: 'Vui lòng nhập đủ thông tin ngân hàng' });
-    if (walletBalance - amt < walletMinBalance) {
-      return pushToast({ type: 'error', title: 'Lỗi', message: `Số dư không đủ. Cần duy trì tối thiểu ${walletMinBalance.toLocaleString('vi-VN')}đ` });
-    }
 
     setSubmittingWithdraw(true);
     try {
@@ -357,12 +366,6 @@ export default function ShopWalletPage() {
             <h2 className="font-h2 text-h2 text-primary">Quản lý Ví LumiX</h2>
             <p className="font-body-md text-body-md text-main/70">Theo dõi dòng tiền và đối soát giao dịch của bạn.</p>
           </div>
-          <div className="flex gap-3">
-            <button className="glass-card px-4 py-2 rounded-xl flex items-center gap-2 font-label-bold text-label-bold hover:bg-white transition-all">
-              <span className="material-symbols-outlined">download</span>
-              Xuất báo cáo
-            </button>
-          </div>
         </header>
 
         <div className={`mb-8 rounded-3xl border p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 ${isWalletHealthy ? 'border-emerald-200 bg-emerald-50/80' : 'border-amber-200 bg-amber-50/90'}`}>
@@ -386,7 +389,7 @@ export default function ShopWalletPage() {
           {!isWalletHealthy ? (
             <button
               type="button"
-              onClick={createPayosQr}
+              onClick={openTopupModal}
               className="px-5 py-3 rounded-xl bg-amber-600 text-white font-label-bold text-label-bold hover:bg-amber-700 transition-all active:scale-95"
             >
               Nạp ví ngay
@@ -405,7 +408,7 @@ export default function ShopWalletPage() {
 
             <div className="flex justify-between items-start z-10">
               <div>
-                <p className="font-label-bold text-label-bold opacity-80 mb-1 uppercase tracking-widest">Số dư khả dụng</p>
+                <p className="font-label-bold text-label-bold opacity-80 mb-1 uppercase tracking-widest">Số dư ví</p>
                 <h3 className="font-h1 text-h1 font-bold">{walletBalance.toLocaleString('vi-VN')} VNĐ</h3>
               </div>
               <div className={`flex items-center gap-2 px-3 py-1 rounded-full backdrop-blur-md ${isWalletHealthy ? 'bg-white/20' : 'bg-amber-500/20'}`}>
@@ -423,7 +426,7 @@ export default function ShopWalletPage() {
                 <button onClick={() => setWithdrawVisible(true)} className="bg-white/20 text-white border border-white/40 font-label-bold text-label-bold px-5 py-3 rounded-xl hover:bg-white/30 transition-all shadow-lg backdrop-blur-md">
                   Rút tiền
                 </button>
-                <button onClick={createPayosQr} className="bg-cyan-100 text-cyan-900 font-label-bold text-label-bold px-5 py-3 rounded-xl hover:bg-cyan-200 transition-all shadow-lg">
+                <button onClick={openTopupModal} className="bg-cyan-100 text-cyan-900 font-label-bold text-label-bold px-5 py-3 rounded-xl hover:bg-cyan-200 transition-all shadow-lg">
                   Nạp tiền (PayOS)
                 </button>
               </div>
@@ -616,15 +619,33 @@ export default function ShopWalletPage() {
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="font-h3 text-h3 text-primary">Yêu cầu rút tiền</h3>
-                <p className="text-sm text-main/70">Số dư khả dụng: {(walletBalance - walletMinBalance > 0 ? walletBalance - walletMinBalance : 0).toLocaleString('vi-VN')}đ</p>
+                <p className="text-sm text-main/70">Số tiền có thể rút: {maxWithdrawable.toLocaleString('vi-VN')}đ</p>
               </div>
               <button type="button" className="text-main/60 hover:text-main" onClick={() => setWithdrawVisible(false)}>✕</button>
             </div>
 
             <div className="mt-5 space-y-4">
               <div>
-                <label className="text-sm font-bold text-main/70">Số tiền rút (VNĐ)</label>
-                <input className="w-full p-3 rounded-xl border border-slate-300" type="number" placeholder="Ví dụ: 500000" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-sm font-bold text-main/70">Số tiền rút (VNĐ)</label>
+                  <button 
+                    type="button" 
+                    className="text-xs text-primary font-bold hover:underline"
+                    onClick={() => setWithdrawAmount(maxWithdrawable)}
+                  >
+                    Rút tối đa
+                  </button>
+                </div>
+                <input 
+                  className={`w-full p-3 rounded-xl border ${Number(withdrawAmount) > maxWithdrawable ? 'border-red-400 bg-red-50' : 'border-slate-300'}`} 
+                  type="number" 
+                  placeholder="Tối thiểu 50.000đ" 
+                  value={withdrawAmount} 
+                  onChange={(e) => setWithdrawAmount(e.target.value)} 
+                />
+                {Number(withdrawAmount) > maxWithdrawable && (
+                  <p className="text-xs text-red-600 font-bold mt-1">Số tiền nhập vượt quá số dư cho phép rút</p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-bold text-main/70">Ngân hàng (Ví dụ: Vietcombank, MBBank)</label>

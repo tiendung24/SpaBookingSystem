@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import { useShop } from '../context/ShopContext'
 
@@ -186,11 +186,10 @@ export default function ShopStaffPage() {
             <button type="button" className="px-4 py-2 rounded-xl bg-primary text-white font-bold" onClick={openCreate}>+ Thêm nhân sự</button>
           </div>
 
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+          <div className="grid grid-cols-2 xl:grid-cols-3 gap-4 mb-5">
             <div className="bg-white rounded-2xl border border-slate-200 p-4"><p className="text-main/60 text-sm">Tổng nhân sự</p><p className="text-2xl font-bold">{stats.total}</p></div>
             <div className="bg-white rounded-2xl border border-slate-200 p-4"><p className="text-main/60 text-sm">Đang làm</p><p className="text-2xl font-bold text-emerald-600">{stats.working}</p></div>
             <div className="bg-white rounded-2xl border border-slate-200 p-4"><p className="text-main/60 text-sm">Booking hôm nay</p><p className="text-2xl font-bold text-primary">{stats.bookingsToday}</p></div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4"><p className="text-main/60 text-sm">Rating trung bình</p><p className="text-2xl font-bold text-amber-500">{stats.ratingAvg}</p></div>
           </div>
 
           <div className="flex gap-2 flex-wrap mb-4">

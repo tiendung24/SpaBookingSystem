@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import { useShop } from '../context/ShopContext'
+import QRCode from 'react-qr-code'
 
 function formatVnd(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')}đ`
@@ -59,6 +60,7 @@ export default function ShopDashboardPage() {
   const [copied, setCopied] = useState(false)
   const [dateFilter, setDateFilter] = useState('today')
   const [customDate, setCustomDate] = useState(new Date().toISOString().slice(0, 10))
+  const [showQRModal, setShowQRModal] = useState(false)
 
   const walletBalance = Number(shop.wallet?.balance || 0)
   const walletMinBalance = Number(shop.wallet?.minBalance || 100000)
@@ -105,6 +107,7 @@ export default function ShopDashboardPage() {
       const count = bookings.filter((item) => {
         const bookingDate = new Date(item.time)
         return (
+          item.status !== 'canceled' &&
           bookingDate.getFullYear() === date.getFullYear() &&
           bookingDate.getMonth() === date.getMonth() &&
           bookingDate.getDate() === date.getDate()
@@ -117,6 +120,21 @@ export default function ShopDashboardPage() {
         active: index === 6
       }
     })
+  }, [bookings])
+
+  const weeklyCancelRate = useMemo(() => {
+    const now = new Date()
+    const start7Days = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6).getTime()
+    
+    const recent7DaysBookings = bookings.filter((item) => {
+      const t = new Date(item.time).getTime()
+      return t >= start7Days
+    })
+    
+    if (recent7DaysBookings.length === 0) return 0
+    
+    const canceledCount = recent7DaysBookings.filter(b => b.status === 'canceled').length
+    return Math.round((canceledCount / recent7DaysBookings.length) * 100)
   }, [bookings])
 
   const maxChart = useMemo(() => Math.max(...weeklyChart.map((item) => item.value), 1), [weeklyChart])
@@ -164,6 +182,66 @@ export default function ShopDashboardPage() {
     } catch (error) {
       console.error('Copy failed:', error)
     }
+  }
+
+  const handleDownloadQR = () => {
+    const svg = document.getElementById('qr-code-svg')
+    if (!svg) return
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    const img = new Image()
+    img.onload = () => {
+      const canvasWidth = 400
+      const canvasHeight = 550
+      canvas.width = canvasWidth
+      canvas.height = canvasHeight
+
+      // 1. Draw Background
+      ctx.fillStyle = '#0f172a' // slate-900
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+      // 2. Draw Shop Name (Header)
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 24px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+      ctx.fillText(shop.name || 'Spa', canvasWidth / 2, 40)
+
+      // 3. Draw Subtitle
+      ctx.fillStyle = '#94a3b8' // slate-400
+      ctx.font = '16px sans-serif'
+      ctx.fillText('Đặt lịch trực tuyến', canvasWidth / 2, 75)
+
+      // 4. Draw White Box for QR Code
+      const qrSize = 260
+      const qrX = (canvasWidth - qrSize) / 2
+      const qrY = 120
+      
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.roundRect(qrX - 20, qrY - 20, qrSize + 40, qrSize + 40, 24)
+      ctx.fill()
+
+      // 5. Draw QR Code Image
+      ctx.drawImage(img, qrX, qrY, qrSize, qrSize)
+
+      // 6. Draw Footer Text
+      ctx.fillStyle = '#f8fafc' // slate-50
+      ctx.font = 'bold 20px sans-serif'
+      ctx.fillText('Quét mã để đặt lịch', canvasWidth / 2, canvasHeight - 75)
+      
+      ctx.fillStyle = '#94a3b8' // slate-400
+      ctx.font = '14px sans-serif'
+      ctx.fillText('Booking powered by LumiX', canvasWidth / 2, canvasHeight - 40)
+
+      const pngFile = canvas.toDataURL('image/png')
+      const downloadLink = document.createElement('a')
+      downloadLink.download = `QR_${shop.slug}.png`
+      downloadLink.href = pngFile
+      downloadLink.click()
+    }
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)))
   }
 
   return (
@@ -239,7 +317,7 @@ export default function ShopDashboardPage() {
               <p className="text-sm text-main/60 mb-1">Liên kết shop</p>
               <p className="font-bold text-primary break-all">{bookingLink}</p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={handleCopyLink}
@@ -248,13 +326,13 @@ export default function ShopDashboardPage() {
                 <span className="material-symbols-outlined">content_copy</span>
                 Copy
               </button>
-              <button type="button" className="bg-primary/10 text-primary py-3 rounded-xl flex items-center justify-center gap-2 font-bold hover:bg-primary/20 transition-all">
+              <button 
+                type="button" 
+                onClick={() => setShowQRModal(true)}
+                className="bg-primary/10 text-primary py-3 rounded-xl flex items-center justify-center gap-2 font-bold hover:bg-primary/20 transition-all"
+              >
                 <span className="material-symbols-outlined">qr_code_2</span>
-                QR
-              </button>
-              <button type="button" className="bg-primary text-white py-3 rounded-xl flex items-center justify-center gap-2 font-bold hover:opacity-90 transition-all">
-                <span className="material-symbols-outlined">share</span>
-                Chia sẻ
+                Mã QR
               </button>
             </div>
             <p className="text-sm text-main/70 italic text-center">Đưa khách hàng đến link của bạn để họ tự đặt lịch nhanh hơn.</p>
@@ -264,7 +342,7 @@ export default function ShopDashboardPage() {
             <div className="flex justify-between items-center">
               <h4 className="font-h3 text-h3 text-primary">Tăng trưởng 7 ngày</h4>
               <span className="px-2 py-1 rounded-full bg-red-100 text-red-600 text-xs font-bold">
-                Hủy lịch: {bookings.length ? Math.round((bookings.filter((item) => item.status === 'canceled').length / bookings.length) * 100) : 0}%
+                Hủy lịch: {weeklyCancelRate}%
               </span>
             </div>
             <div className="h-56 flex items-end justify-between gap-2 border-b border-slate-200 pb-2">
@@ -410,6 +488,52 @@ export default function ShopDashboardPage() {
           </article>
         </section>
       </main>
+
+      {/* QR Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-main/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-6 text-center space-y-6">
+              <div>
+                <h3 className="font-h3 text-h3 text-primary mb-1">Mã QR Đặt lịch</h3>
+                <p className="text-sm text-main/70">Cho khách quét mã này để đặt lịch ngay</p>
+              </div>
+              <div className="bg-white p-4 rounded-2xl inline-block border border-slate-100 shadow-sm mx-auto">
+                <QRCode id="qr-code-svg" value={bookingLink} size={220} />
+              </div>
+              <p className="font-bold text-main">{bookingLink}</p>
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={handleDownloadQR}
+                className="py-3 px-4 rounded-xl bg-primary/10 text-primary font-bold hover:bg-primary/20 transition-all flex justify-center items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[20px]">download</span>
+                Tải ảnh
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleCopyLink()
+                  setShowQRModal(false)
+                }}
+                className="py-3 px-4 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition-all flex justify-center items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[20px]">content_copy</span>
+                Copy link
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowQRModal(false)}
+                className="col-span-2 py-3 px-4 rounded-xl bg-slate-200 text-main font-bold hover:bg-slate-300 transition-all"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
