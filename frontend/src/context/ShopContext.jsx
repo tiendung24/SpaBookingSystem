@@ -278,7 +278,8 @@ export function ShopProvider({ children }) {
   const loadCustomerLoyalty = useCallback(async (accessToken = token) => {
     if (!accessToken) return null
     try {
-      const res = await apiRequest('/api/customer/loyalty/me', { token: accessToken })
+      const url = shop?._id ? `/api/customer/loyalty/me?shopId=${shop._id}` : '/api/customer/loyalty/me'
+      const res = await apiRequest(url, { token: accessToken })
       const payload = res?.loyalty || null
       if (payload) setCustomerLoyalty(payload)
       return payload
@@ -286,7 +287,7 @@ export function ShopProvider({ children }) {
       console.warn('[ShopContext] loadCustomerLoyalty failed', err)
       return null
     }
-  }, [token])
+  }, [token, shop?._id])
 
   const loadCustomerBookings = useCallback(async (accessToken = token) => {
     if (!accessToken) return []

@@ -49,7 +49,7 @@ export default function CustomerHomePage() {
 
   useEffect(() => {
     if (!slug) return
-    loadPublicShop(slug).catch(() => {})
+    loadPublicShop(slug).catch(() => { })
   }, [slug, loadPublicShop])
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export default function CustomerHomePage() {
       <main>
         <section className="relative min-h-[680px] flex items-center hero-mesh">
           <div className="absolute inset-0 z-0">
-            <img className="w-full h-full object-cover opacity-20" src={heroImage} alt="" />
+            <img className="w-full h-full object-cover opacity-20" src={shop.coverUrl || heroImage} alt="" />
           </div>
           <div className="max-w-[1440px] mx-auto px-6 md:px-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center relative z-10">
             <div className="space-y-6">
@@ -173,7 +173,7 @@ export default function CustomerHomePage() {
 
             <div className="glass-card rounded-[2rem] p-5 bg-white/70 border border-white/60">
               <div className="relative overflow-hidden rounded-[1.5rem]">
-                <img className="w-full h-[480px] object-cover" src={shop.coverImageUrl || heroImage} alt={shop.name || 'Spa'} />
+                <img className="w-full h-[480px] object-cover" src={shop.coverUrl || heroImage} alt={shop.name || 'Spa'} />
                 <div className="absolute left-5 right-5 bottom-5 rounded-3xl bg-white/90 backdrop-blur-xl p-4 shadow-xl border border-white/80">
                   <p className="text-xs font-bold text-main/50 uppercase tracking-widest">Thông tin hôm nay</p>
                   <div className="mt-2 grid grid-cols-2 gap-3">

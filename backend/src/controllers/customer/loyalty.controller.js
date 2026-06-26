@@ -1,4 +1,4 @@
-﻿import { getCustomerLoyaltyHistory, getLoyaltySummary } from '../../services/loyalty.service.js'
+import { getCustomerLoyaltyHistory, getLoyaltySummary } from '../../services/loyalty.service.js'
 import { Customer, LoyaltyAccount, User } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
 
@@ -6,7 +6,10 @@ export async function me(req, res) {
   const customerId = String(req.auth?.customerId || '').trim()
   if (!customerId) throw httpError(401, 'Không tìm thấy customerId trong phiên đăng nhập')
 
-  const base = await getLoyaltySummary(customerId)
+  const shopId = String(req.query?.shopId || '').trim()
+  if (!shopId) return res.json({ loyalty: { pointsBalance: 0, redeemValueVnd: 0, lifetimeEarned: 0, lifetimeSpent: 0 } })
+
+  const base = await getLoyaltySummary(customerId, shopId)
 
   // Legacy-safe aggregation: same user/email/phone may map to multiple customerIds in old data.
   const user = await User.findById(String(req.auth?.userId || '')).lean()
@@ -26,7 +29,7 @@ export async function me(req, res) {
     return res.json({ loyalty: base })
   }
 
-  const relatedAccounts = await LoyaltyAccount.find({ customerId: { $in: relatedIds } }).lean()
+  const relatedAccounts = await LoyaltyAccount.find({ customerId: { $in: relatedIds }, shopId }).lean()
   if (!relatedAccounts.length) {
     return res.json({ loyalty: base })
   }
@@ -49,8 +52,11 @@ export async function me(req, res) {
 
 export async function history(req, res) {
   const customerId = String(req.auth?.customerId || '').trim()
+  const shopId = String(req.query?.shopId || '').trim()
   if (!customerId) throw httpError(401, 'Không tìm thấy customerId trong phiên đăng nhập')
+  if (!shopId) return res.json({ items: [] })
+
   const limit = Number(req.query?.limit || 20)
-  const items = await getCustomerLoyaltyHistory(customerId, limit)
+  const items = await getCustomerLoyaltyHistory(customerId, shopId, limit)
   res.json({ items })
 }

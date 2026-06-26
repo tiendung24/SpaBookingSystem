@@ -19,10 +19,6 @@ export default function ForgotPasswordForm() {
         body: { email: String(email || '').trim().toLowerCase() }
       })
       setSubmitted(true)
-      setTimeout(() => {
-        setSubmitted(false)
-        setEmail('')
-      }, 3500)
     } catch (err) {
       setError(err?.message || 'Không gửi được hướng dẫn đặt lại mật khẩu')
     } finally {
@@ -37,12 +33,23 @@ export default function ForgotPasswordForm() {
           <h2 className="text-2xl font-bold text-primary">Kiểm tra email của bạn</h2>
           <p className="text-main">Nếu email tồn tại, LumiX sẽ gửi hướng dẫn đặt lại mật khẩu.</p>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
           <p className="text-green-700 font-medium">Vui lòng kiểm tra hộp thư, kể cả mục Spam.</p>
         </div>
-        <Link to="/login" className="inline-block text-primary hover:text-primary/80 font-semibold transition-colors">
-          Quay lại đăng nhập
-        </Link>
+        <a 
+          href="https://mail.google.com/mail/u/0/#inbox" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="w-full py-3 px-4 bg-primary text-white font-semibold rounded-xl hover:brightness-110 shadow-md transition-all duration-300 flex items-center justify-center gap-2 mb-4"
+        >
+          <Mail size={18} />
+          Mở Gmail
+        </a>
+        <div className="mt-4">
+          <Link to="/login" className="inline-block text-primary hover:text-primary/80 font-semibold transition-colors">
+            Quay lại đăng nhập
+          </Link>
+        </div>
       </div>
     )
   }

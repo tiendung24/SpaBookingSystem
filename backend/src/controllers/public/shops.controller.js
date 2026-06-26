@@ -592,6 +592,7 @@ export async function createBooking(req, res) {
       if (needsDeposit && requestedRedeemPoints > 0) {
         const reserve = await reserveRedeemPointsForBooking({
           customerId: String(customerAccount._id),
+          shopId: String(shop._id),
           bookingId: String(booking._id),
           bookingCode,
           depositAmount: Number(depositAmount || 0),

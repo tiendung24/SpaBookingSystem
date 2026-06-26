@@ -1,4 +1,4 @@
-﻿import { Booking, Customer, LoyaltyAccount, LoyaltyTransaction, User } from '../models/index.js'
+import { Booking, Customer, LoyaltyAccount, LoyaltyTransaction, User } from '../models/index.js'
 import { httpError } from '../utils/httpError.js'
 
 export const LOYALTY_EARN_BASE_VND = 10000
@@ -52,21 +52,23 @@ export function calculateRedeemPlan({ depositAmount, requestedPoints, currentPoi
   return { depositAmount: deposit, currentPointsBalance: balance, requestedPoints: requested, maxDiscountVnd, maxRedeemablePoints, pointsToUse, redeemDiscountVnd, finalDepositAmount }
 }
 
-export async function getOrCreateLoyaltyAccount(customerId) {
+export async function getOrCreateLoyaltyAccount(customerId, shopId) {
   const normalizedCustomerId = String(customerId || '').trim()
-  if (!normalizedCustomerId) throw httpError(400, 'Thiếu customerId để tạo tài khoản điểm')
+  const normalizedShopId = String(shopId || '').trim()
+  if (!normalizedCustomerId || !normalizedShopId) throw httpError(400, 'Thiếu customerId hoặc shopId để tạo tài khoản điểm')
   const now = nowDate()
-  let account = await LoyaltyAccount.findOne({ customerId: normalizedCustomerId })
+  let account = await LoyaltyAccount.findOne({ customerId: normalizedCustomerId, shopId: normalizedShopId })
   if (!account) {
-    account = await LoyaltyAccount.create({ customerId: normalizedCustomerId, pointsBalance: 0, lifetimeEarned: 0, lifetimeSpent: 0, createdAt: now, updatedAt: now })
+    account = await LoyaltyAccount.create({ customerId: normalizedCustomerId, shopId: normalizedShopId, pointsBalance: 0, lifetimeEarned: 0, lifetimeSpent: 0, createdAt: now, updatedAt: now })
   }
   return account
 }
 
-export async function getLoyaltySummary(customerId) {
-  const account = await getOrCreateLoyaltyAccount(customerId)
+export async function getLoyaltySummary(customerId, shopId) {
+  const account = await getOrCreateLoyaltyAccount(customerId, shopId)
   return {
     customerId: String(account.customerId),
+    shopId: String(account.shopId),
     pointsBalance: Math.max(0, Math.floor(safeNumber(account.pointsBalance))),
     redeemValueVnd: Math.max(0, Math.floor(safeNumber(account.pointsBalance))) * LOYALTY_REDEEM_VALUE_PER_POINT,
     lifetimeEarned: Math.max(0, Math.floor(safeNumber(account.lifetimeEarned))),
@@ -79,8 +81,8 @@ export async function getLoyaltySummary(customerId) {
   }
 }
 
-export async function reserveRedeemPointsForBooking({ customerId, bookingId, bookingCode, depositAmount, requestedPoints }) {
-  const account = await getOrCreateLoyaltyAccount(customerId)
+export async function reserveRedeemPointsForBooking({ customerId, shopId, bookingId, bookingCode, depositAmount, requestedPoints }) {
+  const account = await getOrCreateLoyaltyAccount(customerId, shopId)
   const plan = calculateRedeemPlan({ depositAmount, requestedPoints, currentPointsBalance: account.pointsBalance })
   if (plan.pointsToUse <= 0) return { account, plan, transaction: null }
 
@@ -96,6 +98,7 @@ export async function reserveRedeemPointsForBooking({ customerId, bookingId, boo
 
   const tx = await LoyaltyTransaction.create({
     customerId: String(customerId),
+    shopId: String(shopId),
     bookingId: String(bookingId),
     bookingCode: String(bookingCode || ''),
     type: 'redeem_reserve',
@@ -118,7 +121,7 @@ export async function applyRedeemForBooking(bookingId) {
   tx.updatedAt = nowDate()
   await tx.save()
 
-  const account = await getOrCreateLoyaltyAccount(tx.customerId)
+  const account = await getOrCreateLoyaltyAccount(tx.customerId, tx.shopId)
   account.lifetimeSpent = safeNumber(account.lifetimeSpent) + safeNumber(tx.points)
   account.updatedAt = nowDate()
   await account.save()
@@ -132,7 +135,7 @@ export async function releaseRedeemForBooking(bookingId, note = '') {
   if (String(tx.status) === 'released') return tx
   if (String(tx.status) === 'applied') return tx
 
-  const account = await getOrCreateLoyaltyAccount(tx.customerId)
+  const account = await getOrCreateLoyaltyAccount(tx.customerId, tx.shopId)
   account.pointsBalance = safeNumber(account.pointsBalance) + safeNumber(tx.points)
   account.updatedAt = nowDate()
   await account.save()
@@ -151,8 +154,9 @@ export async function earnPointsForCompletedBooking(bookingId) {
   if (String(booking.status) !== 'completed') return null
 
   const customerId = await resolveCanonicalCustomerIdForBooking(booking)
-  if (isLoyaltyDebug()) console.log('[loyalty][earn] resolved customer', { bookingId: String(bookingId), customerId })
-  if (!customerId) return null
+  const shopId = String(booking?.shopId || '')
+  if (isLoyaltyDebug()) console.log('[loyalty][earn] resolved customer', { bookingId: String(bookingId), customerId, shopId })
+  if (!customerId || !shopId) return null
 
   const existing = await LoyaltyTransaction.findOne({ bookingId: String(booking._id), type: 'earn' })
   if (existing) return existing
@@ -161,7 +165,7 @@ export async function earnPointsForCompletedBooking(bookingId) {
   if (isLoyaltyDebug()) console.log('[loyalty][earn] calculated', { bookingId: String(bookingId), points })
   if (points <= 0) return null
 
-  const account = await getOrCreateLoyaltyAccount(customerId)
+  const account = await getOrCreateLoyaltyAccount(customerId, shopId)
   const now = nowDate()
   account.pointsBalance = safeNumber(account.pointsBalance) + points
   account.lifetimeEarned = safeNumber(account.lifetimeEarned) + points
@@ -171,6 +175,7 @@ export async function earnPointsForCompletedBooking(bookingId) {
 
   const createdTx = await LoyaltyTransaction.create({
     customerId,
+    shopId,
     bookingId: String(booking._id),
     bookingCode: String(booking.bookingCode || ''),
     type: 'earn',
@@ -186,22 +191,23 @@ export async function earnPointsForCompletedBooking(bookingId) {
   return createdTx
 }
 
-export async function getCustomerLoyaltyHistory(customerId, limit = 20) {
-  return LoyaltyTransaction.find({ customerId: String(customerId) }).sort({ createdAt: -1 }).limit(Math.max(1, Math.min(100, Number(limit || 20)))).lean()
+export async function getCustomerLoyaltyHistory(customerId, shopId, limit = 20) {
+  if (!shopId) return []
+  return LoyaltyTransaction.find({ customerId: String(customerId), shopId: String(shopId) }).sort({ createdAt: -1 }).limit(Math.max(1, Math.min(100, Number(limit || 20)))).lean()
 }
 
 
-export async function replaceRedeemReserveForBooking({ customerId, bookingId, bookingCode, depositAmount, requestedPoints }) {
+export async function replaceRedeemReserveForBooking({ customerId, shopId, bookingId, bookingCode, depositAmount, requestedPoints }) {
   const existing = await LoyaltyTransaction.findOne({ bookingId: String(bookingId), type: 'redeem_reserve' })
   if (existing && String(existing.status) === 'applied') throw httpError(409, 'Không thể đổi điểm vì cọc đã thanh toán thành công')
 
   if (existing && String(existing.status) === 'reserved') {
-    const account = await getOrCreateLoyaltyAccount(existing.customerId)
+    const account = await getOrCreateLoyaltyAccount(existing.customerId, existing.shopId)
     account.pointsBalance = safeNumber(account.pointsBalance) + safeNumber(existing.points)
     account.updatedAt = nowDate()
     await account.save()
     await LoyaltyTransaction.deleteOne({ _id: existing._id })
   }
 
-  return reserveRedeemPointsForBooking({ customerId, bookingId, bookingCode, depositAmount, requestedPoints })
+  return reserveRedeemPointsForBooking({ customerId, shopId, bookingId, bookingCode, depositAmount, requestedPoints })
 }

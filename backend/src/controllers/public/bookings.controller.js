@@ -324,6 +324,7 @@ export async function recreatePaymentForBooking(req, res) {
 
   const reserve = await replaceRedeemReserveForBooking({
     customerId: String(booking.customerId || ''),
+    shopId: String(booking.shopId || ''),
     bookingId: String(booking._id),
     bookingCode: String(booking.bookingCode || ''),
     depositAmount: originalDeposit,
