@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ShopSidebar from '../components/shop/ShopSidebar'
 import SystemConfigTabs from '../components/shop/SystemConfigTabs'
 import { useShop } from '../context/ShopContext'
@@ -28,6 +28,8 @@ export default function ShopSlotsConfigPage() {
   const hours = shop.hours || {}
   const [openTime, setOpenTime] = useState(hours.open || '09:00')
   const [closeTime, setCloseTime] = useState(hours.close || '20:00')
+  const [lunchBreakStart, setLunchBreakStart] = useState(hours.lunchBreakStart || '12:00')
+  const [lunchBreakEnd, setLunchBreakEnd] = useState(hours.lunchBreakEnd || '13:00')
   const [daysOff, setDaysOff] = useState(new Set(hours.daysOff ?? [0]))
   const [slotDuration, setSlotDuration] = useState(15)
   const [capacity, setCapacity] = useState(Number(hours.capacity || 1))
@@ -40,10 +42,12 @@ export default function ShopSlotsConfigPage() {
   useEffect(() => {
     setOpenTime(hours.open || '09:00')
     setCloseTime(hours.close || '20:00')
+    setLunchBreakStart(hours.lunchBreakStart || '12:00')
+    setLunchBreakEnd(hours.lunchBreakEnd || '13:00')
     setDaysOff(new Set((hours.daysOff ?? [0]).map((day) => (Number(day) === 7 ? 0 : Number(day)))))
     setSlotDuration(15)
     setCapacity(Number(hours.capacity || 1))
-  }, [hours.open, hours.close, hours.daysOff, hours.slotDuration, hours.capacity])
+  }, [hours.open, hours.close, hours.lunchBreakStart, hours.lunchBreakEnd, hours.daysOff, hours.slotDuration, hours.capacity])
 
   const weekDaysOpen = useMemo(() => weekDays.map((day) => day.key).filter((day) => !daysOff.has(day)), [daysOff])
 
@@ -74,6 +78,8 @@ export default function ShopSlotsConfigPage() {
           body: {
             openTime: open,
             closeTime: safeClose,
+            lunchBreakStart: lunchBreakStart || '12:00',
+            lunchBreakEnd: lunchBreakEnd || '13:00',
             weekDays: weekDaysOpen
           }
         }),
@@ -93,6 +99,8 @@ export default function ShopSlotsConfigPage() {
           ...prev.hours,
           open,
           close: safeClose,
+          lunchBreakStart: lunchBreakStart || '12:00',
+          lunchBreakEnd: lunchBreakEnd || '13:00',
           daysOff: [...daysOff],
           slotDuration: normalizedDuration,
           capacity: normalizedCapacity
@@ -169,7 +177,28 @@ export default function ShopSlotsConfigPage() {
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div className="space-y-2">
+                    <label className="font-label-bold text-main/70">Nghỉ trưa từ</label>
+                    <input
+                      className="w-full bg-white/60 border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner"
+                      type="time"
+                      value={lunchBreakStart}
+                      onChange={(e) => setLunchBreakStart(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="font-label-bold text-main/70">Nghỉ trưa đến</label>
+                    <input
+                      className="w-full bg-white/60 border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner"
+                      type="time"
+                      value={lunchBreakEnd}
+                      onChange={(e) => setLunchBreakEnd(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 mt-4">
                   <label className="font-label-bold text-main/70 mb-3 block">Ngày nghỉ định kỳ</label>
                   <div className="flex flex-wrap gap-2">
                     {weekDays.map((d) => {
