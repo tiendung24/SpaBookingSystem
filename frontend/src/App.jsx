@@ -16,6 +16,7 @@ import ShopServicesPage from './pages/ShopServicesPage'
 import ShopStaffPage from './pages/ShopStaffPage'
 import ShopDepositConfigPage from './pages/ShopDepositConfigPage'
 import ShopSlotsConfigPage from './pages/ShopSlotsConfigPage'
+import ShopSecurityConfigPage from './pages/ShopSecurityConfigPage'
 import ShopStatisticsPage from './pages/ShopStatisticsPage'
 import ShopCreateBookingPage from './pages/ShopCreateBookingPage'
 import ShopOnboardingPage from './pages/ShopOnboardingPage'
@@ -78,6 +79,7 @@ function App() {
             <Route path="/shop/config/deposit" element={<RequireRole allow={['shop']}><ShopDepositConfigPage /></RequireRole>} />
             <Route path="/shop/config/slots" element={<RequireRole allow={['shop']}><ShopSlotsConfigPage /></RequireRole>} />
             <Route path="/shop/config/shop" element={<RequireRole allow={['shop']}><ShopConfigPage /></RequireRole>} />
+            <Route path="/shop/config/security" element={<RequireRole allow={['shop']}><ShopSecurityConfigPage /></RequireRole>} />
             <Route path="/shop/statistics" element={<RequireRole allow={['shop']}><ShopStatisticsPage /></RequireRole>} />
 
             <Route path="/admin/dashboard" element={<RequireRole allow={['admin']}><AdminDashboardPage /></RequireRole>} />

@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 const tabs = [
   { to: '/shop/config/shop', label: 'Thông tin shop', icon: 'store' },
   { to: '/shop/config/slots', label: 'Slot & giờ hoạt động', icon: 'schedule' },
-  { to: '/shop/config/deposit', label: 'Đặt cọc & chính sách', icon: 'payments' }
+  { to: '/shop/config/deposit', label: 'Đặt cọc & chính sách', icon: 'payments' },
+  { to: '/shop/config/security', label: 'Tài khoản bảo mật', icon: 'security' }
 ];
 
 export default function SystemConfigTabs() {

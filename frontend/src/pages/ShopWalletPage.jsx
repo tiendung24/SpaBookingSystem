@@ -463,8 +463,8 @@ export default function ShopWalletPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 flex flex-col gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
+          <div className="lg:col-span-12 flex flex-col gap-4">
             <div className="flex justify-between items-end">
               <h4 className="font-h3 text-h3 text-primary">Lịch sử giao dịch</h4>
               <a className="font-label-bold text-label-bold text-primary hover:underline" href="#">Xem tất cả</a>
@@ -496,40 +496,6 @@ export default function ShopWalletPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            <h4 className="font-h3 text-h3 text-primary">Khu vực đối soát</h4>
-
-            <div className="glass-card rounded-3xl p-4 flex flex-col gap-4 bg-white/70">
-              <div className="flex items-center gap-3 mb-1">
-                <span className="material-symbols-outlined text-amber-500 text-[32px]">pending_actions</span>
-                <div>
-                  <p className="font-label-bold text-label-bold text-main/70 uppercase">Tiền cọc Escrow</p>
-                  <p className="font-h2 text-h2 text-amber-700">{Number(shop.wallet?.escrow || 0).toLocaleString('vi-VN')} VNĐ</p>
-                </div>
-              </div>
-
-              <p className="font-body-sm text-body-sm text-main/70 bg-white p-3 rounded-xl border border-slate-200">
-                Các khoản tiền cọc khách đã trả mà LumiX đang giữ hộ. Tiền sẽ được cộng vào ví chính sau khi dịch vụ kết thúc.
-              </p>
-
-              <div className="space-y-3 mt-1">
-                {escrowItems.map((escrow) => (
-                  <div key={escrow.bookingId} className="flex justify-between items-center p-3 rounded-xl border border-primary/10 hover:border-primary/40 transition-colors">
-                    <div>
-                      <p className="font-label-bold text-label-bold">{`Booking ${escrow.bookingId}`}</p>
-                      <p className="font-body-sm text-body-sm text-main/60 italic">{`Dự kiến về: ${escrow.eta}`}</p>
-                    </div>
-                    <p className="font-h3 text-h3 text-primary font-bold">{escrow.amount}</p>
-                  </div>
-                ))}
-              </div>
-
-              <button className="w-full mt-2 py-3 border-2 border-primary text-primary font-label-bold text-label-bold rounded-xl hover:bg-primary hover:text-white transition-all active:scale-95">
-                Yêu cầu quyết toán sớm
-              </button>
             </div>
           </div>
         </div>

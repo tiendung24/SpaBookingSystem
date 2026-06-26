@@ -295,7 +295,7 @@ export async function changePassword(req, res) {
 
   const hash = user.passwordHash || user.password || ''
   const matched = hash.startsWith('$2') ? await bcrypt.compare(oldPassword, hash) : oldPassword === hash
-  if (!matched) throw httpError(401, 'Mật khẩu cũ không đúng')
+  if (!matched) throw httpError(400, 'Mật khẩu hiện tại không chính xác')
 
   user.passwordHash = await bcrypt.hash(newPassword, 10)
   user.updatedAt = new Date()
@@ -308,6 +308,38 @@ export async function changePassword(req, res) {
     meta: {}
   })
   res.json({ success: true })
+}
+
+export async function changeEmail(req, res) {
+  const { newEmail } = req.body
+  const email = normalizeEmail(newEmail || '')
+  if (!email || !isValidEmail(email)) throw httpError(400, 'Email không hợp lệ')
+  
+  const user = await User.findById(req.auth.userId)
+  if (!user) throw httpError(404, 'Tài khoản không tồn tại')
+
+  const existed = await User.findOne({ email, _id: { $ne: user._id } }).lean()
+  if (existed) throw httpError(409, 'Email đã được sử dụng')
+
+  user.email = email
+  user.updatedAt = new Date()
+  await user.save()
+
+  if (user.role === 'shop' && user.shopId) {
+    await Shop.findByIdAndUpdate(user.shopId, { $set: { email, updatedAt: new Date() } })
+  } else if (user.role === 'customer' && user.customerId) {
+    await Customer.findByIdAndUpdate(user.customerId, { $set: { email, updatedAt: new Date() } })
+  }
+
+  await writeAuditLog({
+    actorUserId: String(user._id),
+    action: 'auth.change_email',
+    entity: 'user',
+    entityId: String(user._id),
+    meta: { email }
+  })
+
+  res.json({ success: true, email })
 }
 
 export async function forgotPassword(req, res) {

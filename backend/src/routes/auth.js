@@ -136,6 +136,7 @@ authRouter.get('/me', requireAuth, asyncHandler(AuthController.me))
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
 authRouter.put('/change-password', requireAuth, asyncHandler(AuthController.changePassword))
+authRouter.put('/change-email', requireAuth, asyncHandler(AuthController.changeEmail))
 
 authRouter.post('/customer/register', asyncHandler(AuthController.customerRegister))
 authRouter.post('/customer/login', asyncHandler(AuthController.customerLogin))
