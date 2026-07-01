@@ -1,4 +1,4 @@
-﻿import bcrypt from 'bcryptjs'
+import bcrypt from 'bcryptjs'
 import ExcelJS from 'exceljs'
 import { Booking, Deposit, PayosPayment, PlatformFee, RefundRequest, Service, Shop, User, Wallet, WalletTransaction, ShopStaff } from '../../models/index.js'
 import { httpError } from '../../utils/httpError.js'
@@ -344,6 +344,8 @@ export async function exportExcel(req, res) {
     { header: 'Mã Shop', key: 'id', width: 25 },
     { header: 'Tên Shop', key: 'shopName', width: 30 },
     { header: 'Chủ Shop', key: 'owner', width: 25 },
+    { header: 'SĐT', key: 'phone', width: 15 },
+    { header: 'Email', key: 'email', width: 25 },
     { header: 'Khu vực', key: 'district', width: 30 },
     { header: 'Trạng thái', key: 'status', width: 15 },
     { header: 'Booking thành công', key: 'monthlyBookings', width: 20 },
@@ -368,6 +370,8 @@ export async function exportExcel(req, res) {
       id: String(shop._id),
       shopName: shop.name || '—',
       owner: shop.ownerName || 'Chưa cập nhật',
+      phone: shop.phone || '—',
+      email: shop.email || '—',
       district,
       status: statusText,
       monthlyBookings: shop.stats?.completedBookings || 0,
@@ -390,6 +394,7 @@ export async function exportExcel(req, res) {
       { header: 'Mã booking', key: 'bookingCode', width: 25 },
       { header: 'Khách hàng', key: 'customer', width: 25 },
       { header: 'SĐT Khách', key: 'customerPhone', width: 15 },
+      { header: 'Email Khách', key: 'customerEmail', width: 25 },
       { header: 'Dịch vụ', key: 'service', width: 30 },
       { header: 'Thời gian hẹn', key: 'startTime', width: 25 },
       { header: 'Thời gian đặt', key: 'createdAt', width: 25 },
@@ -411,6 +416,7 @@ export async function exportExcel(req, res) {
         bookingCode: b.bookingCode || String(b._id),
         customer: b.customerName || 'Khách',
         customerPhone: b.customerPhone || '—',
+        customerEmail: b.customerEmail || '—',
         service: srv ? srv.name : '—',
         startTime: formatExcelDate(b.startTime),
         createdAt: formatExcelDate(b.createdAt),
